@@ -1,0 +1,17 @@
+# Local Netlify folder
+.netlify
+
+# Local Supabase CLI state
+supabase/.branches/
+supabase/.temp/
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
+
+# OS/editor noise
+.DS_Store

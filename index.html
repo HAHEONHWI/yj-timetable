@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>용정 시간표</title>
+    <link rel="icon" href="./assets/logo.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-logo" src="./assets/home-banner.png" alt="용정중학교 전자시간표 서비스" />
+        <div class="brand-copy">
+          <p class="eyebrow">용정 전용 시간표</p>
+          <h1>용정 시간표</h1>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-button is-active" data-route="view" type="button">조회</button>
+        <button class="nav-button" data-route="slideshow" type="button">슬라이드쇼</button>
+        <button class="nav-button" data-route="admin" type="button">관리자</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="viewPage" class="page page-view">
+        <div class="view-tools">
+          <div>
+            <h2>이번주-다음주 시간표</h2>
+            <p id="todayLabel" class="muted"></p>
+            <p id="rangeLabel" class="muted"></p>
+          </div>
+          <div class="field compact">
+            <label for="viewClass">학급</label>
+            <select id="viewClass"></select>
+          </div>
+        </div>
+        <div id="dayTabs" class="day-tabs" role="tablist"></div>
+        <div id="viewSchedule" class="schedule-shell"></div>
+      </section>
+
+      <section id="slideshowPage" class="page slideshow-page is-hidden">
+        <div class="slideshow-frame">
+          <div class="slideshow-top">
+            <div>
+              <p class="eyebrow">자동 슬라이드</p>
+              <h2 id="slideshowTitle">시간표</h2>
+            </div>
+            <div class="slideshow-actions">
+              <div id="slideshowMeta" class="slideshow-meta"></div>
+              <button id="exitSlideshowButton" class="ghost-button" type="button">슬라이드쇼 종료</button>
+            </div>
+          </div>
+          <div id="slideshowStage" class="slideshow-stage"></div>
+        </div>
+      </section>
+
+      <section id="adminPage" class="page is-hidden">
+        <div id="loginPanel" class="login-panel">
+          <h2>관리자 로그인</h2>
+          <div class="field">
+            <label for="adminPassword">비밀번호</label>
+            <input id="adminPassword" type="password" autocomplete="current-password" placeholder="비밀번호 입력" />
+          </div>
+          <button id="loginButton" class="primary-button" type="button">로그인</button>
+          <p id="loginMessage" class="message"></p>
+        </div>
+
+        <div id="adminWorkspace" class="admin-workspace is-hidden">
+          <div class="admin-head">
+            <div>
+              <h2>시간표 관리</h2>
+              <p class="muted">기본 시간표와 특정 날짜 변경 사항을 관리합니다.</p>
+            </div>
+            <button id="logoutButton" class="ghost-button" type="button">로그아웃</button>
+          </div>
+
+          <div class="admin-tabs" role="tablist">
+            <button class="admin-tab is-active" data-admin-tab="base" type="button">기본 시간표</button>
+            <button class="admin-tab" data-admin-tab="special" type="button">특별시간표</button>
+            <button class="admin-tab" data-admin-tab="change" type="button">단일교과 변경</button>
+            <button class="admin-tab" data-admin-tab="event" type="button">행사 변경</button>
+            <button class="admin-tab" data-admin-tab="notice" type="button">안내사항</button>
+            <button class="admin-tab" data-admin-tab="slideshowSettings" type="button">슬라이드쇼 설정</button>
+          </div>
+
+          <section id="basePanel" class="admin-panel">
+            <div class="form-grid">
+              <div class="field">
+                <label for="baseClass">학급</label>
+                <select id="baseClass"></select>
+              </div>
+              <div class="field">
+                <label for="baseWeekday">요일</label>
+                <select id="baseWeekday"></select>
+              </div>
+            </div>
+            <div id="baseEditor" class="period-editor"></div>
+            <button id="saveBaseButton" class="primary-button" type="button">기본 시간표 저장</button>
+
+            <div class="subsection">
+              <div>
+                <h3>기본 병합</h3>
+                <p class="muted">선택한 요일에 반복 적용되는 병합 칸입니다.</p>
+              </div>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="baseMergeStart">시작 교시</label>
+                  <select id="baseMergeStart"></select>
+                </div>
+                <div class="field">
+                  <label for="baseMergeEnd">끝 교시</label>
+                  <select id="baseMergeEnd"></select>
+                </div>
+                <div class="field">
+                  <label for="baseMergeTitle">병합명</label>
+                  <input id="baseMergeTitle" type="text" placeholder="예: 창체 활동" />
+                </div>
+                <div class="field">
+                  <label for="baseMergeMemo">메모</label>
+                  <input id="baseMergeMemo" type="text" placeholder="예: 학년 공통" />
+                </div>
+              </div>
+              <div class="field">
+                <label>적용 학급</label>
+                <div id="baseMergeClassChecks" class="check-grid"></div>
+              </div>
+              <button id="saveBaseMergeButton" class="primary-button" type="button">기본 병합 저장</button>
+              <div id="baseMergeList" class="list"></div>
+            </div>
+          </section>
+
+          <section id="specialPanel" class="admin-panel is-hidden">
+            <div>
+              <h3>특별시간표 생성</h3>
+              <p class="muted">날짜 하나에 전체 학급 시간표를 한 번에 저장합니다.</p>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="specialDate">날짜</label>
+                <input id="specialDate" type="date" />
+                <p id="specialDateHint" class="message"></p>
+              </div>
+            </div>
+            <div id="specialEditor" class="special-editor"></div>
+            <div class="button-row">
+              <button id="saveSpecialButton" class="primary-button" type="button">특별시간표 저장</button>
+              <button id="deleteSpecialButton" class="danger-button" type="button">해당 날짜 특별시간표 삭제</button>
+            </div>
+            <div id="specialList" class="list"></div>
+          </section>
+
+          <section id="changePanel" class="admin-panel is-hidden">
+            <div class="form-grid">
+              <div class="field">
+                <label for="changeDate">날짜</label>
+                <input id="changeDate" type="date" />
+                <p id="changeWeekdayHint" class="message"></p>
+              </div>
+              <div class="field">
+                <label for="changeClass">학급</label>
+                <select id="changeClass"></select>
+              </div>
+              <div class="field">
+                <label for="changePeriod">교시</label>
+                <select id="changePeriod"></select>
+              </div>
+              <div class="field">
+                <label for="changeSubject">변경 교과</label>
+                <input id="changeSubject" type="text" placeholder="예: 과학" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="changeMemo">사유</label>
+              <input id="changeMemo" type="text" placeholder="예: 담당 교사 출장" />
+            </div>
+            <div class="button-row">
+              <button id="saveChangeButton" class="primary-button" type="button">변경 저장</button>
+              <button id="deleteChangeButton" class="danger-button" type="button">해당 변경 삭제</button>
+            </div>
+            <div id="changeWeekdayFilter" class="filter-tabs" role="tablist" aria-label="교과 변경 요일 필터"></div>
+            <div id="changeList" class="list"></div>
+          </section>
+
+          <section id="eventPanel" class="admin-panel is-hidden">
+            <div class="form-grid">
+              <div class="field">
+                <label for="eventDate">날짜</label>
+                <input id="eventDate" type="date" />
+              </div>
+              <div class="field">
+                <label for="eventStart">시작 교시</label>
+                <select id="eventStart"></select>
+              </div>
+              <div class="field">
+                <label for="eventEnd">끝 교시</label>
+                <select id="eventEnd"></select>
+              </div>
+              <div class="field">
+                <label for="eventTitle">행사명</label>
+                <input id="eventTitle" type="text" placeholder="예: 진로 특강" />
+              </div>
+            </div>
+            <div class="field">
+              <label>적용 학급</label>
+              <div id="eventClassChecks" class="check-grid"></div>
+            </div>
+            <div class="field">
+              <label for="eventMemo">메모</label>
+              <input id="eventMemo" type="text" placeholder="예: 전 학년 강당 이동" />
+            </div>
+            <button id="saveEventButton" class="primary-button" type="button">행사 저장</button>
+            <div id="eventList" class="list"></div>
+          </section>
+
+          <section id="noticePanel" class="admin-panel is-hidden">
+            <div class="form-grid two">
+              <div class="field">
+                <label for="noticeTitle">제목</label>
+                <input id="noticeTitle" type="text" placeholder="예: 급식실 이용 안내" />
+              </div>
+              <div class="field">
+                <label for="noticeBody">세부 내용</label>
+                <textarea id="noticeBody" rows="5" placeholder="슬라이드쇼에 표시할 세부 내용을 입력하세요."></textarea>
+              </div>
+            </div>
+            <div class="form-grid two">
+              <div class="field">
+                <label for="noticeFontSize">세부 내용 글자 크기</label>
+                <input id="noticeFontSize" type="range" min="24" max="84" step="2" />
+              </div>
+              <div id="noticePreview" class="notice-preview"></div>
+            </div>
+            <div class="button-row">
+              <button id="addNoticeButton" class="ghost-button" type="button">페이지 추가</button>
+              <button id="saveNoticeButton" class="primary-button" type="button">안내사항 저장</button>
+              <span id="noticeFontSizeLabel" class="message"></span>
+            </div>
+            <div id="noticeList" class="list"></div>
+          </section>
+
+          <section id="slideshowSettingsPanel" class="admin-panel is-hidden">
+            <div class="form-grid">
+              <div class="field">
+                <label for="slideInterval">전환 간격</label>
+                <input id="slideInterval" type="number" min="3" max="120" step="1" />
+              </div>
+              <div class="field">
+                <label for="slideRefreshInterval">데이터 새로고침 간격</label>
+                <input id="slideRefreshInterval" type="number" min="10" max="3600" step="5" />
+              </div>
+            </div>
+            <button id="saveSlideSettingsButton" class="primary-button" type="button">설정 저장</button>
+          </section>
+
+          <p id="adminMessage" class="message"></p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">© 2026 23기 하헌휘. All rights reserved.</footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./src/supabase-config.js"></script>
+    <script src="./src/storage.js"></script>
+    <script src="./src/app.js"></script>
+  </body>
+</html>

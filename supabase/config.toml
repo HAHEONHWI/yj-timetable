@@ -1,0 +1,5 @@
+[functions.admin-login]
+verify_jwt = false
+
+[functions.save-state]
+verify_jwt = false
