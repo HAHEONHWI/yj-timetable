@@ -19,6 +19,7 @@
   let slideshowIndex = 0;
   let slideshowTimer = null;
   let slideshowRefreshTimer = null;
+  let slideshowToastTimer = null;
   let remoteUnsubscribe = null;
   let pendingRetryMessage = "";
 
@@ -460,30 +461,18 @@
 
   function slideshowSlides() {
     const day = currentSchoolDay();
-    const slides = day
-      ? [
-          {
-            type: "schedule",
-            title: `${formatDate(day.iso)} ${day.weekday.label}요일 시간표`,
-            meta: `${state.slideshow.intervalSeconds}초 전환 · ${state.slideshow.refreshSeconds || 60}초 새로고침`,
-            html: renderScheduleGrid(day.iso, classes, "slideshow-grid"),
-          },
-        ]
-      : [
-          {
-            type: "empty-schedule",
-            title: "시간표",
-            meta: "오늘 등록된 시간표 없음",
-            html: `<article class="empty-slide">
-              <h3>오늘 등록된 시간표가 없습니다.</h3>
-              <p>평일 기본 시간표 또는 주말 특별시간표가 등록되면 이 화면에 표시됩니다.</p>
-            </article>`,
-          },
-        ];
+    const slides = [];
 
-    const notices = state.notices.length
-      ? state.notices
-      : [{ id: "empty", title: "안내사항 없음", body: "관리자 페이지에서 안내사항을 등록하세요.", detailFontSize: 42 }];
+    if (day) {
+      slides.push({
+        type: "schedule",
+        title: `${formatDate(day.iso)} ${day.weekday.label}요일 시간표`,
+        meta: `${state.slideshow.intervalSeconds}초 전환 · ${state.slideshow.refreshSeconds || 60}초 새로고침`,
+        html: renderScheduleGrid(day.iso, classes, "slideshow-grid"),
+      });
+    }
+
+    const notices = state.notices.filter((notice) => notice.title || notice.body);
 
     notices.forEach((notice, index) => {
       slides.push({
@@ -497,16 +486,63 @@
       });
     });
 
-    return slides;
+    if (slides.length) return slides;
+
+    return [
+      {
+        type: "empty",
+        title: "슬라이드쇼",
+        meta: "표시할 내용 없음",
+        html: `<article class="empty-slide">
+          <h3>표시할 내용이 없습니다.</h3>
+          <p>오늘 시간표 또는 안내사항이 등록되면 슬라이드쇼에 표시됩니다.</p>
+        </article>`,
+      },
+    ];
   }
 
   function renderSlideshow() {
     const slides = slideshowSlides();
-    slideshowIndex = slideshowIndex % slides.length;
+    slideshowIndex = clamp(slideshowIndex, 0, slides.length - 1);
     const slide = slides[slideshowIndex];
     els.slideshowTitle.textContent = slide.title;
     els.slideshowMeta.textContent = slide.meta;
     els.slideshowStage.innerHTML = slide.html;
+  }
+
+  function showSlideshowToast(message) {
+    let toast = document.querySelector("#slideshowToast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "slideshowToast";
+      toast.className = "slideshow-toast";
+      els.slideshowPage.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add("is-visible");
+    window.clearTimeout(slideshowToastTimer);
+    slideshowToastTimer = window.setTimeout(() => {
+      toast.classList.remove("is-visible");
+    }, 1600);
+  }
+
+  function moveSlideshow(delta, manual = false) {
+    const slides = slideshowSlides();
+    if (slides.length <= 1) {
+      if (manual) showSlideshowToast("이 페이지가 전부입니다.");
+      slideshowIndex = 0;
+      renderSlideshow();
+      return;
+    }
+
+    const nextIndex = slideshowIndex + delta;
+    if (manual && (nextIndex < 0 || nextIndex >= slides.length)) {
+      showSlideshowToast(delta > 0 ? "마지막 페이지입니다." : "첫 페이지입니다.");
+      return;
+    }
+
+    slideshowIndex = manual ? nextIndex : (nextIndex + slides.length) % slides.length;
+    renderSlideshow();
   }
 
   function stopSlideshow() {
@@ -518,16 +554,18 @@
       window.clearInterval(slideshowRefreshTimer);
       slideshowRefreshTimer = null;
     }
+    window.clearTimeout(slideshowToastTimer);
   }
 
   function startSlideshow() {
     stopSlideshow();
     renderSlideshow();
     const seconds = Math.max(3, Number(state.slideshow.intervalSeconds) || 8);
-    slideshowTimer = window.setInterval(() => {
-      slideshowIndex += 1;
-      renderSlideshow();
-    }, seconds * 1000);
+    if (slideshowSlides().length > 1) {
+      slideshowTimer = window.setInterval(() => {
+        moveSlideshow(1);
+      }, seconds * 1000);
+    }
 
     const refreshSeconds = Math.max(10, Number(state.slideshow.refreshSeconds) || 60);
     slideshowRefreshTimer = window.setInterval(() => {
@@ -952,6 +990,18 @@
     document.addEventListener("click", (event) => {
       if (!event.target.closest("[data-retry-save]")) return;
       retrySaveState();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (currentRoute !== "slideshow") return;
+      if (event.target && ["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(event.target.tagName)) return;
+      if (event.key === "ArrowRight" || event.key === " ") {
+        event.preventDefault();
+        moveSlideshow(1, true);
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveSlideshow(-1, true);
+      }
     });
 
     els.dayTabs.addEventListener("click", (event) => {
