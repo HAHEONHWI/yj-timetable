@@ -535,13 +535,7 @@
       return;
     }
 
-    const nextIndex = slideshowIndex + delta;
-    if (manual && (nextIndex < 0 || nextIndex >= slides.length)) {
-      showSlideshowToast(delta > 0 ? "마지막 페이지입니다." : "첫 페이지입니다.");
-      return;
-    }
-
-    slideshowIndex = manual ? nextIndex : (nextIndex + slides.length) % slides.length;
+    slideshowIndex = (slideshowIndex + delta + slides.length) % slides.length;
     renderSlideshow();
   }
 
