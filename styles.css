@@ -149,6 +149,11 @@ body.slideshow-mode main {
 }
 
 .global-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 20;
@@ -167,6 +172,16 @@ body.slideshow-mode main {
   border-bottom: 1px solid #1d4ed8;
   background: #0f172a;
   color: #bfdbfe;
+}
+
+.global-status button {
+  min-height: 34px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  padding: 0 12px;
+  font-weight: 900;
 }
 
 .is-hidden {
@@ -520,7 +535,8 @@ button:focus-visible {
   overflow: hidden;
 }
 
-.notice-slide {
+.notice-slide,
+.empty-slide {
   display: grid;
   grid-template-rows: auto 1fr;
   align-content: stretch;
@@ -532,7 +548,8 @@ button:focus-visible {
   background: #101826;
 }
 
-.notice-slide h3 {
+.notice-slide h3,
+.empty-slide h3 {
   margin: 0;
   color: #f8fafc;
   font-size: clamp(42px, 7vw, 92px);
@@ -540,12 +557,29 @@ button:focus-visible {
   text-align: center;
 }
 
-.notice-slide p {
+.notice-slide p,
+.empty-slide p {
   margin: 0;
   color: #dbeafe;
   font-size: var(--notice-body-size, 42px);
   line-height: 1.45;
   overflow: hidden;
+}
+
+.empty-slide {
+  place-items: center;
+  text-align: center;
+}
+
+.empty-slide h3 {
+  align-self: end;
+  font-size: clamp(36px, 5.8vw, 76px);
+}
+
+.empty-slide p {
+  align-self: start;
+  max-width: 820px;
+  font-size: clamp(22px, 3vw, 42px);
 }
 
 .login-panel {

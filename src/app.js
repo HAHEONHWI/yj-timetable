@@ -20,6 +20,7 @@
   let slideshowTimer = null;
   let slideshowRefreshTimer = null;
   let remoteUnsubscribe = null;
+  let pendingRetryMessage = "";
 
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -468,7 +469,17 @@
             html: renderScheduleGrid(day.iso, classes, "slideshow-grid"),
           },
         ]
-      : [];
+      : [
+          {
+            type: "empty-schedule",
+            title: "시간표",
+            meta: "오늘 등록된 시간표 없음",
+            html: `<article class="empty-slide">
+              <h3>오늘 등록된 시간표가 없습니다.</h3>
+              <p>평일 기본 시간표 또는 주말 특별시간표가 등록되면 이 화면에 표시됩니다.</p>
+            </article>`,
+          },
+        ];
 
     const notices = state.notices.length
       ? state.notices
@@ -835,7 +846,11 @@
     });
   }
 
-  function showGlobalStatus(message, type = "info") {
+  function confirmAction(message) {
+    return window.confirm(message);
+  }
+
+  function showGlobalStatus(message, type = "info", options = {}) {
     let statusBox = document.querySelector("#globalStatus");
     if (!statusBox) {
       statusBox = document.createElement("div");
@@ -844,10 +859,18 @@
     }
     statusBox.className = `global-status is-${type}`;
     statusBox.textContent = message;
+
+    if (options.retry) {
+      const retryButton = document.createElement("button");
+      retryButton.type = "button";
+      retryButton.dataset.retrySave = "true";
+      retryButton.textContent = "다시 저장";
+      statusBox.appendChild(retryButton);
+    }
   }
 
-  function showGlobalError(message) {
-    showGlobalStatus(message, "error");
+  function showGlobalError(message, options = {}) {
+    showGlobalStatus(message, "error", options);
   }
 
   function clearGlobalStatus() {
@@ -858,6 +881,7 @@
   }
 
   async function saveState(message) {
+    pendingRetryMessage = message;
     const resultPromise = write(state);
     renderView();
     renderAdmin();
@@ -868,12 +892,21 @@
     const result = await resultPromise;
     if (result && result.ok === false) {
       const detail = result.error || "알 수 없는 오류";
-      showGlobalError(`Supabase 저장 실패: 화면에는 반영됐지만 다른 기기에는 아직 공유되지 않았습니다. ${detail}`);
+      showGlobalError(`Supabase 저장 실패: 화면에는 반영됐지만 다른 기기에는 아직 공유되지 않았습니다. ${detail}`, {
+        retry: true,
+      });
       showMessage(els.adminMessage, `브라우저에는 반영됨 · Supabase 저장 실패: ${detail}`);
       return;
     }
+    pendingRetryMessage = "";
     clearGlobalStatus();
     showMessage(els.adminMessage, message);
+  }
+
+  function retrySaveState() {
+    if (!pendingRetryMessage) return;
+    showMessage(els.adminMessage, "Supabase에 다시 저장하는 중입니다.");
+    saveState(pendingRetryMessage);
   }
 
   function initControls() {
@@ -916,6 +949,10 @@
     });
 
     els.homeButton.addEventListener("click", goHome);
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-retry-save]")) return;
+      retrySaveState();
+    });
 
     els.dayTabs.addEventListener("click", (event) => {
       const button = event.target.closest("[data-date]");
@@ -1045,6 +1082,7 @@
         showMessage(els.adminMessage, "삭제할 특별시간표가 없습니다.");
         return;
       }
+      if (!confirmAction(`${date} 특별시간표를 삭제할까요?`)) return;
       delete state.specialSchedules[date];
       renderSpecialEditor();
       saveState("특별시간표를 삭제했습니다.");
@@ -1061,6 +1099,7 @@
     els.baseMergeList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-delete-base-merge]");
       if (!button) return;
+      if (!confirmAction("기본 병합을 삭제할까요?")) return;
       state.baseMerges = state.baseMerges.filter((merge) => merge.id !== button.dataset.deleteBaseMerge);
       saveState("기본 병합을 삭제했습니다.");
     });
@@ -1080,6 +1119,11 @@
 
     els.deleteChangeButton.addEventListener("click", () => {
       const key = changeKey(els.changeDate.value, els.changeClass.value, els.changePeriod.value);
+      if (!state.changes[key]) {
+        showMessage(els.adminMessage, "삭제할 단일 변경이 없습니다.");
+        return;
+      }
+      if (!confirmAction("해당 단일교과 변경을 삭제할까요?")) return;
       delete state.changes[key];
       saveState("해당 단일 변경을 삭제했습니다.");
     });
@@ -1087,6 +1131,7 @@
     els.changeList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-revert-change]");
       if (!button) return;
+      if (!confirmAction("해당 교과 변경을 되돌릴까요?")) return;
       delete state.changes[button.dataset.revertChange];
       saveState("해당 교과 변경을 되돌렸습니다.");
     });
@@ -1117,6 +1162,7 @@
     els.eventList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-delete-event]");
       if (!button) return;
+      if (!confirmAction("행사를 삭제할까요?")) return;
       state.events = state.events.filter((item) => item.id !== button.dataset.deleteEvent);
       saveState("행사를 삭제했습니다.");
     });
@@ -1157,6 +1203,7 @@
     els.noticeList.addEventListener("click", (event) => {
       const deleteButton = event.target.closest("[data-delete-notice]");
       if (deleteButton) {
+        if (!confirmAction("안내사항을 삭제할까요?")) return;
         state.notices = state.notices.filter((notice) => notice.id !== deleteButton.dataset.deleteNotice);
         if (selectedNoticeId === deleteButton.dataset.deleteNotice) {
           selectedNoticeId = state.notices[0] ? state.notices[0].id : "";
