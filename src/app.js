@@ -28,6 +28,7 @@
     viewPage: $("#viewPage"),
     slideshowPage: $("#slideshowPage"),
     adminPage: $("#adminPage"),
+    homeButton: $("#homeButton"),
     todayLabel: $("#todayLabel"),
     rangeLabel: $("#rangeLabel"),
     viewClass: $("#viewClass"),
@@ -234,6 +235,14 @@
     } else {
       stopSlideshow();
     }
+  }
+
+  function goHome() {
+    const days = schoolDaysForTwoWeeks();
+    const today = toISO(new Date());
+    selectedDate = days.some((day) => day.iso === today) ? today : days[0].iso;
+    routeTo("view");
+    renderView();
   }
 
   function getChange(date, className, period) {
@@ -808,9 +817,14 @@
   async function refreshFromRemote(options = {}) {
     try {
       const remoteState = await readRemote();
+      clearGlobalStatus();
       applyRemoteState(remoteState, options);
     } catch (error) {
-      showGlobalError(error.message || "Supabase DB 연결에 실패했습니다.");
+      showGlobalError(
+        `Supabase 연결 실패: 브라우저에 저장된 시간표를 계속 표시합니다. 관리자 저장은 원격 연결이 복구된 뒤 다시 시도하세요. ${
+          error.message || "Supabase DB 연결에 실패했습니다."
+        }`
+      );
     }
   }
 
@@ -821,15 +835,26 @@
     });
   }
 
-  function showGlobalError(message) {
-    let errorBox = document.querySelector("#globalError");
-    if (!errorBox) {
-      errorBox = document.createElement("div");
-      errorBox.id = "globalError";
-      errorBox.className = "global-error";
-      document.body.prepend(errorBox);
+  function showGlobalStatus(message, type = "info") {
+    let statusBox = document.querySelector("#globalStatus");
+    if (!statusBox) {
+      statusBox = document.createElement("div");
+      statusBox.id = "globalStatus";
+      document.body.prepend(statusBox);
     }
-    errorBox.textContent = message;
+    statusBox.className = `global-status is-${type}`;
+    statusBox.textContent = message;
+  }
+
+  function showGlobalError(message) {
+    showGlobalStatus(message, "error");
+  }
+
+  function clearGlobalStatus() {
+    const statusBox = document.querySelector("#globalStatus");
+    if (statusBox) {
+      statusBox.remove();
+    }
   }
 
   async function saveState(message) {
@@ -842,9 +867,12 @@
 
     const result = await resultPromise;
     if (result && result.ok === false) {
-      showMessage(els.adminMessage, `Supabase 저장 실패: ${result.error || "알 수 없는 오류"}`);
+      const detail = result.error || "알 수 없는 오류";
+      showGlobalError(`Supabase 저장 실패: 화면에는 반영됐지만 다른 기기에는 아직 공유되지 않았습니다. ${detail}`);
+      showMessage(els.adminMessage, `브라우저에는 반영됨 · Supabase 저장 실패: ${detail}`);
       return;
     }
+    clearGlobalStatus();
     showMessage(els.adminMessage, message);
   }
 
@@ -886,6 +914,8 @@
         refreshAdminAuth();
       });
     });
+
+    els.homeButton.addEventListener("click", goHome);
 
     els.dayTabs.addEventListener("click", (event) => {
       const button = event.target.closest("[data-date]");
