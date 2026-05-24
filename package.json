@@ -1,0 +1,35 @@
+{
+  "name": "yj-timetable-widget",
+  "version": "1.0.0",
+  "description": "Yongjeong timetable desktop widget",
+  "author": "Yongjeong Middle School",
+  "main": "widget/main.js",
+  "private": true,
+  "scripts": {
+    "start:widget": "electron .",
+    "dist:win": "electron-builder --win portable --x64"
+  },
+  "build": {
+    "appId": "kr.yjms.timetable.widget",
+    "productName": "YJ Timetable Widget",
+    "files": [
+      "assets/**/*",
+      "src/storage.js",
+      "src/supabase-config.js",
+      "widget/**/*"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "assets/logo.png"
+    },
+    "portable": {
+      "artifactName": "YJ-Timetable-Widget.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  }
+}

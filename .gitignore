@@ -1,6 +1,10 @@
 # Local Netlify folder
 .netlify
 
+# Node/Electron local output
+node_modules/
+dist/
+
 # Local Supabase CLI state
 supabase/.branches/
 supabase/.temp/

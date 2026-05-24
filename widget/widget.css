@@ -1,0 +1,285 @@
+:root {
+  color-scheme: dark;
+  --bg: #07111d;
+  --panel: #101826;
+  --panel-soft: #152235;
+  --line: #2f3b4c;
+  --ink: #eef4ff;
+  --muted: #9aa8bd;
+  --blue: #3b82f6;
+  --today: #172554;
+  --change: #422006;
+  --change-line: #f59e0b;
+  --event: #064e3b;
+  --event-line: #10b981;
+  font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.widget {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  border: 1px solid #1e293b;
+  background: linear-gradient(180deg, #081320 0%, #0d1117 100%);
+}
+
+.widget-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(7, 17, 29, 0.96);
+}
+
+.drag-region {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  -webkit-app-region: drag;
+}
+
+.drag-region img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+
+.drag-region p,
+.drag-region h1 {
+  margin: 0;
+}
+
+.drag-region p {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.drag-region h1 {
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  -webkit-app-region: no-drag;
+}
+
+.controls label,
+.opacity-control span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+select,
+button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0f1623;
+  color: var(--ink);
+  padding: 0 10px;
+  font-weight: 800;
+}
+
+.toggle,
+.opacity-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0f1623;
+  padding: 0 10px;
+}
+
+.toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--blue);
+}
+
+.opacity-control input {
+  width: 96px;
+  accent-color: var(--blue);
+}
+
+button {
+  cursor: pointer;
+}
+
+.icon-button {
+  width: 36px;
+  padding: 0;
+  color: #fecaca;
+  border-color: #7f1d1d;
+  background: #2a1014;
+  font-size: 22px;
+  line-height: 1;
+}
+
+main {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px;
+}
+
+.status {
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.status.is-error {
+  color: #fed7aa;
+}
+
+.week-shell {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.today-grid {
+  display: grid;
+  height: 100%;
+  min-width: 860px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--line);
+  gap: 1px;
+  grid-template-columns: 70px repeat(6, minmax(0, 1fr));
+  grid-template-rows: 52px repeat(9, minmax(42px, 1fr));
+}
+
+.today-grid > div {
+  min-width: 0;
+}
+
+.today-grid > div > .lesson {
+  height: 100%;
+}
+
+.corner,
+.class-head,
+.period-head,
+.lesson {
+  min-width: 0;
+  background: var(--panel);
+}
+
+.corner,
+.period-head,
+.class-head {
+  display: grid;
+  place-items: center;
+  color: #dbeafe;
+  font-weight: 900;
+}
+
+.class-head {
+  align-content: center;
+  gap: 2px;
+  padding: 6px;
+  text-align: center;
+  background: var(--today);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.45);
+}
+
+.class-head small {
+  color: #bfdbfe;
+  font-size: 12px;
+}
+
+.period-head {
+  color: #a5b4fc;
+}
+
+.lesson {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding: 7px;
+  line-height: 1.18;
+  text-align: center;
+}
+
+.lesson strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(14px, 1.9vw, 19px);
+}
+
+.lesson small {
+  color: #cbd5e1;
+  font-size: 11px;
+  opacity: 0.88;
+}
+
+.lesson.is-change {
+  border: 2px solid var(--change-line);
+  background: var(--change);
+  color: #fde68a;
+}
+
+.lesson.is-event {
+  border: 2px solid var(--event-line);
+  background: var(--event);
+  color: #ecfdf5;
+}
+
+.lesson.is-merge {
+  background: #263449;
+  color: #e0f2fe;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  height: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  text-align: center;
+  padding: 28px;
+}
+
+.empty-state strong {
+  font-size: 28px;
+}
+
+.empty-state span {
+  color: var(--muted);
+  font-weight: 800;
+}
