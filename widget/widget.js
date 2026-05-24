@@ -14,6 +14,7 @@
     opacity: 0.96,
     alwaysOnTop: true,
     openAtLogin: false,
+    theme: "dark",
   };
 
   const els = {
@@ -25,6 +26,7 @@
     schedule: document.querySelector("#schedule"),
     startupToggle: document.querySelector("#startupToggle"),
     status: document.querySelector("#status"),
+    themeToggle: document.querySelector("#themeToggle"),
   };
 
   function pad(value) {
@@ -203,12 +205,15 @@
         opacity: Number(localStorage.getItem("widget-opacity")) || 0.96,
         alwaysOnTop: localStorage.getItem("widget-pin") !== "false",
         openAtLogin: localStorage.getItem("widget-startup") === "true",
+        theme: localStorage.getItem("widget-theme") === "light" ? "light" : "dark",
       };
       document.body.style.opacity = settings.opacity;
     }
+    applyTheme(settings.theme);
     els.opacityRange.value = Math.round(settings.opacity * 100);
     els.pinToggle.checked = Boolean(settings.alwaysOnTop);
     els.startupToggle.checked = Boolean(settings.openAtLogin);
+    els.themeToggle.checked = settings.theme === "light";
   }
 
   async function saveSettings(patch) {
@@ -219,11 +224,19 @@
       localStorage.setItem("widget-opacity", String(settings.opacity));
       localStorage.setItem("widget-pin", String(settings.alwaysOnTop));
       localStorage.setItem("widget-startup", String(settings.openAtLogin));
+      localStorage.setItem("widget-theme", settings.theme);
       document.body.style.opacity = settings.opacity;
     }
+    applyTheme(settings.theme);
     els.opacityRange.value = Math.round(settings.opacity * 100);
     els.pinToggle.checked = Boolean(settings.alwaysOnTop);
     els.startupToggle.checked = Boolean(settings.openAtLogin);
+    els.themeToggle.checked = settings.theme === "light";
+  }
+
+  function applyTheme(theme) {
+    document.body.classList.toggle("theme-light", theme === "light");
+    document.body.classList.toggle("theme-dark", theme !== "light");
   }
 
   async function init() {
@@ -236,6 +249,9 @@
     });
     els.startupToggle.addEventListener("change", () => {
       saveSettings({ openAtLogin: els.startupToggle.checked });
+    });
+    els.themeToggle.addEventListener("change", () => {
+      saveSettings({ theme: els.themeToggle.checked ? "light" : "dark" });
     });
     els.refreshButton.addEventListener("click", refresh);
     els.closeButton.addEventListener("click", () => {

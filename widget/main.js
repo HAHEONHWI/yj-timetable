@@ -13,6 +13,7 @@ function defaultSettings() {
     opacity: 0.96,
     alwaysOnTop: true,
     openAtLogin: false,
+    theme: "dark",
   };
 }
 
@@ -86,6 +87,7 @@ app.whenReady().then(() => {
     settings.opacity = Math.min(1, Math.max(0.55, Number(settings.opacity) || 0.96));
     settings.alwaysOnTop = Boolean(settings.alwaysOnTop);
     settings.openAtLogin = Boolean(settings.openAtLogin);
+    settings.theme = settings.theme === "light" ? "light" : "dark";
     writeSettings(settings);
     applyLoginSettings(settings);
     if (mainWindow) {

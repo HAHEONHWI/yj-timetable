@@ -1,5 +1,4 @@
 :root {
-  color-scheme: dark;
   --bg: #07111d;
   --panel: #101826;
   --panel-soft: #152235;
@@ -13,6 +12,58 @@
   --event: #064e3b;
   --event-line: #10b981;
   font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body.theme-dark {
+  color-scheme: dark;
+  --bg: #07111d;
+  --panel: #101826;
+  --panel-soft: #152235;
+  --line: #2f3b4c;
+  --ink: #eef4ff;
+  --muted: #9aa8bd;
+  --blue: #3b82f6;
+  --today: #172554;
+  --control-bg: #0f1623;
+  --header-bg: rgba(7, 17, 29, 0.96);
+  --widget-bg: linear-gradient(180deg, #081320 0%, #0d1117 100%);
+  --change: #422006;
+  --change-line: #f59e0b;
+  --change-text: #fde68a;
+  --event: #064e3b;
+  --event-line: #10b981;
+  --event-text: #ecfdf5;
+  --merge: #263449;
+  --merge-text: #e0f2fe;
+  --close-bg: #2a1014;
+  --close-line: #7f1d1d;
+  --close-text: #fecaca;
+}
+
+body.theme-light {
+  color-scheme: light;
+  --bg: #eef4ff;
+  --panel: #ffffff;
+  --panel-soft: #eaf1fb;
+  --line: #c9d6e8;
+  --ink: #172033;
+  --muted: #607089;
+  --blue: #2563eb;
+  --today: #dbeafe;
+  --control-bg: #f8fbff;
+  --header-bg: rgba(248, 251, 255, 0.96);
+  --widget-bg: linear-gradient(180deg, #f8fbff 0%, #eaf1fb 100%);
+  --change: #fff7d6;
+  --change-line: #d97706;
+  --change-text: #6b3b00;
+  --event: #dcfce7;
+  --event-line: #059669;
+  --event-text: #064e3b;
+  --merge: #e2e8f0;
+  --merge-text: #1e3a5f;
+  --close-bg: #fee2e2;
+  --close-line: #fca5a5;
+  --close-text: #991b1b;
 }
 
 * {
@@ -37,8 +88,8 @@ select {
   display: grid;
   grid-template-rows: auto 1fr;
   height: 100vh;
-  border: 1px solid #1e293b;
-  background: linear-gradient(180deg, #081320 0%, #0d1117 100%);
+  border: 1px solid var(--line);
+  background: var(--widget-bg);
 }
 
 .widget-head {
@@ -48,7 +99,7 @@ select {
   gap: 16px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
-  background: rgba(7, 17, 29, 0.96);
+  background: var(--header-bg);
 }
 
 .drag-region {
@@ -102,7 +153,7 @@ button {
   min-height: 36px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #0f1623;
+  background: var(--control-bg);
   color: var(--ink);
   padding: 0 10px;
   font-weight: 800;
@@ -116,7 +167,7 @@ button {
   min-height: 36px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #0f1623;
+  background: var(--control-bg);
   padding: 0 10px;
 }
 
@@ -138,9 +189,9 @@ button {
 .icon-button {
   width: 36px;
   padding: 0;
-  color: #fecaca;
-  border-color: #7f1d1d;
-  background: #2a1014;
+  color: var(--close-text);
+  border-color: var(--close-line);
+  background: var(--close-bg);
   font-size: 22px;
   line-height: 1;
 }
@@ -217,7 +268,7 @@ main {
 }
 
 .class-head small {
-  color: #bfdbfe;
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -248,18 +299,18 @@ main {
 .lesson.is-change {
   border: 2px solid var(--change-line);
   background: var(--change);
-  color: #fde68a;
+  color: var(--change-text);
 }
 
 .lesson.is-event {
   border: 2px solid var(--event-line);
   background: var(--event);
-  color: #ecfdf5;
+  color: var(--event-text);
 }
 
 .lesson.is-merge {
-  background: #263449;
-  color: #e0f2fe;
+  background: var(--merge);
+  color: var(--merge-text);
 }
 
 .empty-state {

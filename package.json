@@ -2,7 +2,7 @@
   "name": "yj-timetable-widget",
   "version": "1.0.0",
   "description": "Yongjeong timetable desktop widget",
-  "author": "Yongjeong Middle School",
+  "author": "하헌휘",
   "main": "widget/main.js",
   "private": true,
   "scripts": {
