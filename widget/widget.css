@@ -11,6 +11,11 @@
   --change-line: #f59e0b;
   --event: #064e3b;
   --event-line: #10b981;
+  --label: #cbd5e1;
+  --head-text: #dbeafe;
+  --period-text: #a5b4fc;
+  --meta-text: #cbd5e1;
+  --error-text: #fed7aa;
   font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -38,6 +43,11 @@ body.theme-dark {
   --close-bg: #2a1014;
   --close-line: #7f1d1d;
   --close-text: #fecaca;
+  --label: #cbd5e1;
+  --head-text: #dbeafe;
+  --period-text: #a5b4fc;
+  --meta-text: #cbd5e1;
+  --error-text: #fed7aa;
 }
 
 body.theme-light {
@@ -45,9 +55,9 @@ body.theme-light {
   --bg: #eef4ff;
   --panel: #ffffff;
   --panel-soft: #eaf1fb;
-  --line: #c9d6e8;
-  --ink: #172033;
-  --muted: #607089;
+  --line: #b8c7dc;
+  --ink: #0f172a;
+  --muted: #263449;
   --blue: #2563eb;
   --today: #dbeafe;
   --control-bg: #f8fbff;
@@ -64,6 +74,11 @@ body.theme-light {
   --close-bg: #fee2e2;
   --close-line: #fca5a5;
   --close-text: #991b1b;
+  --label: #111827;
+  --head-text: #111827;
+  --period-text: #1e3a8a;
+  --meta-text: #1f2937;
+  --error-text: #9a3412;
 }
 
 * {
@@ -143,7 +158,7 @@ select {
 
 .controls label,
 .opacity-control span {
-  color: #cbd5e1;
+  color: var(--label);
   font-size: 13px;
   font-weight: 900;
 }
@@ -212,7 +227,7 @@ main {
 }
 
 .status.is-error {
-  color: #fed7aa;
+  color: var(--error-text);
 }
 
 .week-shell {
@@ -254,7 +269,7 @@ main {
 .class-head {
   display: grid;
   place-items: center;
-  color: #dbeafe;
+  color: var(--head-text);
   font-weight: 900;
 }
 
@@ -273,7 +288,7 @@ main {
 }
 
 .period-head {
-  color: #a5b4fc;
+  color: var(--period-text);
 }
 
 .lesson {
@@ -291,9 +306,9 @@ main {
 }
 
 .lesson small {
-  color: #cbd5e1;
+  color: var(--meta-text);
   font-size: 11px;
-  opacity: 0.88;
+  opacity: 1;
 }
 
 .lesson.is-change {

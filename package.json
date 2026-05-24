@@ -7,7 +7,7 @@
   "private": true,
   "scripts": {
     "start:widget": "electron .",
-    "dist:win": "electron-builder --win portable --x64"
+    "dist:win": "electron-builder --win nsis --x64"
   },
   "build": {
     "appId": "kr.yjms.timetable.widget",
@@ -20,12 +20,18 @@
     ],
     "win": {
       "target": [
-        "portable"
+        "nsis"
       ],
       "icon": "assets/logo.png"
     },
-    "portable": {
-      "artifactName": "YJ-Timetable-Widget.exe"
+    "nsis": {
+      "artifactName": "YJ-Timetable-Widget-Setup.exe",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "YJ Timetable Widget"
     }
   },
   "devDependencies": {
