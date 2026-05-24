@@ -10,6 +10,8 @@
   } = window.TimetableStore;
 
   let state = read();
+  let refreshTimer = null;
+  let remoteUnsubscribe = null;
   let settings = {
     opacity: 0.96,
     alwaysOnTop: true,
@@ -180,21 +182,49 @@
   }
 
   async function refresh() {
-    els.status.textContent = "Supabase에서 최신 시간표를 확인하는 중입니다.";
+    els.status.textContent = "Supabase에서 최신 시간표를 자동 확인하는 중입니다.";
     els.status.classList.remove("is-error");
     try {
       state = await readRemote();
       render();
+      restartAutoRefresh();
       els.status.textContent = `최신 시간표 표시 중 · ${new Date().toLocaleTimeString("ko-KR", {
         hour: "2-digit",
         minute: "2-digit",
-      })}`;
+      })} · 자동 동기화`;
     } catch (error) {
       state = read();
       render();
-      els.status.textContent = `원격 연결 실패 · 로컬 저장 시간표 표시 중 (${error.message || "알 수 없는 오류"})`;
+      restartAutoRefresh();
+      els.status.textContent = `원격 연결 실패 · 다음 주기에 다시 확인합니다 (${error.message || "알 수 없는 오류"})`;
       els.status.classList.add("is-error");
     }
+  }
+
+  function refreshIntervalMs() {
+    const seconds = Math.max(10, Number(state.slideshow && state.slideshow.refreshSeconds) || 60);
+    return seconds * 1000;
+  }
+
+  function restartAutoRefresh() {
+    window.clearInterval(refreshTimer);
+    refreshTimer = window.setInterval(() => {
+      refresh();
+    }, refreshIntervalMs());
+  }
+
+  function startRemoteSync() {
+    if (remoteUnsubscribe || typeof subscribeRemoteChanges !== "function") return;
+    remoteUnsubscribe = subscribeRemoteChanges((remoteState) => {
+      state = remoteState;
+      render();
+      restartAutoRefresh();
+      els.status.textContent = `원격 변경사항 자동 반영 · ${new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+      els.status.classList.remove("is-error");
+    });
   }
 
   async function loadSettings() {
@@ -262,16 +292,10 @@
       }
     });
 
-    subscribeRemoteChanges((remoteState) => {
-      state = remoteState;
-      render();
-      els.status.textContent = "원격 변경사항이 반영되었습니다.";
-      els.status.classList.remove("is-error");
-    });
-
     render();
+    startRemoteSync();
+    restartAutoRefresh();
     refresh();
-    window.setInterval(refresh, 5 * 60 * 1000);
   }
 
   init();
