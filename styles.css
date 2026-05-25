@@ -411,8 +411,17 @@ body.board-mode.board-light label {
 
 body.board-mode select {
   min-height: 52px;
+  border-color: #60a5fa;
+  background: #1d4ed8;
+  color: #ffffff;
   font-size: 24px;
   font-weight: 900;
+}
+
+body.board-mode.board-light select {
+  border-color: #93c5fd;
+  background: #dbeafe;
+  color: #0f172a;
 }
 
 .board-theme-button {
