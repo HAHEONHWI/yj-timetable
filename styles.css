@@ -161,6 +161,13 @@ body.board-mode .footer {
   font-weight: 800;
 }
 
+body.board-mode.board-light {
+  --ink: #0f172a;
+  --muted: #334155;
+  background: #f4f7fb;
+  color: #0f172a;
+}
+
 body.board-mode .page-view {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -171,6 +178,10 @@ body.board-mode .page-view {
   border-radius: 0;
   padding: 14px 18px;
   background: #07111d;
+}
+
+body.board-mode.board-light .page-view {
+  background: #f4f7fb;
 }
 
 .page,
@@ -367,6 +378,10 @@ body.board-mode .view-tools {
   margin-bottom: 0;
 }
 
+body.board-mode .view-tools > div:first-child {
+  min-width: 0;
+}
+
 body.board-mode .view-tools h2 {
   font-size: 32px;
 }
@@ -384,10 +399,42 @@ body.board-mode label {
   font-size: 15px;
 }
 
+body.board-mode.board-light label {
+  color: #0f172a;
+}
+
 body.board-mode select {
   min-height: 52px;
   font-size: 24px;
   font-weight: 900;
+}
+
+.board-theme-button {
+  display: none;
+}
+
+body.board-mode .board-theme-button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid #334155;
+  border-radius: 50%;
+  background: #101826;
+  color: #f8fafc;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+body.board-mode .board-theme-button:hover {
+  border-color: #93c5fd;
+}
+
+body.board-mode.board-light .board-theme-button {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
 }
 
 body.board-mode .day-tabs {
@@ -412,6 +459,11 @@ body.board-mode .schedule-shell {
   grid-template-rows: 58px repeat(9, minmax(0, 1fr));
 }
 
+body.board-mode.board-light .board-week-grid {
+  border-color: #cbd5e1;
+  background: #cbd5e1;
+}
+
 .board-week-grid > div {
   min-width: 0;
 }
@@ -431,6 +483,14 @@ body.board-mode .schedule-shell {
   text-align: center;
 }
 
+body.board-mode.board-light .board-corner,
+body.board-mode.board-light .board-period-head,
+body.board-mode.board-light .board-day-head,
+body.board-mode.board-light .board-lesson {
+  background: #ffffff;
+  color: #0f172a;
+}
+
 .board-corner,
 .board-period-head,
 .board-day-head {
@@ -444,6 +504,13 @@ body.board-mode .schedule-shell {
   padding: 6px;
 }
 
+body.board-mode.board-light .board-corner,
+body.board-mode.board-light .board-period-head,
+body.board-mode.board-light .board-day-head {
+  background: #e8eef7;
+  color: #1e3a8a;
+}
+
 .board-day-head strong {
   font-size: 25px;
 }
@@ -453,8 +520,18 @@ body.board-mode .schedule-shell {
   font-size: 15px;
 }
 
+body.board-mode.board-light .board-day-head small {
+  color: #475569;
+}
+
 .board-day-head.is-today {
   background: #1d4ed8;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 3px #93c5fd;
+}
+
+body.board-mode.board-light .board-day-head.is-today {
+  background: #2563eb;
   color: #ffffff;
   box-shadow: inset 0 0 0 3px #93c5fd;
 }
@@ -468,6 +545,10 @@ body.board-mode .schedule-shell {
   font-size: 20px;
 }
 
+body.board-mode.board-light .board-period-head {
+  color: #1d4ed8;
+}
+
 .board-lesson {
   align-content: center;
   gap: 4px;
@@ -478,6 +559,12 @@ body.board-mode .schedule-shell {
 .board-lesson.is-today {
   background: #12284f;
   box-shadow: inset 0 0 0 2px rgba(147, 197, 253, 0.62);
+}
+
+body.board-mode.board-light .board-lesson.is-today {
+  background: #dbeafe;
+  color: #0f172a;
+  box-shadow: inset 0 0 0 2px #60a5fa;
 }
 
 .board-lesson strong {
@@ -498,15 +585,30 @@ body.board-mode .schedule-shell {
   color: #fde68a;
 }
 
+body.board-mode.board-light .board-lesson.is-change {
+  background: #fef3c7;
+  color: #78350f;
+}
+
 .board-lesson.is-event {
   border: 2px solid #10b981;
   background: #064e3b;
   color: #ecfdf5;
 }
 
+body.board-mode.board-light .board-lesson.is-event {
+  background: #d1fae5;
+  color: #064e3b;
+}
+
 .board-lesson.is-merge {
   background: #263449;
   color: #e0f2fe;
+}
+
+body.board-mode.board-light .board-lesson.is-merge {
+  background: #e0f2fe;
+  color: #0f172a;
 }
 
 .schedule-grid {

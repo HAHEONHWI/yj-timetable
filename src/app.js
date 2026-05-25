@@ -36,6 +36,7 @@
     todayLabel: $("#todayLabel"),
     rangeLabel: $("#rangeLabel"),
     viewClass: $("#viewClass"),
+    boardThemeButton: $("#boardThemeButton"),
     dayTabs: $("#dayTabs"),
     viewSchedule: $("#viewSchedule"),
     slideshowTitle: $("#slideshowTitle"),
@@ -538,6 +539,7 @@
       els.viewClass.value = savedClass;
     }
     const className = classes.includes(els.viewClass.value) ? els.viewClass.value : classes[0];
+    localStorage.setItem("board-class", className);
     const days = schoolDaysForCurrentWeek();
     const today = toISO(new Date());
     els.todayLabel.textContent = `오늘: ${formatDate(today)} ${weekdayLabelForDate(today)}요일 · ${className}`;
@@ -546,6 +548,22 @@
     )} ${days[days.length - 1].weekday.label} · 자동 동기화`;
     els.dayTabs.innerHTML = "";
     els.viewSchedule.innerHTML = renderBoardWeekGrid(className);
+  }
+
+  function boardTheme() {
+    return localStorage.getItem("board-theme") === "light" ? "light" : "dark";
+  }
+
+  function applyBoardTheme(theme = boardTheme()) {
+    if (!isBoardMode) return;
+    const light = theme === "light";
+    document.body.classList.toggle("board-light", light);
+    localStorage.setItem("board-theme", light ? "light" : "dark");
+    if (els.boardThemeButton) {
+      els.boardThemeButton.textContent = light ? "☀" : "☾";
+      els.boardThemeButton.setAttribute("aria-label", light ? "라이트 모드 사용 중, 다크 모드로 전환" : "다크 모드 사용 중, 라이트 모드로 전환");
+      els.boardThemeButton.title = light ? "라이트 모드" : "다크 모드";
+    }
   }
 
   function renderView() {
@@ -1124,6 +1142,11 @@
       }
       renderView();
     });
+    if (els.boardThemeButton) {
+      els.boardThemeButton.addEventListener("click", () => {
+        applyBoardTheme(boardTheme() === "light" ? "dark" : "light");
+      });
+    }
     els.exitSlideshowButton.addEventListener("click", () => {
       routeTo("view");
     });
@@ -1394,6 +1417,7 @@
   function init() {
     document.body.classList.toggle("board-mode", isBoardMode);
     initControls();
+    applyBoardTheme();
     bindEvents();
     refreshAdminAuth();
     renderView();
