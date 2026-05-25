@@ -154,9 +154,9 @@ body.board-mode .footer {
   width: 100%;
   height: 34px;
   margin: 0;
-  border-top: 1px solid #d7dde8;
-  background: #ffffff;
-  color: #475569;
+  border-top: 1px solid #111827;
+  background: #07111d;
+  color: #9aa8bd;
   font-size: 13px;
   font-weight: 800;
 }
@@ -166,6 +166,12 @@ body.board-mode.board-light {
   --muted: #334155;
   background: #f4f7fb;
   color: #0f172a;
+}
+
+body.board-mode.board-light .footer {
+  border-top-color: #d7dde8;
+  background: #f4f7fb;
+  color: #475569;
 }
 
 body.board-mode .page-view {
