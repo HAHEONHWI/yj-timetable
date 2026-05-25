@@ -20,8 +20,10 @@
   let slideshowTimer = null;
   let slideshowRefreshTimer = null;
   let slideshowToastTimer = null;
+  let boardRefreshTimer = null;
   let remoteUnsubscribe = null;
   let pendingRetryMessage = "";
+  const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
 
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -144,6 +146,19 @@
         weekLabel: "특별",
       }));
     return [...regularDays, ...specialDays].sort((a, b) => a.iso.localeCompare(b.iso));
+  }
+
+  function schoolDaysForCurrentWeek() {
+    const start = mondayOf(new Date());
+    return weekdays.map((weekday, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return {
+        iso: toISO(date),
+        weekday,
+        weekLabel: "이번주",
+      };
+    });
   }
 
   function currentSchoolDay() {
@@ -443,7 +458,101 @@
     </div>`;
   }
 
+  function getBoardCell(date, className, period, periodIndex, isToday) {
+    const event = getEventsForDate(date).find((item) => {
+      return item.classes.includes(className) && period >= item.start && period <= item.end;
+    });
+    if (event) {
+      return `<div class="board-lesson is-event${isToday ? " is-today" : ""}">
+        <strong>${escapeHtml(event.title)}</strong>
+        <small>행사 · ${formatPeriodRange(event.start, event.end)}${event.memo ? ` · ${escapeHtml(event.memo)}` : ""}</small>
+      </div>`;
+    }
+
+    const change = getChange(date, className, period);
+    if (change) {
+      const original = getSubjectsForDate(date, className)[periodIndex] || "-";
+      return `<div class="board-lesson is-change${isToday ? " is-today" : ""}">
+        <strong>${escapeHtml(change.subject)}</strong>
+        <small>${escapeHtml(original)} 변경${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
+      </div>`;
+    }
+
+    const baseMerge = getBaseMergesForDate(date).find((merge) => {
+      return merge.classes.includes(className) && period >= merge.start && period <= merge.end;
+    });
+    if (baseMerge) {
+      return `<div class="board-lesson is-merge${isToday ? " is-today" : ""}">
+        <strong>${escapeHtml(baseMerge.title)}</strong>
+        <small>${formatPeriodRange(baseMerge.start, baseMerge.end)}${baseMerge.memo ? ` · ${escapeHtml(baseMerge.memo)}` : ""}</small>
+      </div>`;
+    }
+
+    const subject = getSubjectsForDate(date, className)[periodIndex] || "-";
+    return `<div class="board-lesson${isToday ? " is-today" : ""}">
+      <strong>${escapeHtml(subject)}</strong>
+    </div>`;
+  }
+
+  function renderBoardWeekGrid(className) {
+    const days = schoolDaysForCurrentWeek();
+    const today = toISO(new Date());
+    const headerCells = days
+      .map((day, index) => {
+        const todayClass = day.iso === today ? " is-today" : "";
+        return `<div class="board-day-head${todayClass}" style="grid-column:${index + 2};grid-row:1">
+          <strong>${day.weekday.label}요일${day.iso === today ? " · 오늘" : ""}</strong>
+          <small>${formatDate(day.iso)}</small>
+        </div>`;
+      })
+      .join("");
+
+    const rows = periods
+      .map((period, periodIndex) => {
+        const cells = days
+          .map((day, dayIndex) => {
+            const isToday = day.iso === today;
+            return `<div style="grid-column:${dayIndex + 2};grid-row:${periodIndex + 2}">
+              ${getBoardCell(day.iso, className, period, periodIndex, isToday)}
+            </div>`;
+          })
+          .join("");
+        return `<div class="board-period-head" style="grid-column:1;grid-row:${periodIndex + 2}">${period}교시</div>${cells}`;
+      })
+      .join("");
+
+    return `<div class="board-week-grid">
+      <div class="board-corner" style="grid-column:1;grid-row:1">교시</div>
+      ${headerCells}
+      ${rows}
+    </div>`;
+  }
+
+  function renderBoardView() {
+    const title = els.viewPage.querySelector("h2");
+    if (title) {
+      title.textContent = "전자칠판 시간표";
+    }
+    const savedClass = localStorage.getItem("board-class");
+    if (savedClass && classes.includes(savedClass) && els.viewClass.value !== savedClass) {
+      els.viewClass.value = savedClass;
+    }
+    const className = classes.includes(els.viewClass.value) ? els.viewClass.value : classes[0];
+    const days = schoolDaysForCurrentWeek();
+    const today = toISO(new Date());
+    els.todayLabel.textContent = `오늘: ${formatDate(today)} ${weekdayLabelForDate(today)}요일 · ${className}`;
+    els.rangeLabel.textContent = `${formatDate(days[0].iso)} ${days[0].weekday.label} - ${formatDate(
+      days[days.length - 1].iso
+    )} ${days[days.length - 1].weekday.label} · 자동 동기화`;
+    els.dayTabs.innerHTML = "";
+    els.viewSchedule.innerHTML = renderBoardWeekGrid(className);
+  }
+
   function renderView() {
+    if (isBoardMode) {
+      renderBoardView();
+      return;
+    }
     const days = schoolDaysForTwoWeeks();
     if (!selectedDate) {
       const today = toISO(new Date());
@@ -942,7 +1051,7 @@
   }
 
   function initControls() {
-    fillSelect(els.viewClass, ["all", ...classes], (value) => (value === "all" ? "전체 학급" : value));
+    fillSelect(els.viewClass, isBoardMode ? classes : ["all", ...classes], (value) => (value === "all" ? "전체 학급" : value));
     fillSelect(els.baseClass, classes);
     fillSelect(els.changeClass, classes);
     fillSelect(els.baseWeekday, weekdays.map((day) => day.key), (key) => weekdays.find((day) => day.key === key).label);
@@ -953,6 +1062,10 @@
     fillSelect(els.eventEnd, periods, (period) => `${period}교시`);
 
     const today = toISO(new Date());
+    if (isBoardMode) {
+      const savedBoardClass = localStorage.getItem("board-class");
+      els.viewClass.value = classes.includes(savedBoardClass) ? savedBoardClass : classes[0];
+    }
     els.changeDate.value = today;
     changeFilterWeekday = weekdayForDate(today).key;
     els.specialDate.value = today;
@@ -1005,7 +1118,12 @@
       renderView();
     });
 
-    els.viewClass.addEventListener("change", renderView);
+    els.viewClass.addEventListener("change", () => {
+      if (isBoardMode) {
+        localStorage.setItem("board-class", els.viewClass.value);
+      }
+      renderView();
+    });
     els.exitSlideshowButton.addEventListener("click", () => {
       routeTo("view");
     });
@@ -1274,6 +1392,7 @@
   }
 
   function init() {
+    document.body.classList.toggle("board-mode", isBoardMode);
     initControls();
     bindEvents();
     refreshAdminAuth();
@@ -1281,6 +1400,12 @@
     renderAdmin();
     routeTo(currentRoute);
     startRemoteSync();
+    if (isBoardMode) {
+      const seconds = Math.max(10, Number(state.slideshow && state.slideshow.refreshSeconds) || 60);
+      boardRefreshTimer = window.setInterval(() => {
+        refreshFromRemote({ keepNoticeSelection: true, restartSlideshow: false });
+      }, seconds * 1000);
+    }
     refreshFromRemote();
   }
 

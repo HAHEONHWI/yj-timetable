@@ -55,7 +55,7 @@ function createWindow() {
     minHeight: 480,
     x: Math.max(workArea.x, workArea.x + workArea.width - width - 24),
     y: Math.max(workArea.y, workArea.y + 24),
-    title: "YJ Timetable Widget",
+    title: "용정시간표-Widget",
     frame: false,
     backgroundColor: "#07111d",
     titleBarStyle: "hidden",

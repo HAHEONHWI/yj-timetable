@@ -1,0 +1,12 @@
+.android-sdk/
+android-board/
+Widget-Win/
+Widget-Win.zip
+dist/
+node_modules/
+supabase/
+widget/
+package-lock.json
+package.json
+deno.lock
+.DS_Store

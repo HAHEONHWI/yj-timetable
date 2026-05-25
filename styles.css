@@ -131,6 +131,48 @@ body.slideshow-mode main {
   margin: 0;
 }
 
+body.board-mode {
+  overflow: hidden;
+}
+
+body.board-mode .topbar {
+  display: none;
+}
+
+body.board-mode main {
+  width: 100vw;
+  height: calc(100vh - 34px);
+  margin: 0;
+}
+
+body.board-mode .footer {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 10;
+  width: 100%;
+  height: 34px;
+  margin: 0;
+  border-top: 1px solid #d7dde8;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+body.board-mode .page-view {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 14px 18px;
+  background: #07111d;
+}
+
 .page,
 .login-panel,
 .admin-workspace {
@@ -318,6 +360,153 @@ button:focus-visible {
 
 .page-view .schedule-shell {
   min-height: min(68vh, 820px);
+}
+
+body.board-mode .view-tools {
+  align-items: center;
+  margin-bottom: 0;
+}
+
+body.board-mode .view-tools h2 {
+  font-size: 32px;
+}
+
+body.board-mode .view-tools .muted {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+body.board-mode .field.compact {
+  min-width: 190px;
+}
+
+body.board-mode label {
+  font-size: 15px;
+}
+
+body.board-mode select {
+  min-height: 52px;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+body.board-mode .day-tabs {
+  display: none;
+}
+
+body.board-mode .schedule-shell {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.board-week-grid {
+  display: grid;
+  height: 100%;
+  min-width: 0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #334155;
+  gap: 1px;
+  grid-template-columns: 72px repeat(5, minmax(0, 1fr));
+  grid-template-rows: 58px repeat(9, minmax(0, 1fr));
+}
+
+.board-week-grid > div {
+  min-width: 0;
+}
+
+.board-week-grid > div > .board-lesson {
+  height: 100%;
+}
+
+.board-corner,
+.board-period-head,
+.board-day-head,
+.board-lesson {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  background: #101826;
+  text-align: center;
+}
+
+.board-corner,
+.board-period-head,
+.board-day-head {
+  color: #dbeafe;
+  font-weight: 900;
+}
+
+.board-day-head {
+  align-content: center;
+  gap: 3px;
+  padding: 6px;
+}
+
+.board-day-head strong {
+  font-size: 25px;
+}
+
+.board-day-head small {
+  color: #9fb7d7;
+  font-size: 15px;
+}
+
+.board-day-head.is-today {
+  background: #1d4ed8;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 3px #93c5fd;
+}
+
+.board-day-head.is-today small {
+  color: #dbeafe;
+}
+
+.board-period-head {
+  color: #a5b4fc;
+  font-size: 20px;
+}
+
+.board-lesson {
+  align-content: center;
+  gap: 4px;
+  padding: 7px;
+  line-height: 1.18;
+}
+
+.board-lesson.is-today {
+  background: #12284f;
+  box-shadow: inset 0 0 0 2px rgba(147, 197, 253, 0.62);
+}
+
+.board-lesson strong {
+  overflow-wrap: anywhere;
+  font-size: 24px;
+}
+
+.board-lesson small {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.86;
+}
+
+.board-lesson.is-change {
+  border: 2px solid #f59e0b;
+  background: #422006;
+  color: #fde68a;
+}
+
+.board-lesson.is-event {
+  border: 2px solid #10b981;
+  background: #064e3b;
+  color: #ecfdf5;
+}
+
+.board-lesson.is-merge {
+  background: #263449;
+  color: #e0f2fe;
 }
 
 .schedule-grid {

@@ -11,7 +11,7 @@
   },
   "build": {
     "appId": "kr.yjms.timetable.widget",
-    "productName": "YJ Timetable Widget",
+    "productName": "용정시간표-Widget",
     "files": [
       "assets/**/*",
       "src/storage.js",
@@ -25,13 +25,13 @@
       "icon": "assets/logo.png"
     },
     "nsis": {
-      "artifactName": "YJ-Timetable-Widget-Setup.exe",
+      "artifactName": "용정시간표-Widget-Setup.exe",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "YJ Timetable Widget"
+      "shortcutName": "용정시간표-Widget"
     }
   },
   "devDependencies": {

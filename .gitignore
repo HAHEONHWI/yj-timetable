@@ -5,6 +5,12 @@
 node_modules/
 dist/
 
+# Android local build output
+.android-sdk/
+android-board/build/
+android-board/output/
+android-board/debug.keystore
+
 # Local Supabase CLI state
 supabase/.branches/
 supabase/.temp/
