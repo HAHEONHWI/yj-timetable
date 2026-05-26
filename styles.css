@@ -944,6 +944,18 @@ body.board-mode.board-light .board-lesson.is-merge {
   text-align: right;
 }
 
+.download-note {
+  margin: 0;
+  border: 1px solid #854d0e;
+  border-radius: 8px;
+  background: rgba(120, 53, 15, 0.22);
+  color: #fde68a;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
 .download-button {
   display: grid;
   place-items: center;
