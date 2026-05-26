@@ -867,6 +867,98 @@ body.board-mode.board-light .board-lesson.is-merge {
   overflow: hidden;
 }
 
+.download-page {
+  display: grid;
+  gap: 24px;
+}
+
+.download-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.download-head .muted {
+  max-width: 460px;
+  text-align: right;
+}
+
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.download-card {
+  display: grid;
+  gap: 18px;
+  align-content: space-between;
+  min-height: 300px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #101826;
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.download-type {
+  width: fit-content;
+  margin: 0 0 12px;
+  border: 1px solid #60a5fa;
+  border-radius: 999px;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.18);
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.download-card h3 {
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.download-meta {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.download-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #263449;
+  padding-top: 8px;
+}
+
+.download-meta dt {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.download-meta dd {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 900;
+  text-align: right;
+}
+
+.download-button {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.download-button:hover {
+  background: var(--blue-dark);
+}
+
 .notice-slide,
 .empty-slide {
   display: grid;
@@ -1097,9 +1189,19 @@ textarea {
 @media (max-width: 760px) {
   .topbar,
   .view-tools,
-  .admin-head {
+  .admin-head,
+  .download-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .download-head .muted {
+    max-width: none;
+    text-align: left;
+  }
+
+  .download-grid {
+    grid-template-columns: 1fr;
   }
 
   .nav {

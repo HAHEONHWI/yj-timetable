@@ -19,6 +19,7 @@
       <nav class="nav">
         <button class="nav-button is-active" data-route="view" type="button">조회</button>
         <button class="nav-button" data-route="slideshow" type="button">슬라이드쇼</button>
+        <button class="nav-button" data-route="download" type="button">다운로드</button>
         <button class="nav-button" data-route="admin" type="button">관리자</button>
       </nav>
     </header>
@@ -54,6 +55,56 @@
             </div>
           </div>
           <div id="slideshowStage" class="slideshow-stage"></div>
+        </div>
+      </section>
+
+      <section id="downloadPage" class="page download-page is-hidden">
+        <div class="download-head">
+          <div>
+            <p class="eyebrow">설치 파일</p>
+            <h2>다운로드</h2>
+          </div>
+          <p class="muted">전자칠판 APK와 Windows 위젯 설치 파일을 내려받을 수 있습니다.</p>
+        </div>
+
+        <div class="download-grid">
+          <article class="download-card">
+            <div>
+              <p class="download-type">Windows</p>
+              <h3>용정시간표 Widget</h3>
+              <p class="muted">바탕화면에서 오늘 전체 학급 시간표를 확인하는 Windows 위젯입니다.</p>
+            </div>
+            <dl class="download-meta">
+              <div>
+                <dt>파일</dt>
+                <dd>EXE 설치형</dd>
+              </div>
+              <div>
+                <dt>대상</dt>
+                <dd>Windows 64비트</dd>
+              </div>
+            </dl>
+            <a class="download-button" href="./downloads/yongjeong-timetable-widget-setup.exe" download>Windows 위젯 다운로드</a>
+          </article>
+
+          <article class="download-card">
+            <div>
+              <p class="download-type">Android</p>
+              <h3>전자칠판용 APK</h3>
+              <p class="muted">전자칠판에서 `/board` 화면을 가로 모드로 표시하는 Android WebView 앱입니다.</p>
+            </div>
+            <dl class="download-meta">
+              <div>
+                <dt>파일</dt>
+                <dd>APK</dd>
+              </div>
+              <div>
+                <dt>대상</dt>
+                <dd>Android 5.0 이상</dd>
+              </div>
+            </dl>
+            <a class="download-button" href="./downloads/yj-timetable-board.apk" download>전자칠판 APK 다운로드</a>
+          </article>
         </div>
       </section>
 

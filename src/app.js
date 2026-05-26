@@ -31,6 +31,7 @@
   const els = {
     viewPage: $("#viewPage"),
     slideshowPage: $("#slideshowPage"),
+    downloadPage: $("#downloadPage"),
     adminPage: $("#adminPage"),
     homeButton: $("#homeButton"),
     todayLabel: $("#todayLabel"),
@@ -242,6 +243,7 @@
     currentRoute = route;
     els.viewPage.classList.toggle("is-hidden", route !== "view");
     els.slideshowPage.classList.toggle("is-hidden", route !== "slideshow");
+    els.downloadPage.classList.toggle("is-hidden", route !== "download");
     els.adminPage.classList.toggle("is-hidden", route !== "admin");
     document.body.classList.toggle("slideshow-mode", route === "slideshow");
     $$(".nav-button").forEach((button) => {

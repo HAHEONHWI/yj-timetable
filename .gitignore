@@ -11,6 +11,9 @@ android-board/build/
 android-board/output/
 android-board/debug.keystore
 
+# Static distribution files
+downloads/
+
 # Local Supabase CLI state
 supabase/.branches/
 supabase/.temp/
