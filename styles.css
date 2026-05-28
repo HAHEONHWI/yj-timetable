@@ -758,11 +758,11 @@ body.board-mode.board-light .board-lesson.is-merge {
 .slideshow-grid .lesson-cell {
   padding: 6px;
   gap: 3px;
-  font-size: clamp(18px, 1.55vw, 28px);
+  font-size: clamp(22px, 1.95vw, 36px);
 }
 
 .slideshow-grid .lesson-cell strong {
-  font-size: clamp(18px, 1.65vw, 30px);
+  font-size: clamp(22px, 2.05vw, 38px);
   line-height: 1.08;
 }
 
