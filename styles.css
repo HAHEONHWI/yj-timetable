@@ -756,19 +756,29 @@ body.board-mode.board-light .board-lesson.is-merge {
 }
 
 .slideshow-grid .lesson-cell {
-  padding: 5px;
-  gap: 2px;
-  font-size: clamp(15px, 1.25vw, 22px);
+  padding: 6px;
+  gap: 3px;
+  font-size: clamp(18px, 1.55vw, 28px);
+}
+
+.slideshow-grid .lesson-cell strong {
+  font-size: clamp(18px, 1.65vw, 30px);
+  line-height: 1.08;
 }
 
 .slideshow-grid .lesson-cell small {
-  font-size: clamp(10px, 0.8vw, 14px);
+  font-size: clamp(11px, 0.9vw, 16px);
 }
 
 .slideshow-grid .event-cell,
 .slideshow-grid .base-merge-cell {
   margin: 5px;
   padding: 8px;
+}
+
+.slideshow-grid .event-cell.is-no-memo,
+.slideshow-grid .base-merge-cell.is-no-memo {
+  gap: 2px;
 }
 
 .slideshow-grid .event-cell strong,

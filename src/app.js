@@ -391,21 +391,47 @@
         return placements.map((placement) => {
           const rowSpan = placement.rowEnd - placement.rowStart;
           const colSpan = placement.columnEnd - placement.columnStart;
-          const lengthPenalty = Math.max(0, String(item.title).length - 6) * 1.2;
+          const hasMemo = Boolean(item.memo);
+          const isEventCell = className.includes("event-cell");
+          const lengthPenalty = Math.max(0, String(item.title).length - 6) * (compact ? 1 : 1.2);
           const titleMax =
-            rowSpan === 1 ? (compact ? 30 : 22) : rowSpan === 2 ? (compact ? 38 : 30) : compact ? 44 : 36;
-          const titleMin = rowSpan === 1 ? 14 : 16;
+            rowSpan === 1
+              ? compact
+                ? hasMemo
+                  ? 34
+                  : 42
+                : 22
+              : rowSpan === 2
+                ? compact
+                  ? hasMemo
+                    ? 44
+                    : 54
+                  : 30
+                : compact
+                  ? hasMemo
+                    ? 52
+                    : 64
+                  : 36;
+          const titleMin = compact ? (rowSpan === 1 ? 18 : 22) : rowSpan === 1 ? 14 : 16;
           const titleSize = clamp(
-            (compact ? 15 : 14) + rowSpan * 4 + Math.min(colSpan, 3) * 1.5 - lengthPenalty,
+            (compact ? (hasMemo ? 20 : 25) : 14) +
+              rowSpan * (compact ? 5 : 4) +
+              Math.min(colSpan, 3) * (compact ? 2 : 1.5) +
+              (isEventCell && compact ? 4 : 0) -
+              lengthPenalty,
             titleMin,
             titleMax
           );
-          const metaSize = clamp(rowSpan === 1 ? 10 : titleSize * 0.44, 10, rowSpan === 1 ? 12 : compact ? 17 : 15);
-          const titleLines = rowSpan === 1 ? 1 : 2;
+          const metaSize = clamp(
+            hasMemo ? (rowSpan === 1 ? 11 : titleSize * 0.4) : rowSpan === 1 ? 10 : titleSize * 0.32,
+            10,
+            hasMemo ? (rowSpan === 1 ? 13 : compact ? 18 : 15) : rowSpan === 1 ? 12 : 14
+          );
+          const titleLines = hasMemo ? (rowSpan === 1 ? 1 : 2) : rowSpan === 1 ? 2 : 3;
           const metaLines = rowSpan === 1 ? 1 : 2;
           const periodStart = placement.periodStart || item.start;
           const periodEnd = placement.periodEnd || item.end;
-          return `<div class="${className}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? 1 : 4}px;--merge-padding:${rowSpan === 1 ? 6 : 8}px">
+          return `<div class="${className}${hasMemo ? " has-memo" : " is-no-memo"}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? 1 : 4}px;--merge-padding:${rowSpan === 1 ? 6 : 8}px">
             <strong>${escapeHtml(item.title)}</strong>
             <small>${formatPeriodRange(periodStart, periodEnd)}${item.memo ? ` · ${escapeHtml(item.memo)}` : ""}</small>
           </div>`;
