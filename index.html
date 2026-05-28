@@ -281,6 +281,10 @@
             </div>
             <div class="form-grid two">
               <div class="field">
+                <label for="noticeTitleFontSize">제목 글자 크기</label>
+                <input id="noticeTitleFontSize" type="range" min="36" max="120" step="2" />
+              </div>
+              <div class="field">
                 <label for="noticeFontSize">세부 내용 글자 크기</label>
                 <input id="noticeFontSize" type="range" min="24" max="84" step="2" />
               </div>
@@ -289,6 +293,7 @@
             <div class="button-row">
               <button id="addNoticeButton" class="ghost-button" type="button">페이지 추가</button>
               <button id="saveNoticeButton" class="primary-button" type="button">안내사항 저장</button>
+              <span id="noticeTitleFontSizeLabel" class="message"></span>
               <span id="noticeFontSizeLabel" class="message"></span>
             </div>
             <div id="noticeList" class="list"></div>

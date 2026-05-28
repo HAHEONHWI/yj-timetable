@@ -42,6 +42,7 @@
           id: "sample-notice",
           title: "오늘의 안내",
           body: "관리자 페이지에서 안내사항을 수정하거나 새로 등록할 수 있습니다.",
+          titleFontSize: 72,
           detailFontSize: 42,
         },
       ],
@@ -73,6 +74,7 @@
         notices: Array.isArray(parsed.notices)
           ? parsed.notices.map((notice) => ({
               ...notice,
+              titleFontSize: Number(notice.titleFontSize) || 72,
               detailFontSize: Number(notice.detailFontSize) || 42,
             }))
           : [],
@@ -110,6 +112,7 @@
       notices: Array.isArray(parsed.notices)
         ? parsed.notices.map((notice) => ({
             ...notice,
+            titleFontSize: Number(notice.titleFontSize) || 72,
             detailFontSize: Number(notice.detailFontSize) || 42,
           }))
         : defaults.notices,

@@ -1004,7 +1004,7 @@ body.board-mode.board-light .board-lesson.is-merge {
 .empty-slide h3 {
   margin: 0;
   color: #f8fafc;
-  font-size: clamp(42px, 7vw, 92px);
+  font-size: var(--notice-title-size, clamp(42px, 7vw, 92px));
   letter-spacing: 0;
   text-align: center;
 }
@@ -1099,7 +1099,7 @@ textarea {
   margin: 0;
   text-align: center;
   color: #f8fafc;
-  font-size: 28px;
+  font-size: clamp(24px, calc(var(--notice-preview-title-size, 72px) * 0.42), 50px);
   letter-spacing: 0;
 }
 

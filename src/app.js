@@ -88,6 +88,8 @@
     eventList: $("#eventList"),
     noticeTitle: $("#noticeTitle"),
     noticeBody: $("#noticeBody"),
+    noticeTitleFontSize: $("#noticeTitleFontSize"),
+    noticeTitleFontSizeLabel: $("#noticeTitleFontSizeLabel"),
     noticeFontSize: $("#noticeFontSize"),
     noticeFontSizeLabel: $("#noticeFontSizeLabel"),
     noticePreview: $("#noticePreview"),
@@ -634,7 +636,7 @@
         type: "notice",
         title: "안내사항",
         meta: `${index + 1} / ${notices.length}`,
-        html: `<article class="notice-slide" style="--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
+        html: `<article class="notice-slide" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
           <h3>${escapeHtml(notice.title)}</h3>
           <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
         </article>`,
@@ -910,7 +912,7 @@
             return `<article class="list-item notice-list-item${notice.id === selectedNoticeId ? " is-active" : ""}" data-select-notice="${notice.id}">
               <div>
                 <strong>${index + 1}페이지 · ${escapeHtml(notice.title || "제목 없음")}</strong>
-                <span>${escapeHtml(notice.body)} · ${Number(notice.detailFontSize) || 42}px</span>
+                <span>${escapeHtml(notice.body)} · 제목 ${Number(notice.titleFontSize) || 72}px · 내용 ${Number(notice.detailFontSize) || 42}px</span>
               </div>
               <button class="text-button" data-delete-notice="${notice.id}" type="button">삭제</button>
             </article>`;
@@ -924,6 +926,7 @@
     const notice = state.notices.find((item) => item.id === selectedNoticeId);
     els.noticeTitle.value = notice ? notice.title : "";
     els.noticeBody.value = notice ? notice.body : "";
+    els.noticeTitleFontSize.value = notice ? Number(notice.titleFontSize) || 72 : 72;
     els.noticeFontSize.value = notice ? Number(notice.detailFontSize) || 42 : 42;
     renderNoticeList();
     renderNoticePreview();
@@ -932,9 +935,11 @@
   function renderNoticePreview() {
     const title = els.noticeTitle.value.trim() || "안내사항 제목";
     const body = els.noticeBody.value.trim() || "세부 내용 미리보기입니다.";
-    const size = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
-    els.noticeFontSizeLabel.textContent = `${size}px`;
-    els.noticePreview.innerHTML = `<article class="notice-preview-card" style="--notice-preview-size:${size}px">
+    const titleSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);
+    const bodySize = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
+    els.noticeTitleFontSizeLabel.textContent = `제목 ${titleSize}px`;
+    els.noticeFontSizeLabel.textContent = `내용 ${bodySize}px`;
+    els.noticePreview.innerHTML = `<article class="notice-preview-card" style="--notice-preview-title-size:${titleSize}px;--notice-preview-size:${bodySize}px">
       <h4>${escapeHtml(title)}</h4>
       <p>${escapeHtml(body).replaceAll("\n", "<br />")}</p>
     </article>`;
@@ -1122,6 +1127,7 @@
     els.eventEnd.value = "9";
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
+    els.noticeTitleFontSize.value = "72";
     els.noticeFontSize.value = "42";
     renderChangeDateHint();
     renderChangeWeekdayFilter();
@@ -1380,7 +1386,7 @@
       saveState("행사를 삭제했습니다.");
     });
 
-    [els.noticeTitle, els.noticeBody, els.noticeFontSize].forEach((input) => {
+    [els.noticeTitle, els.noticeBody, els.noticeTitleFontSize, els.noticeFontSize].forEach((input) => {
       input.addEventListener("input", renderNoticePreview);
     });
 
@@ -1402,6 +1408,7 @@
         id: existing ? existing.id : `${Date.now()}`,
         title,
         body,
+        titleFontSize: clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120),
         detailFontSize: clamp(Number(els.noticeFontSize.value) || 42, 24, 84),
       };
       if (existing) {
