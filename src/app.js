@@ -84,6 +84,8 @@
     eventTitle: $("#eventTitle"),
     eventMemo: $("#eventMemo"),
     eventClassChecks: $("#eventClassChecks"),
+    slideEventFontScale: $("#slideEventFontScale"),
+    slideEventFontScaleLabel: $("#slideEventFontScaleLabel"),
     saveEventButton: $("#saveEventButton"),
     eventList: $("#eventList"),
     noticeTitle: $("#noticeTitle"),
@@ -435,9 +437,11 @@
           const metaLines = rowSpan === 1 ? 1 : 2;
           const periodStart = placement.periodStart || item.start;
           const periodEnd = placement.periodEnd || item.end;
-          return `<div class="${className}${hasMemo ? " has-memo" : " is-no-memo"}${rowSpan === 1 ? " is-single-row" : ""}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? (hasMemo ? 3 : 1) : 4}px;--merge-padding:${rowSpan === 1 ? 5 : 8}px">
+          const eventScale = isEventCell && compact ? clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150) / 100 : 1;
+          const showMeta = !(isEventCell && compact && !hasMemo);
+          return `<div class="${className}${hasMemo ? " has-memo" : " is-no-memo"}${rowSpan === 1 ? " is-single-row" : ""}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize * eventScale}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? (hasMemo ? 3 : 1) : 4}px;--merge-padding:${rowSpan === 1 ? 5 : 8}px">
             <strong>${escapeHtml(item.title)}</strong>
-            <small>${formatPeriodRange(periodStart, periodEnd)}${item.memo ? ` · ${escapeHtml(item.memo)}` : ""}</small>
+            ${showMeta ? `<small>${formatPeriodRange(periodStart, periodEnd)}${item.memo ? ` · ${escapeHtml(item.memo)}` : ""}</small>` : ""}
           </div>`;
         });
       })
@@ -1133,6 +1137,8 @@
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
+    els.slideEventFontScale.value = clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
+    els.slideEventFontScaleLabel.textContent = `행사 ${els.slideEventFontScale.value}%`;
     els.noticeTitleFontSize.value = "72";
     els.noticeFontSize.value = "42";
     renderChangeDateHint();
@@ -1390,6 +1396,17 @@
       if (!confirmAction("행사를 삭제할까요?")) return;
       state.events = state.events.filter((item) => item.id !== button.dataset.deleteEvent);
       saveState("행사를 삭제했습니다.");
+    });
+
+    els.slideEventFontScale.addEventListener("input", () => {
+      const scale = clamp(Number(els.slideEventFontScale.value) || 100, 70, 150);
+      els.slideEventFontScaleLabel.textContent = `행사 ${scale}%`;
+    });
+
+    els.slideEventFontScale.addEventListener("change", () => {
+      state.slideshow.eventFontScale = clamp(Number(els.slideEventFontScale.value) || 100, 70, 150);
+      if (currentRoute === "slideshow") renderSlideshow();
+      saveState("슬라이드쇼 행사 글자 크기를 저장했습니다.");
     });
 
     [els.noticeTitle, els.noticeBody, els.slideLessonFontScale, els.noticeTitleFontSize, els.noticeFontSize].forEach((input) => {
