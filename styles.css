@@ -759,11 +759,11 @@ body.board-mode.board-light .board-lesson.is-merge {
   container-type: size;
   padding: 4px;
   gap: 3px;
-  font-size: clamp(28px, 2.35vw, 46px);
+  font-size: clamp(calc(28px * var(--lesson-font-scale, 1)), calc(2.35vw * var(--lesson-font-scale, 1)), calc(46px * var(--lesson-font-scale, 1)));
 }
 
 .slideshow-grid .lesson-cell strong {
-  font-size: clamp(42px, 76cqh, 72px);
+  font-size: clamp(calc(42px * var(--lesson-font-scale, 1)), calc(76cqh * var(--lesson-font-scale, 1)), calc(72px * var(--lesson-font-scale, 1)));
   line-height: 0.92;
 }
 

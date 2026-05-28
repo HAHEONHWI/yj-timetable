@@ -96,6 +96,8 @@
     addNoticeButton: $("#addNoticeButton"),
     saveNoticeButton: $("#saveNoticeButton"),
     noticeList: $("#noticeList"),
+    slideLessonFontScale: $("#slideLessonFontScale"),
+    slideLessonFontScaleLabel: $("#slideLessonFontScaleLabel"),
     slideInterval: $("#slideInterval"),
     slideRefreshInterval: $("#slideRefreshInterval"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
@@ -480,7 +482,8 @@
       })
       .join("");
 
-    return `<div class="schedule-grid class-columns ${variant}" style="--class-count:${visibleClasses.length}">
+    const lessonScale = variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150) / 100 : 1;
+    return `<div class="schedule-grid class-columns ${variant}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale}">
       <div class="corner-cell" style="grid-column:1;grid-row:1">교시</div>
       ${classColumns}
       ${periodRows}
@@ -939,6 +942,8 @@
     const body = els.noticeBody.value.trim() || "세부 내용 미리보기입니다.";
     const titleSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);
     const bodySize = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
+    const lessonScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
+    els.slideLessonFontScaleLabel.textContent = `시간표 ${lessonScale}%`;
     els.noticeTitleFontSizeLabel.textContent = `제목 ${titleSize}px`;
     els.noticeFontSizeLabel.textContent = `내용 ${bodySize}px`;
     els.noticePreview.innerHTML = `<article class="notice-preview-card" style="--notice-preview-title-size:${titleSize}px;--notice-preview-size:${bodySize}px">
@@ -1129,6 +1134,7 @@
     els.eventEnd.value = "9";
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
+    els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
     els.noticeTitleFontSize.value = "72";
     els.noticeFontSize.value = "42";
     renderChangeDateHint();
@@ -1388,8 +1394,15 @@
       saveState("행사를 삭제했습니다.");
     });
 
-    [els.noticeTitle, els.noticeBody, els.noticeTitleFontSize, els.noticeFontSize].forEach((input) => {
+    [els.noticeTitle, els.noticeBody, els.slideLessonFontScale, els.noticeTitleFontSize, els.noticeFontSize].forEach((input) => {
       input.addEventListener("input", renderNoticePreview);
+    });
+
+    els.slideLessonFontScale.addEventListener("change", () => {
+      state.slideshow.lessonFontScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
+      renderView();
+      if (currentRoute === "slideshow") renderSlideshow();
+      saveState("슬라이드쇼 시간표 글자 크기를 저장했습니다.");
     });
 
     els.addNoticeButton.addEventListener("click", () => {

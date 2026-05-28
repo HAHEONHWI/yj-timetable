@@ -49,6 +49,7 @@
       slideshow: {
         intervalSeconds: 8,
         refreshSeconds: 60,
+        lessonFontScale: 100,
       },
     };
   }
@@ -81,6 +82,7 @@
         slideshow: {
           intervalSeconds: Number(parsed.slideshow && parsed.slideshow.intervalSeconds) || 8,
           refreshSeconds: Number(parsed.slideshow && parsed.slideshow.refreshSeconds) || 60,
+          lessonFontScale: Number(parsed.slideshow && parsed.slideshow.lessonFontScale) || 100,
         },
       };
     } catch {
@@ -119,6 +121,7 @@
       slideshow: {
         intervalSeconds: Number(parsed.slideshow && parsed.slideshow.intervalSeconds) || 8,
         refreshSeconds: Number(parsed.slideshow && parsed.slideshow.refreshSeconds) || 60,
+        lessonFontScale: Number(parsed.slideshow && parsed.slideshow.lessonFontScale) || 100,
       },
     };
   }
