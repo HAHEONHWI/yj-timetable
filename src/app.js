@@ -398,8 +398,8 @@
             rowSpan === 1
               ? compact
                 ? hasMemo
-                  ? 34
-                  : 42
+                  ? 28
+                  : 46
                 : 22
               : rowSpan === 2
                 ? compact
@@ -425,13 +425,13 @@
           const metaSize = clamp(
             hasMemo ? (rowSpan === 1 ? 11 : titleSize * 0.4) : rowSpan === 1 ? 10 : titleSize * 0.32,
             10,
-            hasMemo ? (rowSpan === 1 ? 13 : compact ? 18 : 15) : rowSpan === 1 ? 12 : 14
+            hasMemo ? (rowSpan === 1 ? 12 : compact ? 18 : 15) : rowSpan === 1 ? 12 : 14
           );
           const titleLines = hasMemo ? (rowSpan === 1 ? 1 : 2) : rowSpan === 1 ? 2 : 3;
           const metaLines = rowSpan === 1 ? 1 : 2;
           const periodStart = placement.periodStart || item.start;
           const periodEnd = placement.periodEnd || item.end;
-          return `<div class="${className}${hasMemo ? " has-memo" : " is-no-memo"}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? 1 : 4}px;--merge-padding:${rowSpan === 1 ? 6 : 8}px">
+          return `<div class="${className}${hasMemo ? " has-memo" : " is-no-memo"}${rowSpan === 1 ? " is-single-row" : ""}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? (hasMemo ? 3 : 1) : 4}px;--merge-padding:${rowSpan === 1 ? 5 : 8}px">
             <strong>${escapeHtml(item.title)}</strong>
             <small>${formatPeriodRange(periodStart, periodEnd)}${item.memo ? ` · ${escapeHtml(item.memo)}` : ""}</small>
           </div>`;
