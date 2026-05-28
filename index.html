@@ -238,20 +238,22 @@
           </section>
 
           <section id="eventPanel" class="admin-panel is-hidden">
-            <div class="form-grid">
-              <div class="field">
-                <label for="eventDate">날짜</label>
-                <input id="eventDate" type="date" />
+            <div class="event-form-grid">
+              <div class="event-time-fields">
+                <div class="field">
+                  <label for="eventDate">날짜</label>
+                  <input id="eventDate" type="date" />
+                </div>
+                <div class="field">
+                  <label for="eventStart">시작 교시</label>
+                  <select id="eventStart"></select>
+                </div>
+                <div class="field">
+                  <label for="eventEnd">끝 교시</label>
+                  <select id="eventEnd"></select>
+                </div>
               </div>
-              <div class="field">
-                <label for="eventStart">시작 교시</label>
-                <select id="eventStart"></select>
-              </div>
-              <div class="field">
-                <label for="eventEnd">끝 교시</label>
-                <select id="eventEnd"></select>
-              </div>
-              <div class="field">
+              <div class="field event-title-field">
                 <label for="eventTitle">행사명</label>
                 <input id="eventTitle" type="text" placeholder="예: 진로 특강" />
               </div>

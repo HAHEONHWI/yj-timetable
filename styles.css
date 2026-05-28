@@ -1073,6 +1073,23 @@ body.board-mode.board-light .board-lesson.is-merge {
   grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.2fr);
 }
 
+.event-form-grid {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.95fr) minmax(260px, 1.05fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.event-time-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 14px;
+}
+
+.event-title-field input {
+  font-weight: 900;
+}
+
 textarea {
   min-height: 132px;
   padding: 12px;
@@ -1239,6 +1256,8 @@ textarea {
 
   .form-grid,
   .form-grid.two,
+  .event-form-grid,
+  .event-time-fields,
   .period-editor,
   .check-grid {
     grid-template-columns: 1fr;
