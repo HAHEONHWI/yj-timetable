@@ -402,9 +402,7 @@
             rowSpan === 1
               ? compact
                 ? hasMemo
-                  ? isEventCell
-                    ? 38
-                    : 28
+                  ? 28
                   : 46
                 : 22
               : rowSpan === 2
