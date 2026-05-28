@@ -782,6 +782,24 @@ body.board-mode.board-light .board-lesson.is-merge {
   gap: 2px;
 }
 
+.slideshow-grid .event-cell.has-memo {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  column-gap: 12px;
+  text-align: left;
+}
+
+.slideshow-grid .event-cell.has-memo strong {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: right;
+}
+
+.slideshow-grid .event-cell.has-memo small {
+  grid-column: 1;
+  grid-row: 1;
+  text-align: left;
+}
+
 .slideshow-grid .event-cell strong,
 .slideshow-grid .base-merge-cell strong {
   font-size: var(--merge-title-size, 28px);
@@ -1073,23 +1091,6 @@ body.board-mode.board-light .board-lesson.is-merge {
   grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.2fr);
 }
 
-.event-form-grid {
-  display: grid;
-  grid-template-columns: minmax(420px, 0.95fr) minmax(260px, 1.05fr);
-  gap: 14px;
-  align-items: end;
-}
-
-.event-time-fields {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(120px, 1fr));
-  gap: 14px;
-}
-
-.event-title-field input {
-  font-weight: 900;
-}
-
 textarea {
   min-height: 132px;
   padding: 12px;
@@ -1256,8 +1257,6 @@ textarea {
 
   .form-grid,
   .form-grid.two,
-  .event-form-grid,
-  .event-time-fields,
   .period-editor,
   .check-grid {
     grid-template-columns: 1fr;
