@@ -239,13 +239,28 @@
     return sessionStorage.getItem("timetable-admin") === "true";
   }
 
+  function routeFromPath() {
+    const path = location.pathname.replace(/\/+$/, "") || "/";
+    if (path === "/admin") return "admin";
+    if (path === "/slide" || path === "/slideshow") return "slideshow";
+    if (path === "/download" || path === "/downloads") return "download";
+    return "view";
+  }
+
+  function pathForRoute(route) {
+    if (route === "admin") return "/admin";
+    if (route === "slideshow") return "/slide";
+    if (route === "download") return "/download";
+    return "/";
+  }
+
   function refreshAdminAuth() {
     const loggedIn = isLoggedIn();
     els.loginPanel.classList.toggle("is-hidden", loggedIn);
     els.adminWorkspace.classList.toggle("is-hidden", !loggedIn);
   }
 
-  function routeTo(route) {
+  function routeTo(route, options = {}) {
     currentRoute = route;
     els.viewPage.classList.toggle("is-hidden", route !== "view");
     els.slideshowPage.classList.toggle("is-hidden", route !== "slideshow");
@@ -260,6 +275,12 @@
       startSlideshow();
     } else {
       stopSlideshow();
+    }
+
+    const nextPath = pathForRoute(route);
+    if (!isBoardMode && location.pathname !== nextPath) {
+      const method = options.replace ? "replaceState" : "pushState";
+      history[method]({ route }, "", nextPath);
     }
   }
 
@@ -1174,6 +1195,10 @@
         moveSlideshow(-1, true);
       }
     });
+    window.addEventListener("popstate", () => {
+      routeTo(routeFromPath(), { replace: true });
+      refreshAdminAuth();
+    });
 
     els.dayTabs.addEventListener("click", (event) => {
       const button = event.target.closest("[data-date]");
@@ -1481,6 +1506,7 @@
 
   function init() {
     document.body.classList.toggle("board-mode", isBoardMode);
+    currentRoute = isBoardMode ? "view" : routeFromPath();
     initControls();
     applyBoardTheme();
     bindEvents();
