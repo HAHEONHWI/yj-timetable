@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 - 페이지를 찾을 수 없습니다</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #070d16;
+      color: #e5e7eb;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR",
+        "Segoe UI", sans-serif;
+    }
+
+    header {
+      height: 150px;
+      background: #08111d;
+      border-bottom: 1px solid #263241;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 70px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #1f2937, #0f766e);
+      border: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    .logo-text h1 {
+      font-size: 25px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text p {
+      margin-top: 4px;
+      font-size: 14px;
+      color: #22d3ee;
+      font-weight: 600;
+    }
+
+    nav {
+      display: flex;
+      gap: 10px;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #e5e7eb;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 12px 18px;
+      border: 1px solid #334155;
+      border-radius: 7px;
+      background: #0b1320;
+      transition: 0.2s;
+    }
+
+    nav a:hover {
+      background: #1e293b;
+      border-color: #3b82f6;
+    }
+
+    nav a.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+
+    main {
+      min-height: calc(100vh - 150px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 50px 20px;
+    }
+
+    .error-card {
+      width: 100%;
+      max-width: 850px;
+      background: #111821;
+      border: 1px solid #2d3848;
+      border-radius: 10px;
+      padding: 70px 40px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 8px 15px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.45);
+      color: #93c5fd;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 22px;
+    }
+
+    .error-code {
+      font-size: 110px;
+      line-height: 1;
+      font-weight: 900;
+      color: #60a5fa;
+      letter-spacing: -4px;
+      text-shadow: 0 0 35px rgba(59, 130, 246, 0.25);
+      margin-bottom: 22px;
+    }
+
+    .error-card h2 {
+      font-size: 30px;
+      font-weight: 800;
+      margin-bottom: 14px;
+      letter-spacing: -0.6px;
+    }
+
+    .error-card p {
+      color: #9ca3af;
+      font-size: 16px;
+      line-height: 1.7;
+      margin-bottom: 36px;
+    }
+
+    .button-wrap {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      text-decoration: none;
+      padding: 14px 22px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 15px;
+      transition: 0.2s;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+      border: 1px solid #3b82f6;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-secondary {
+      background: #0b1320;
+      color: #e5e7eb;
+      border: 1px solid #334155;
+    }
+
+    .btn-secondary:hover {
+      background: #1e293b;
+    }
+
+    .small-info {
+      margin-top: 34px;
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        height: auto;
+        padding: 24px 22px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 22px;
+      }
+
+      nav {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+
+      nav a {
+        flex: 1;
+        text-align: center;
+        padding: 11px 10px;
+      }
+
+      main {
+        min-height: calc(100vh - 210px);
+      }
+
+      .error-card {
+        padding: 55px 24px;
+      }
+
+      .error-code {
+        font-size: 82px;
+      }
+
+      .error-card h2 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🏫</div>
+      <div class="logo-text">
+        <h1>용정중학교</h1>
+        <p>전자시간표 서비스</p>
+      </div>
+    </div>
+
+    <nav>
+      <a href="/">조회</a>
+      <a href="/slideshow.html">슬라이드쇼</a>
+      <a href="/download.html">다운로드</a>
+      <a href="/admin.html">관리자</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="error-card">
+      <div class="badge">Page Not Found</div>
+
+      <div class="error-code">404</div>
+
+      <h2>페이지를 찾을 수 없습니다</h2>
+
+      <p>
+        요청하신 페이지가 존재하지 않거나 주소가 변경되었을 수 있습니다.<br />
+        주소를 다시 확인하시거나 아래 버튼을 눌러 시간표 조회 화면으로 이동해주세요.
+      </p>
+
+      <div class="button-wrap">
+        <a href="/" class="btn btn-primary">홈으로 돌아가기</a>
+        <a href="javascript:history.back()" class="btn btn-secondary">이전 페이지</a>
+      </div>
+
+      <div class="small-info">
+        용정중학교 전자시간표 서비스
+      </div>
+    </section>
+  </main>
+</body>
+</html>
