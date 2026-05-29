@@ -1,270 +1,303 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>404 - 페이지를 찾을 수 없습니다</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 - 페이지를 찾을 수 없습니다</title>
+    <link rel="icon" href="/assets/logo.png" />
+    <style>
+      :root {
+        --bg: #070b12;
+        --panel: #111827;
+        --panel-soft: #162033;
+        --line: #2b3648;
+        --ink: #f1f5f9;
+        --muted: #9aa8bd;
+        --accent: #14b8a6;
+        --accent-strong: #0f766e;
+        --blue: #3b82f6;
+        --warning: #f59e0b;
+        font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
 
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+      * {
+        box-sizing: border-box;
+      }
 
-    body {
-      min-height: 100vh;
-      background: #070d16;
-      color: #e5e7eb;
-      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR",
-        "Segoe UI", sans-serif;
-    }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 18% 16%, rgba(20, 184, 166, 0.18), transparent 28%),
+          radial-gradient(circle at 82% 22%, rgba(59, 130, 246, 0.14), transparent 26%),
+          linear-gradient(180deg, #080d15 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
 
-    header {
-      height: 150px;
-      background: #08111d;
-      border-bottom: 1px solid #263241;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 70px;
-    }
+      a {
+        color: inherit;
+      }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 18px clamp(18px, 4vw, 56px);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(7, 11, 18, 0.78);
+        backdrop-filter: blur(18px);
+      }
 
-    .logo-icon {
-      width: 58px;
-      height: 58px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #1f2937, #0f766e);
-      border: 1px solid #334155;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-    }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        text-decoration: none;
+      }
 
-    .logo-text h1 {
-      font-size: 25px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
+      .brand img {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+      }
 
-    .logo-text p {
-      margin-top: 4px;
-      font-size: 14px;
-      color: #22d3ee;
-      font-weight: 600;
-    }
+      .eyebrow,
+      .brand p {
+        margin: 0;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 900;
+      }
 
-    nav {
-      display: flex;
-      gap: 10px;
-    }
-
-    nav a {
-      text-decoration: none;
-      color: #e5e7eb;
-      font-size: 15px;
-      font-weight: 700;
-      padding: 12px 18px;
-      border: 1px solid #334155;
-      border-radius: 7px;
-      background: #0b1320;
-      transition: 0.2s;
-    }
-
-    nav a:hover {
-      background: #1e293b;
-      border-color: #3b82f6;
-    }
-
-    nav a.active {
-      background: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
-    }
-
-    main {
-      min-height: calc(100vh - 150px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 50px 20px;
-    }
-
-    .error-card {
-      width: 100%;
-      max-width: 850px;
-      background: #111821;
-      border: 1px solid #2d3848;
-      border-radius: 10px;
-      padding: 70px 40px;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 8px 15px;
-      border-radius: 999px;
-      background: rgba(59, 130, 246, 0.12);
-      border: 1px solid rgba(59, 130, 246, 0.45);
-      color: #93c5fd;
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 22px;
-    }
-
-    .error-code {
-      font-size: 110px;
-      line-height: 1;
-      font-weight: 900;
-      color: #60a5fa;
-      letter-spacing: -4px;
-      text-shadow: 0 0 35px rgba(59, 130, 246, 0.25);
-      margin-bottom: 22px;
-    }
-
-    .error-card h2 {
-      font-size: 30px;
-      font-weight: 800;
-      margin-bottom: 14px;
-      letter-spacing: -0.6px;
-    }
-
-    .error-card p {
-      color: #9ca3af;
-      font-size: 16px;
-      line-height: 1.7;
-      margin-bottom: 36px;
-    }
-
-    .button-wrap {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      text-decoration: none;
-      padding: 14px 22px;
-      border-radius: 8px;
-      font-weight: 800;
-      font-size: 15px;
-      transition: 0.2s;
-    }
-
-    .btn-primary {
-      background: #3b82f6;
-      color: white;
-      border: 1px solid #3b82f6;
-    }
-
-    .btn-primary:hover {
-      background: #2563eb;
-    }
-
-    .btn-secondary {
-      background: #0b1320;
-      color: #e5e7eb;
-      border: 1px solid #334155;
-    }
-
-    .btn-secondary:hover {
-      background: #1e293b;
-    }
-
-    .small-info {
-      margin-top: 34px;
-      font-size: 13px;
-      color: #64748b;
-    }
-
-    @media (max-width: 768px) {
-      header {
-        height: auto;
-        padding: 24px 22px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 22px;
+      .brand h1 {
+        margin: 2px 0 0;
+        font-size: 22px;
+        letter-spacing: 0;
       }
 
       nav {
-        width: 100%;
+        display: flex;
+        gap: 8px;
         flex-wrap: wrap;
+        justify-content: flex-end;
       }
 
-      nav a {
-        flex: 1;
-        text-align: center;
-        padding: 11px 10px;
+      nav a,
+      .button {
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(17, 24, 39, 0.82);
+        color: var(--ink);
+        padding: 0 14px;
+        font-size: 14px;
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      nav a:hover,
+      .button:hover {
+        border-color: rgba(20, 184, 166, 0.7);
+        background: rgba(22, 32, 51, 0.94);
       }
 
       main {
-        min-height: calc(100vh - 210px);
+        min-height: calc(100vh - 85px);
+        display: grid;
+        place-items: center;
+        padding: clamp(28px, 6vw, 72px) 18px;
       }
 
-      .error-card {
-        padding: 55px 24px;
+      .shell {
+        width: min(980px, 100%);
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 18px;
+        align-items: stretch;
       }
 
-      .error-code {
-        font-size: 82px;
+      .hero,
+      .quick-links {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(17, 24, 39, 0.88);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
       }
 
-      .error-card h2 {
-        font-size: 24px;
+      .hero {
+        padding: clamp(28px, 5vw, 54px);
       }
-    }
-  </style>
-</head>
 
-<body>
-  <header>
-    <div class="logo">
-      <div class="logo-icon">🏫</div>
-      <div class="logo-text">
-        <h1>용정중학교</h1>
-        <p>전자시간표 서비스</p>
-      </div>
-    </div>
+      .badge {
+        width: fit-content;
+        border: 1px solid rgba(245, 158, 11, 0.45);
+        border-radius: 999px;
+        background: rgba(245, 158, 11, 0.1);
+        color: #fcd34d;
+        padding: 7px 12px;
+        font-size: 13px;
+        font-weight: 900;
+      }
 
-    <nav>
-      <a href="/">조회</a>
-      <a href="/slideshow.html">슬라이드쇼</a>
-      <a href="/download.html">다운로드</a>
-      <a href="/admin.html">관리자</a>
-    </nav>
-  </header>
+      .code {
+        margin: 24px 0 8px;
+        color: var(--ink);
+        font-size: clamp(76px, 13vw, 138px);
+        line-height: 0.9;
+        font-weight: 950;
+        letter-spacing: 0;
+      }
 
-  <main>
-    <section class="error-card">
-      <div class="badge">Page Not Found</div>
+      h2 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 46px);
+        letter-spacing: 0;
+      }
 
-      <div class="error-code">404</div>
+      .hero p {
+        max-width: 610px;
+        margin: 16px 0 0;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.65;
+        font-weight: 700;
+      }
 
-      <h2>페이지를 찾을 수 없습니다</h2>
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 28px;
+      }
 
-      <p>
-        요청하신 페이지가 존재하지 않거나 주소가 변경되었을 수 있습니다.<br />
-        주소를 다시 확인하시거나 아래 버튼을 눌러 시간표 조회 화면으로 이동해주세요.
-      </p>
+      .button.primary {
+        border-color: var(--accent-strong);
+        background: var(--accent-strong);
+        color: #ecfeff;
+      }
 
-      <div class="button-wrap">
-        <a href="/" class="btn btn-primary">홈으로 돌아가기</a>
-        <a href="javascript:history.back()" class="btn btn-secondary">이전 페이지</a>
-      </div>
+      .button.secondary {
+        border-color: rgba(59, 130, 246, 0.55);
+      }
 
-      <div class="small-info">
-        용정중학교 전자시간표 서비스
-      </div>
-    </section>
-  </main>
-</body>
+      .quick-links {
+        display: grid;
+        align-content: center;
+        gap: 12px;
+        padding: clamp(22px, 4vw, 34px);
+      }
+
+      .quick-links h3 {
+        margin: 0 0 4px;
+        font-size: 20px;
+      }
+
+      .link-card {
+        display: grid;
+        gap: 4px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 8px;
+        background: rgba(8, 13, 21, 0.55);
+        padding: 14px;
+        text-decoration: none;
+      }
+
+      .link-card strong {
+        font-size: 15px;
+      }
+
+      .link-card span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .link-card:hover {
+        border-color: rgba(20, 184, 166, 0.7);
+        background: rgba(15, 118, 110, 0.14);
+      }
+
+      @media (max-width: 820px) {
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        nav {
+          width: 100%;
+          justify-content: stretch;
+        }
+
+        nav a {
+          flex: 1 1 42%;
+        }
+
+        .shell {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="홈으로 이동">
+        <img src="/assets/home-banner.png" alt="" />
+        <div>
+          <p>용정 전용 시간표</p>
+          <h1>용정 시간표</h1>
+        </div>
+      </a>
+
+      <nav aria-label="주요 페이지">
+        <a href="/">조회</a>
+        <a href="/slide">슬라이드쇼</a>
+        <a href="/download">다운로드</a>
+        <a href="/admin">관리자</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="shell" aria-labelledby="pageTitle">
+        <article class="hero">
+          <div class="badge">Page Not Found</div>
+          <div class="code">404</div>
+          <h2 id="pageTitle">찾는 페이지가 없어요</h2>
+          <p>
+            주소가 바뀌었거나 더 이상 사용하지 않는 링크일 수 있습니다.
+            아래 바로가기로 필요한 화면으로 이동해 주세요.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="/">시간표 조회로 이동</a>
+            <a class="button secondary" href="javascript:history.back()">이전 페이지</a>
+          </div>
+        </article>
+
+        <aside class="quick-links" aria-label="빠른 이동">
+          <p class="eyebrow">바로가기</p>
+          <h3>필요한 화면으로 바로 이동</h3>
+          <a class="link-card" href="/slide">
+            <strong>슬라이드쇼</strong>
+            <span>전자칠판에 자동 슬라이드 화면 표시</span>
+          </a>
+          <a class="link-card" href="/download">
+            <strong>다운로드</strong>
+            <span>Windows 위젯과 전자칠판 APK 설치 파일</span>
+          </a>
+          <a class="link-card" href="/admin">
+            <strong>관리자</strong>
+            <span>시간표 변경, 행사, 안내사항 관리</span>
+          </a>
+          <a class="link-card" href="/widget/widget.html">
+            <strong>위젯 화면</strong>
+            <span>브라우저에서 Windows 위젯 화면 확인</span>
+          </a>
+        </aside>
+      </section>
+    </main>
+  </body>
 </html>
