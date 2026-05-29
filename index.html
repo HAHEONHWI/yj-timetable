@@ -131,15 +131,15 @@
           </div>
 
           <div class="admin-tabs" role="tablist">
-            <button class="admin-tab is-active" data-admin-tab="base" type="button">기본 시간표</button>
+            <button class="admin-tab" data-admin-tab="base" type="button">기본 시간표</button>
             <button class="admin-tab" data-admin-tab="special" type="button">특별시간표</button>
-            <button class="admin-tab" data-admin-tab="change" type="button">단일교과 변경</button>
+            <button class="admin-tab is-active" data-admin-tab="change" type="button">단일교과 변경</button>
             <button class="admin-tab" data-admin-tab="event" type="button">행사 변경</button>
             <button class="admin-tab" data-admin-tab="notice" type="button">안내사항</button>
             <button class="admin-tab" data-admin-tab="slideshowSettings" type="button">슬라이드쇼 설정</button>
           </div>
 
-          <section id="basePanel" class="admin-panel">
+          <section id="basePanel" class="admin-panel is-hidden">
             <div class="form-grid">
               <div class="field">
                 <label for="baseClass">학급</label>
@@ -205,7 +205,7 @@
             <div id="specialList" class="list"></div>
           </section>
 
-          <section id="changePanel" class="admin-panel is-hidden">
+          <section id="changePanel" class="admin-panel">
             <div class="form-grid">
               <div class="field">
                 <label for="changeDate">날짜</label>

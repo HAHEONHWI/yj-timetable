@@ -17,11 +17,14 @@
     alwaysOnTop: true,
     openAtLogin: false,
     theme: "dark",
+    fontScale: 1,
   };
 
   const els = {
     closeButton: document.querySelector("#closeButton"),
     dateLabel: document.querySelector("#dateLabel"),
+    fontScaleLabel: document.querySelector("#fontScaleLabel"),
+    fontScaleRange: document.querySelector("#fontScaleRange"),
     opacityRange: document.querySelector("#opacityRange"),
     pinToggle: document.querySelector("#pinToggle"),
     refreshButton: document.querySelector("#refreshButton"),
@@ -79,22 +82,13 @@
     return state.changes[changeKey(date, className, period)] || null;
   }
 
-  function getEvent(date, className, period) {
-    return state.events.find((event) => {
-      return event.date === date && event.classes.includes(className) && period >= event.start && period <= event.end;
-    });
+  function getEventsForDate(date) {
+    return state.events.filter((event) => event.date === date);
   }
 
-  function getBaseMerge(date, className, period) {
-    if (!isSchoolWeekday(date)) return null;
-    const weekdayKey = weekdayForDate(date).key;
-    return state.baseMerges.find((merge) => {
-      return (
-        merge.weekday === weekdayKey &&
-        merge.classes.includes(className) &&
-        period >= merge.start &&
-        period <= merge.end
-      );
+  function hasEventCovering(date, className, period) {
+    return getEventsForDate(date).some((event) => {
+      return event.classes.includes(className) && period >= event.start && period <= event.end;
     });
   }
 
@@ -107,30 +101,54 @@
     return isSchoolWeekday(date) || Boolean(state.specialSchedules[date]);
   }
 
-  function renderCell(date, className, period, periodIndex) {
-    const event = getEvent(date, className, period);
-    const change = getChange(date, className, period);
-    const baseMerge = getBaseMerge(date, className, period);
+  function contiguousClassGroups(classNames) {
+    const indexes = classNames
+      .map((className) => classes.indexOf(className))
+      .filter((index) => index >= 0)
+      .sort((a, b) => a - b);
+    const groups = [];
+    indexes.forEach((index) => {
+      const last = groups[groups.length - 1];
+      if (last && last[last.length - 1] === index - 1) {
+        last.push(index);
+      } else {
+        groups.push([index]);
+      }
+    });
+    return groups;
+  }
 
-    if (event) {
-      return `<div class="lesson is-event">
-        <strong>${escapeHtml(event.title)}</strong>
-        <small>행사 · ${event.start}-${event.end}교시${event.memo ? ` · ${escapeHtml(event.memo)}` : ""}</small>
-      </div>`;
-    }
+  function formatPeriodRange(start, end) {
+    return start === end ? `${start}교시` : `${start}-${end}교시`;
+  }
+
+  function renderMergedBlock(item, className, options = {}) {
+    return contiguousClassGroups(item.classes)
+      .map((group) => {
+        const start = Number(item.start);
+        const end = Number(item.end);
+        const rowStart = start + 1;
+        const rowEnd = end + 2;
+        const columnStart = group[0] + 2;
+        const columnEnd = group[group.length - 1] + 3;
+        const memo = item.memo ? ` · ${escapeHtml(item.memo)}` : "";
+        const prefix = options.prefix ? `${options.prefix} · ` : "";
+        return `<div class="lesson ${className}" style="grid-column:${columnStart}/${columnEnd};grid-row:${rowStart}/${rowEnd}">
+          <strong>${escapeHtml(item.title)}</strong>
+          <small>${prefix}${formatPeriodRange(start, end)}${memo}</small>
+        </div>`;
+      })
+      .join("");
+  }
+
+  function renderCell(date, className, period, periodIndex) {
+    const change = getChange(date, className, period);
 
     if (change) {
       const original = getSubjectsForDate(date, className)[periodIndex] || "-";
       return `<div class="lesson is-change">
         <strong>${escapeHtml(change.subject)}</strong>
         <small>${escapeHtml(original)} 변경${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
-      </div>`;
-    }
-
-    if (baseMerge) {
-      return `<div class="lesson is-merge">
-        <strong>${escapeHtml(baseMerge.title)}</strong>
-        <small>${baseMerge.start}-${baseMerge.end}교시${baseMerge.memo ? ` · ${escapeHtml(baseMerge.memo)}` : ""}</small>
       </div>`;
     }
 
@@ -161,10 +179,35 @@
       return;
     }
 
+    const baseMerges = isSchoolWeekday(today)
+      ? state.baseMerges
+          .filter((merge) => merge.weekday === weekdayForDate(today).key)
+          .map((merge) => {
+            const classNames = merge.classes.filter((className) => {
+              return (
+                classes.includes(className) &&
+                periods
+                  .filter((period) => period >= merge.start && period <= merge.end)
+                  .every((period) => !hasEventCovering(today, className, period) && !getChange(today, className, period))
+              );
+            });
+            return { ...merge, classes: classNames };
+          })
+          .filter((merge) => merge.classes.length > 0)
+      : [];
+
+    const hasRenderedBaseMerge = (className, period) => {
+      return baseMerges.some((merge) => {
+        return merge.classes.includes(className) && period >= merge.start && period <= merge.end;
+      });
+    };
+
     const rows = periods
       .map((period, periodIndex) => {
         const cells = classes
           .map((className, classIndex) => {
+            if (hasEventCovering(today, className, period)) return "";
+            if (hasRenderedBaseMerge(className, period)) return "";
             return `<div style="grid-column:${classIndex + 2};grid-row:${periodIndex + 2}">
               ${renderCell(today, className, period, periodIndex)}
             </div>`;
@@ -173,11 +216,16 @@
         return `<div class="period-head" style="grid-column:1;grid-row:${periodIndex + 2}">${period}교시</div>${cells}`;
       })
       .join("");
+    const mergedBlocks = [
+      ...baseMerges.map((merge) => renderMergedBlock(merge, "is-merge")),
+      ...getEventsForDate(today).map((event) => renderMergedBlock(event, "is-event", { prefix: "행사" })),
+    ].join("");
 
     els.schedule.innerHTML = `<div class="today-grid">
       <div class="corner" style="grid-column:1;grid-row:1">교시</div>
       ${heads}
       ${rows}
+      ${mergedBlocks}
     </div>`;
   }
 
@@ -236,11 +284,15 @@
         alwaysOnTop: localStorage.getItem("widget-pin") !== "false",
         openAtLogin: localStorage.getItem("widget-startup") === "true",
         theme: localStorage.getItem("widget-theme") === "light" ? "light" : "dark",
+        fontScale: Number(localStorage.getItem("widget-font-scale")) || 1,
       };
       document.body.style.opacity = settings.opacity;
     }
     applyTheme(settings.theme);
+    applyFontScale(settings.fontScale);
     els.opacityRange.value = Math.round(settings.opacity * 100);
+    els.fontScaleRange.value = Math.round((Number(settings.fontScale) || 1) * 100);
+    els.fontScaleLabel.textContent = `글씨 ${els.fontScaleRange.value}%`;
     els.pinToggle.checked = Boolean(settings.alwaysOnTop);
     els.startupToggle.checked = Boolean(settings.openAtLogin);
     els.themeToggle.checked = settings.theme === "light";
@@ -255,10 +307,14 @@
       localStorage.setItem("widget-pin", String(settings.alwaysOnTop));
       localStorage.setItem("widget-startup", String(settings.openAtLogin));
       localStorage.setItem("widget-theme", settings.theme);
+      localStorage.setItem("widget-font-scale", String(settings.fontScale));
       document.body.style.opacity = settings.opacity;
     }
     applyTheme(settings.theme);
+    applyFontScale(settings.fontScale);
     els.opacityRange.value = Math.round(settings.opacity * 100);
+    els.fontScaleRange.value = Math.round((Number(settings.fontScale) || 1) * 100);
+    els.fontScaleLabel.textContent = `글씨 ${els.fontScaleRange.value}%`;
     els.pinToggle.checked = Boolean(settings.alwaysOnTop);
     els.startupToggle.checked = Boolean(settings.openAtLogin);
     els.themeToggle.checked = settings.theme === "light";
@@ -269,10 +325,21 @@
     document.body.classList.toggle("theme-dark", theme !== "light");
   }
 
+  function applyFontScale(fontScale) {
+    const scale = Math.min(1.5, Math.max(0.8, Number(fontScale) || 1));
+    document.body.style.setProperty("--widget-font-scale", scale);
+  }
+
   async function init() {
     await loadSettings();
     els.opacityRange.addEventListener("input", () => {
       saveSettings({ opacity: Number(els.opacityRange.value) / 100 });
+    });
+    els.fontScaleRange.addEventListener("input", () => {
+      const fontScale = Number(els.fontScaleRange.value) / 100;
+      applyFontScale(fontScale);
+      els.fontScaleLabel.textContent = `글씨 ${els.fontScaleRange.value}%`;
+      saveSettings({ fontScale });
     });
     els.pinToggle.addEventListener("change", () => {
       saveSettings({ alwaysOnTop: els.pinToggle.checked });

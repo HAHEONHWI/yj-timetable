@@ -91,6 +91,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
+  --widget-font-scale: 1;
 }
 
 button,
@@ -157,7 +158,8 @@ select {
 }
 
 .controls label,
-.opacity-control span {
+.opacity-control span,
+.font-control span {
   color: var(--label);
   font-size: 13px;
   font-weight: 900;
@@ -175,7 +177,8 @@ button {
 }
 
 .toggle,
-.opacity-control {
+.opacity-control,
+.font-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -192,7 +195,8 @@ button {
   accent-color: var(--blue);
 }
 
-.opacity-control input {
+.opacity-control input,
+.font-control input {
   width: 96px;
   accent-color: var(--blue);
 }
@@ -302,12 +306,12 @@ main {
 
 .lesson strong {
   overflow-wrap: anywhere;
-  font-size: clamp(14px, 1.9vw, 19px);
+  font-size: clamp(calc(14px * var(--widget-font-scale)), calc(1.9vw * var(--widget-font-scale)), calc(24px * var(--widget-font-scale)));
 }
 
 .lesson small {
   color: var(--meta-text);
-  font-size: 11px;
+  font-size: clamp(calc(10px * var(--widget-font-scale)), calc(1.15vw * var(--widget-font-scale)), calc(14px * var(--widget-font-scale)));
   opacity: 1;
 }
 

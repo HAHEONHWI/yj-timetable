@@ -14,6 +14,7 @@ function defaultSettings() {
     alwaysOnTop: true,
     openAtLogin: false,
     theme: "dark",
+    fontScale: 1,
   };
 }
 
@@ -88,6 +89,7 @@ app.whenReady().then(() => {
     settings.alwaysOnTop = Boolean(settings.alwaysOnTop);
     settings.openAtLogin = Boolean(settings.openAtLogin);
     settings.theme = settings.theme === "light" ? "light" : "dark";
+    settings.fontScale = Math.min(1.5, Math.max(0.8, Number(settings.fontScale) || 1));
     writeSettings(settings);
     applyLoginSettings(settings);
     if (mainWindow) {
