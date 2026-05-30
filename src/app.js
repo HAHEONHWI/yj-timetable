@@ -15,6 +15,7 @@
   let selectedDate = "";
   let currentRoute = "view";
   let selectedNoticeId = state.notices[0] ? state.notices[0].id : "";
+  let selectedEventId = "";
   let changeFilterWeekday = "all";
   let slideshowIndex = 0;
   let slideshowTimer = null;
@@ -921,16 +922,50 @@
           .slice()
           .sort((a, b) => a.date.localeCompare(b.date))
           .map((event) => {
-            return `<article class="list-item event-list-item">
+            return `<article class="list-item event-list-item${event.id === selectedEventId ? " is-active" : ""}">
               <div>
                 <strong>${event.date} · ${escapeHtml(event.title)}</strong>
                 <span>${escapeHtml(event.classes.join(", "))} · ${formatPeriodRange(event.start, event.end)}${event.memo ? ` · ${escapeHtml(event.memo)}` : ""}</span>
               </div>
-              <button class="text-button" data-delete-event="${event.id}" type="button">삭제</button>
+              <div class="list-actions">
+                <button class="text-button neutral" data-edit-event="${event.id}" type="button">수정</button>
+                <button class="text-button" data-delete-event="${event.id}" type="button">삭제</button>
+              </div>
             </article>`;
           })
           .join("")
       : `<p class="empty">등록된 행사가 없습니다.</p>`;
+  }
+
+  function resetEventForm() {
+    selectedEventId = "";
+    els.eventTitle.value = "";
+    els.eventMemo.value = "";
+    $$("#eventClassChecks input").forEach((input) => {
+      input.checked = true;
+    });
+    els.saveEventButton.textContent = "행사 저장";
+    renderEventList();
+  }
+
+  function loadEventEditor(eventId) {
+    const item = state.events.find((event) => event.id === eventId);
+    if (!item) {
+      showMessage(els.adminMessage, "수정할 행사를 찾을 수 없습니다.");
+      return;
+    }
+    selectedEventId = item.id;
+    els.eventDate.value = item.date;
+    els.eventStart.value = String(item.start);
+    els.eventEnd.value = String(item.end);
+    els.eventTitle.value = item.title || "";
+    els.eventMemo.value = item.memo || "";
+    $$("#eventClassChecks input").forEach((input) => {
+      input.checked = item.classes.includes(input.value);
+    });
+    els.saveEventButton.textContent = "행사 수정 저장";
+    renderEventList();
+    showMessage(els.adminMessage, "행사 내용을 불러왔습니다. 수정 후 저장하세요.");
   }
 
   function renderNoticeList() {
@@ -1401,25 +1436,39 @@
         showMessage(els.adminMessage, "행사 날짜, 이름, 학급, 교시 범위를 확인하세요.");
         return;
       }
-      state.events.push({
-        id: `${Date.now()}`,
+      const nextEvent = {
+        id: selectedEventId || `${Date.now()}`,
         date: els.eventDate.value,
         title,
         start,
         end,
         classes: eventClasses,
         memo: els.eventMemo.value.trim(),
-      });
-      els.eventTitle.value = "";
-      els.eventMemo.value = "";
+      };
+      if (selectedEventId) {
+        state.events = state.events.map((item) => (item.id === selectedEventId ? nextEvent : item));
+        resetEventForm();
+        saveState("행사 시간표를 수정했습니다.");
+        return;
+      }
+      state.events.push(nextEvent);
+      resetEventForm();
       saveState("행사 시간표를 저장했습니다.");
     });
 
     els.eventList.addEventListener("click", (event) => {
+      const editButton = event.target.closest("[data-edit-event]");
+      if (editButton) {
+        loadEventEditor(editButton.dataset.editEvent);
+        return;
+      }
       const button = event.target.closest("[data-delete-event]");
       if (!button) return;
       if (!confirmAction("행사를 삭제할까요?")) return;
       state.events = state.events.filter((item) => item.id !== button.dataset.deleteEvent);
+      if (selectedEventId === button.dataset.deleteEvent) {
+        resetEventForm();
+      }
       saveState("행사를 삭제했습니다.");
     });
 

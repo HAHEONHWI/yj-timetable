@@ -1208,6 +1208,19 @@ textarea {
   gap: 4px;
 }
 
+.list-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.text-button.neutral {
+  color: var(--ink);
+  border-color: var(--line);
+  background: #111827;
+}
+
 .empty,
 .message {
   margin: 0;
