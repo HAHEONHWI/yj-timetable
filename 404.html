@@ -168,10 +168,38 @@
 
       .code {
         margin: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
         font-size: clamp(72px, 8vw, 112px);
         line-height: 0.92;
         font-weight: 950;
         letter-spacing: 0;
+      }
+
+      .code:focus-visible {
+        outline: 2px solid var(--teal-light);
+        outline-offset: 8px;
+      }
+
+      .code.is-egg-shake {
+        animation: codeShake 260ms ease;
+      }
+
+      @keyframes codeShake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+
+        25% {
+          transform: translateX(-5px) rotate(-1deg);
+        }
+
+        75% {
+          transform: translateX(5px) rotate(1deg);
+        }
       }
 
       .status {
@@ -363,7 +391,7 @@
         <section class="content" aria-labelledby="title">
           <article class="hero">
             <div class="code-box">
-              <div class="code">404</div>
+              <button id="codeEgg" class="code" type="button" aria-label="404">404</button>
               <div class="status">잘못된 주소</div>
             </div>
 
@@ -382,7 +410,7 @@
           </article>
 
           <nav class="quick-links" aria-label="빠른 이동">
-            <a class="quick-link" href="/slide">
+            <a id="slideLink" class="quick-link" href="/slide">
               <strong>슬라이드쇼</strong>
               <span>전자칠판용 자동 화면</span>
             </a>
@@ -409,9 +437,14 @@
       (() => {
         const logo = document.querySelector("#logoEgg");
         const brandStatus = document.querySelector("#brandStatus");
+        const code = document.querySelector("#codeEgg");
+        const slideLink = document.querySelector("#slideLink");
         const toast = document.querySelector("#eggToast");
         const widgetLink = document.querySelector("#widgetLink");
         const originalStatus = brandStatus.textContent;
+        const arrowCode = ["arrowup", "arrowup", "arrowdown", "arrowdown"];
+        let arrowIndex = 0;
+        let codeClicks = 0;
         let logoClicks = 0;
         let logoTimer = 0;
         let toastTimer = 0;
@@ -425,6 +458,17 @@
             toast.classList.remove("is-visible");
           }, 2200);
         }
+
+        code.addEventListener("click", () => {
+          codeClicks += 1;
+          code.classList.remove("is-egg-shake");
+          window.requestAnimationFrame(() => {
+            code.classList.add("is-egg-shake");
+          });
+          if (codeClicks < 4) return;
+          codeClicks = 0;
+          showToast("아직도 없습니다.");
+        });
 
         logo.addEventListener("click", () => {
           logoClicks += 1;
@@ -443,6 +487,20 @@
 
         document.addEventListener("keydown", (event) => {
           if (event.ctrlKey || event.metaKey || event.altKey) return;
+          const normalizedKey = event.key.toLowerCase();
+          if (normalizedKey === arrowCode[arrowIndex]) {
+            arrowIndex += 1;
+            if (arrowIndex === arrowCode.length) {
+              arrowIndex = 0;
+              showToast("전자칠판 모드 준비 완료");
+              slideLink.classList.add("is-egg-highlight");
+              window.setTimeout(() => {
+                slideLink.classList.remove("is-egg-highlight");
+              }, 2200);
+            }
+            return;
+          }
+          arrowIndex = normalizedKey === arrowCode[0] ? 1 : 0;
           const key = event.key.toLowerCase();
           if (key.length !== 1) return;
           sequence = (sequence + key).slice(-2);
