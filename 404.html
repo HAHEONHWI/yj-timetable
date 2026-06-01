@@ -9,14 +9,14 @@
       :root {
         --bg: #070b12;
         --surface: #111827;
-        --surface-2: #172033;
+        --surface-soft: #151f31;
         --line: #2f3b4c;
         --ink: #f1f5f9;
         --muted: #9aa8bd;
         --teal: #0f766e;
-        --teal-soft: #123f3d;
+        --teal-light: #5eead4;
         --blue: #3b82f6;
-        --amber: #f59e0b;
+        --amber: #fbbf24;
         font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
@@ -28,10 +28,10 @@
         margin: 0;
         min-height: 100vh;
         background:
-          linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-          linear-gradient(145deg, #08111d 0%, var(--bg) 52%, #0a1414 100%);
-        background-size: 46px 46px, 46px 46px, auto;
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(145deg, #08111d 0%, var(--bg) 55%, #081512 100%);
+        background-size: 58px 58px, 58px 58px, auto;
         color: var(--ink);
       }
 
@@ -46,13 +46,14 @@
       }
 
       .topbar {
+        min-height: 86px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 18px;
-        padding: 18px clamp(18px, 4vw, 56px);
-        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-        background: rgba(7, 11, 18, 0.86);
+        padding: 16px clamp(20px, 5vw, 72px);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(7, 11, 18, 0.88);
       }
 
       .brand {
@@ -64,22 +65,22 @@
       }
 
       .brand img {
-        width: 46px;
-        height: 46px;
+        width: 50px;
+        height: 50px;
         object-fit: contain;
       }
 
-      .brand p,
-      .eyebrow {
+      .brand p {
         margin: 0;
-        color: #5eead4;
+        color: var(--teal-light);
         font-size: 13px;
         font-weight: 900;
       }
 
       .brand h1 {
         margin: 2px 0 0;
-        font-size: 22px;
+        font-size: 23px;
+        line-height: 1.1;
         letter-spacing: 0;
       }
 
@@ -98,7 +99,7 @@
         justify-content: center;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: rgba(17, 24, 39, 0.88);
+        background: rgba(17, 24, 39, 0.86);
         padding: 0 14px;
         text-decoration: none;
         font-size: 14px;
@@ -107,65 +108,82 @@
 
       .nav a:hover,
       .button:hover,
-      .route-card:hover {
-        border-color: rgba(94, 234, 212, 0.72);
+      .quick-link:hover {
+        border-color: rgba(94, 234, 212, 0.7);
         background: rgba(15, 118, 110, 0.18);
       }
 
       main {
         display: grid;
         place-items: center;
-        padding: clamp(26px, 5vw, 70px) 18px;
+        padding: clamp(28px, 5vw, 72px) 20px;
       }
 
-      .layout {
-        width: min(1080px, 100%);
+      .content {
+        width: min(980px, 100%);
         display: grid;
-        grid-template-columns: minmax(0, 1.02fr) minmax(310px, 0.78fr);
         gap: 18px;
-        align-items: stretch;
       }
 
       .hero {
-        min-height: 520px;
         display: grid;
-        align-content: center;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: clamp(24px, 4vw, 46px);
+        align-items: center;
         border: 1px solid var(--line);
         border-radius: 12px;
         background:
-          linear-gradient(135deg, rgba(15, 118, 110, 0.22), transparent 38%),
-          rgba(17, 24, 39, 0.92);
-        padding: clamp(28px, 5vw, 58px);
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+          linear-gradient(135deg, rgba(15, 118, 110, 0.2), transparent 42%),
+          rgba(17, 24, 39, 0.94);
+        padding: clamp(30px, 5vw, 54px);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+      }
+
+      .code-box {
+        min-width: 210px;
+        text-align: center;
+      }
+
+      .code {
+        margin: 0;
+        font-size: clamp(72px, 8vw, 112px);
+        line-height: 0.92;
+        font-weight: 950;
+        letter-spacing: 0;
       }
 
       .status {
         width: fit-content;
-        border: 1px solid rgba(245, 158, 11, 0.5);
+        margin: 14px auto 0;
+        border: 1px solid rgba(251, 191, 36, 0.5);
         border-radius: 999px;
-        background: rgba(245, 158, 11, 0.12);
-        color: #fcd34d;
+        background: rgba(251, 191, 36, 0.1);
+        color: var(--amber);
         padding: 7px 12px;
         font-size: 13px;
         font-weight: 900;
       }
 
-      .code {
-        margin: 26px 0 12px;
-        font-size: clamp(88px, 14vw, 156px);
-        line-height: 0.85;
-        font-weight: 950;
-        letter-spacing: 0;
+      .copy {
+        min-width: 0;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--teal-light);
+        font-size: 13px;
+        font-weight: 900;
       }
 
       h2 {
+        max-width: 620px;
         margin: 0;
-        font-size: clamp(30px, 4.4vw, 54px);
-        line-height: 1.05;
+        font-size: clamp(30px, 3.4vw, 44px);
+        line-height: 1.08;
         letter-spacing: 0;
       }
 
-      .hero-copy {
+      .description {
         max-width: 650px;
         margin: 16px 0 0;
         color: var(--muted);
@@ -178,7 +196,7 @@
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
-        margin-top: 30px;
+        margin-top: 28px;
       }
 
       .button.primary {
@@ -191,76 +209,39 @@
         border-color: rgba(59, 130, 246, 0.58);
       }
 
-      .panel {
+      .quick-links {
         display: grid;
-        align-content: center;
-        gap: 12px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .quick-link {
+        display: grid;
+        gap: 5px;
+        min-height: 92px;
         border: 1px solid var(--line);
-        border-radius: 12px;
-        background: rgba(17, 24, 39, 0.92);
-        padding: clamp(22px, 3vw, 32px);
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
-      }
-
-      .panel h3 {
-        margin: 0 0 2px;
-        font-size: 21px;
-      }
-
-      .panel-note {
-        margin: 0 0 6px;
-        color: var(--muted);
-        font-size: 14px;
-        font-weight: 800;
-        line-height: 1.5;
-      }
-
-      .route-card {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 12px;
-        align-items: center;
-        border: 1px solid rgba(148, 163, 184, 0.22);
         border-radius: 10px;
-        background: rgba(8, 13, 21, 0.58);
+        background: rgba(17, 24, 39, 0.82);
         padding: 14px;
         text-decoration: none;
       }
 
-      .route-icon {
-        width: 38px;
-        height: 38px;
-        display: grid;
-        place-items: center;
-        border-radius: 8px;
-        border: 1px solid rgba(94, 234, 212, 0.25);
-        background: rgba(15, 118, 110, 0.24);
-        color: #99f6e4;
-        font-weight: 950;
-      }
-
-      .route-card strong,
-      .route-card span {
-        display: block;
-      }
-
-      .route-card strong {
+      .quick-link strong {
         font-size: 15px;
       }
 
-      .route-card span {
-        margin-top: 3px;
+      .quick-link span {
         color: var(--muted);
         font-size: 13px;
         font-weight: 800;
-        line-height: 1.45;
+        line-height: 1.4;
       }
 
-      .foot {
-        margin-top: 6px;
+      .footer-note {
         color: #718096;
         font-size: 12px;
         font-weight: 800;
+        text-align: center;
       }
 
       @media (max-width: 860px) {
@@ -278,12 +259,28 @@
           flex: 1 1 42%;
         }
 
-        .layout {
+        .hero {
           grid-template-columns: 1fr;
         }
 
-        .hero {
-          min-height: auto;
+        .code-box {
+          min-width: 0;
+          text-align: left;
+        }
+
+        .status {
+          margin-left: 0;
+          margin-right: 0;
+        }
+
+        .quick-links {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 520px) {
+        .quick-links {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -308,60 +305,47 @@
       </header>
 
       <main>
-        <section class="layout" aria-labelledby="title">
+        <section class="content" aria-labelledby="title">
           <article class="hero">
-            <div class="status">404 · 잘못된 주소</div>
-            <div class="code">404</div>
-            <h2 id="title">이 주소에는 시간표가 없어요</h2>
-            <p class="hero-copy">
-              페이지가 이동되었거나 링크가 잘못 입력된 것 같습니다.
-              아래 버튼으로 바로 조회 화면으로 돌아가거나 필요한 메뉴를 선택해 주세요.
-            </p>
-            <div class="actions">
-              <a class="button primary" href="/">시간표 조회</a>
-              <a class="button secondary" href="javascript:history.back()">이전 화면</a>
+            <div class="code-box">
+              <div class="code">404</div>
+              <div class="status">잘못된 주소</div>
+            </div>
+
+            <div class="copy">
+              <p class="eyebrow">Page Not Found</p>
+              <h2 id="title">페이지를 찾을 수 없습니다</h2>
+              <p class="description">
+                입력한 주소가 올바르지 않거나 페이지가 이동되었습니다.
+                아래에서 필요한 화면으로 이동해 주세요.
+              </p>
+              <div class="actions">
+                <a class="button primary" href="/">시간표 조회</a>
+                <a class="button secondary" href="javascript:history.back()">이전 화면</a>
+              </div>
             </div>
           </article>
 
-          <aside class="panel" aria-label="빠른 이동">
-            <p class="eyebrow">빠른 이동</p>
-            <h3>어디로 갈까요?</h3>
-            <p class="panel-note">현재 사용할 수 있는 용정 시간표 화면입니다.</p>
-
-            <a class="route-card" href="/slide">
-              <span class="route-icon">S</span>
-              <span>
-                <strong>슬라이드쇼</strong>
-                <span>전자칠판용 자동 슬라이드 화면</span>
-              </span>
+          <nav class="quick-links" aria-label="빠른 이동">
+            <a class="quick-link" href="/slide">
+              <strong>슬라이드쇼</strong>
+              <span>전자칠판용 자동 화면</span>
             </a>
-
-            <a class="route-card" href="/download">
-              <span class="route-icon">D</span>
-              <span>
-                <strong>다운로드</strong>
-                <span>Windows 위젯과 Android APK 설치 파일</span>
-              </span>
+            <a class="quick-link" href="/download">
+              <strong>다운로드</strong>
+              <span>Windows 위젯, Android APK</span>
             </a>
-
-            <a class="route-card" href="/admin">
-              <span class="route-icon">A</span>
-              <span>
-                <strong>관리자</strong>
-                <span>시간표 변경, 행사, 안내사항 관리</span>
-              </span>
+            <a class="quick-link" href="/admin">
+              <strong>관리자</strong>
+              <span>시간표와 안내사항 관리</span>
             </a>
-
-            <a class="route-card" href="/widget/widget.html">
-              <span class="route-icon">W</span>
-              <span>
-                <strong>위젯 화면</strong>
-                <span>브라우저에서 위젯 화면 확인</span>
-              </span>
+            <a class="quick-link" href="/widget/widget.html">
+              <strong>위젯 화면</strong>
+              <span>브라우저에서 위젯 확인</span>
             </a>
+          </nav>
 
-            <div class="foot">용정중학교 전자시간표 서비스</div>
-          </aside>
+          <div class="footer-note">용정중학교 전자시간표 서비스</div>
         </section>
       </main>
     </div>
