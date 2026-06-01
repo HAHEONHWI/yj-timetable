@@ -64,6 +64,28 @@
         text-decoration: none;
       }
 
+      .brand-copy {
+        min-width: 0;
+        text-decoration: none;
+      }
+
+      .logo-egg {
+        width: 50px;
+        height: 50px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .logo-egg:focus-visible {
+        outline: 2px solid var(--teal-light);
+        outline-offset: 4px;
+      }
+
       .brand img {
         width: 50px;
         height: 50px;
@@ -244,6 +266,37 @@
         text-align: center;
       }
 
+      .egg-toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        z-index: 10;
+        transform: translate(-50%, 14px);
+        border: 1px solid rgba(94, 234, 212, 0.45);
+        border-radius: 999px;
+        background: rgba(8, 13, 21, 0.94);
+        color: var(--ink);
+        padding: 10px 14px;
+        font-size: 13px;
+        font-weight: 900;
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 180ms ease,
+          transform 180ms ease;
+      }
+
+      .egg-toast.is-visible {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      .quick-link.is-egg-highlight {
+        border-color: var(--teal-light);
+        background: rgba(15, 118, 110, 0.24);
+        box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.12);
+      }
+
       @media (max-width: 860px) {
         .topbar {
           align-items: flex-start;
@@ -288,13 +341,15 @@
   <body>
     <div class="page">
       <header class="topbar">
-        <a class="brand" href="/" aria-label="용정 시간표 홈으로 이동">
-          <img src="/assets/logo.png" alt="" />
-          <div>
-            <p>용정 전용 시간표</p>
+        <div class="brand">
+          <button id="logoEgg" class="logo-egg" type="button" aria-label="용정 로고">
+            <img src="/assets/logo.png" alt="" />
+          </button>
+          <a class="brand-copy" href="/" aria-label="용정 시간표 홈으로 이동">
+            <p id="brandStatus">용정 전용 시간표</p>
             <h1>용정 시간표</h1>
-          </div>
-        </a>
+          </a>
+        </div>
 
         <nav class="nav" aria-label="주요 페이지">
           <a href="/">조회</a>
@@ -339,7 +394,7 @@
               <strong>관리자</strong>
               <span>시간표와 안내사항 관리</span>
             </a>
-            <a class="quick-link" href="/widget/widget.html">
+            <a id="widgetLink" class="quick-link" href="/widget/widget.html">
               <strong>위젯 화면</strong>
               <span>브라우저에서 위젯 확인</span>
             </a>
@@ -349,5 +404,56 @@
         </section>
       </main>
     </div>
+    <div id="eggToast" class="egg-toast" role="status" aria-live="polite"></div>
+    <script>
+      (() => {
+        const logo = document.querySelector("#logoEgg");
+        const brandStatus = document.querySelector("#brandStatus");
+        const toast = document.querySelector("#eggToast");
+        const widgetLink = document.querySelector("#widgetLink");
+        const originalStatus = brandStatus.textContent;
+        let logoClicks = 0;
+        let logoTimer = 0;
+        let toastTimer = 0;
+        let sequence = "";
+
+        function showToast(message) {
+          toast.textContent = message;
+          toast.classList.add("is-visible");
+          window.clearTimeout(toastTimer);
+          toastTimer = window.setTimeout(() => {
+            toast.classList.remove("is-visible");
+          }, 2200);
+        }
+
+        logo.addEventListener("click", () => {
+          logoClicks += 1;
+          window.clearTimeout(logoTimer);
+          logoTimer = window.setTimeout(() => {
+            logoClicks = 0;
+          }, 1300);
+          if (logoClicks < 5) return;
+          logoClicks = 0;
+          brandStatus.textContent = "용정 시간표 상태: 정상 운영 중";
+          showToast("상태 확인 완료");
+          window.setTimeout(() => {
+            brandStatus.textContent = originalStatus;
+          }, 2400);
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.ctrlKey || event.metaKey || event.altKey) return;
+          const key = event.key.toLowerCase();
+          if (key.length !== 1) return;
+          sequence = (sequence + key).slice(-2);
+          if (sequence !== "yj") return;
+          showToast("YJ route unlocked");
+          widgetLink.classList.add("is-egg-highlight");
+          window.setTimeout(() => {
+            widgetLink.classList.remove("is-egg-highlight");
+          }, 2200);
+        });
+      })();
+    </script>
   </body>
 </html>
