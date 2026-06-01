@@ -3,20 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>404 - 페이지를 찾을 수 없습니다</title>
+    <title>404 - 용정 시간표</title>
     <link rel="icon" href="/assets/logo.png" />
     <style>
       :root {
         --bg: #070b12;
-        --panel: #111827;
-        --panel-soft: #162033;
-        --line: #2b3648;
+        --surface: #111827;
+        --surface-2: #172033;
+        --line: #2f3b4c;
         --ink: #f1f5f9;
         --muted: #9aa8bd;
-        --accent: #14b8a6;
-        --accent-strong: #0f766e;
+        --teal: #0f766e;
+        --teal-soft: #123f3d;
         --blue: #3b82f6;
-        --warning: #f59e0b;
+        --amber: #f59e0b;
         font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
@@ -28,9 +28,10 @@
         margin: 0;
         min-height: 100vh;
         background:
-          radial-gradient(circle at 18% 16%, rgba(20, 184, 166, 0.18), transparent 28%),
-          radial-gradient(circle at 82% 22%, rgba(59, 130, 246, 0.14), transparent 26%),
-          linear-gradient(180deg, #080d15 0%, var(--bg) 100%);
+          linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+          linear-gradient(145deg, #08111d 0%, var(--bg) 52%, #0a1414 100%);
+        background-size: 46px 46px, 46px 46px, auto;
         color: var(--ink);
       }
 
@@ -38,15 +39,20 @@
         color: inherit;
       }
 
+      .page {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
       .topbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 20px;
+        gap: 18px;
         padding: 18px clamp(18px, 4vw, 56px);
         border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-        background: rgba(7, 11, 18, 0.78);
-        backdrop-filter: blur(18px);
+        background: rgba(7, 11, 18, 0.86);
       }
 
       .brand {
@@ -58,15 +64,15 @@
       }
 
       .brand img {
-        width: 48px;
-        height: 48px;
+        width: 46px;
+        height: 46px;
         object-fit: contain;
       }
 
-      .eyebrow,
-      .brand p {
+      .brand p,
+      .eyebrow {
         margin: 0;
-        color: var(--accent);
+        color: #5eead4;
         font-size: 13px;
         font-weight: 900;
       }
@@ -77,14 +83,14 @@
         letter-spacing: 0;
       }
 
-      nav {
+      .nav {
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
         justify-content: flex-end;
       }
 
-      nav a,
+      .nav a,
       .button {
         min-height: 40px;
         display: inline-flex;
@@ -92,52 +98,52 @@
         justify-content: center;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: rgba(17, 24, 39, 0.82);
-        color: var(--ink);
+        background: rgba(17, 24, 39, 0.88);
         padding: 0 14px;
+        text-decoration: none;
         font-size: 14px;
         font-weight: 900;
-        text-decoration: none;
       }
 
-      nav a:hover,
-      .button:hover {
-        border-color: rgba(20, 184, 166, 0.7);
-        background: rgba(22, 32, 51, 0.94);
+      .nav a:hover,
+      .button:hover,
+      .route-card:hover {
+        border-color: rgba(94, 234, 212, 0.72);
+        background: rgba(15, 118, 110, 0.18);
       }
 
       main {
-        min-height: calc(100vh - 85px);
         display: grid;
         place-items: center;
-        padding: clamp(28px, 6vw, 72px) 18px;
+        padding: clamp(26px, 5vw, 70px) 18px;
       }
 
-      .shell {
-        width: min(980px, 100%);
+      .layout {
+        width: min(1080px, 100%);
         display: grid;
-        grid-template-columns: 1.05fr 0.95fr;
+        grid-template-columns: minmax(0, 1.02fr) minmax(310px, 0.78fr);
         gap: 18px;
         align-items: stretch;
       }
 
-      .hero,
-      .quick-links {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: rgba(17, 24, 39, 0.88);
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
-      }
-
       .hero {
-        padding: clamp(28px, 5vw, 54px);
+        min-height: 520px;
+        display: grid;
+        align-content: center;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background:
+          linear-gradient(135deg, rgba(15, 118, 110, 0.22), transparent 38%),
+          rgba(17, 24, 39, 0.92);
+        padding: clamp(28px, 5vw, 58px);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
       }
 
-      .badge {
+      .status {
         width: fit-content;
-        border: 1px solid rgba(245, 158, 11, 0.45);
+        border: 1px solid rgba(245, 158, 11, 0.5);
         border-radius: 999px;
-        background: rgba(245, 158, 11, 0.1);
+        background: rgba(245, 158, 11, 0.12);
         color: #fcd34d;
         padding: 7px 12px;
         font-size: 13px;
@@ -145,159 +151,219 @@
       }
 
       .code {
-        margin: 24px 0 8px;
-        color: var(--ink);
-        font-size: clamp(76px, 13vw, 138px);
-        line-height: 0.9;
+        margin: 26px 0 12px;
+        font-size: clamp(88px, 14vw, 156px);
+        line-height: 0.85;
         font-weight: 950;
         letter-spacing: 0;
       }
 
       h2 {
         margin: 0;
-        font-size: clamp(28px, 4vw, 46px);
+        font-size: clamp(30px, 4.4vw, 54px);
+        line-height: 1.05;
         letter-spacing: 0;
       }
 
-      .hero p {
-        max-width: 610px;
+      .hero-copy {
+        max-width: 650px;
         margin: 16px 0 0;
         color: var(--muted);
         font-size: 17px;
         line-height: 1.65;
-        font-weight: 700;
+        font-weight: 750;
       }
 
       .actions {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
-        margin-top: 28px;
+        margin-top: 30px;
       }
 
       .button.primary {
-        border-color: var(--accent-strong);
-        background: var(--accent-strong);
+        border-color: var(--teal);
+        background: var(--teal);
         color: #ecfeff;
       }
 
       .button.secondary {
-        border-color: rgba(59, 130, 246, 0.55);
+        border-color: rgba(59, 130, 246, 0.58);
       }
 
-      .quick-links {
+      .panel {
         display: grid;
         align-content: center;
         gap: 12px;
-        padding: clamp(22px, 4vw, 34px);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(17, 24, 39, 0.92);
+        padding: clamp(22px, 3vw, 32px);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
       }
 
-      .quick-links h3 {
-        margin: 0 0 4px;
-        font-size: 20px;
+      .panel h3 {
+        margin: 0 0 2px;
+        font-size: 21px;
       }
 
-      .link-card {
+      .panel-note {
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.5;
+      }
+
+      .route-card {
         display: grid;
-        gap: 4px;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 8px;
-        background: rgba(8, 13, 21, 0.55);
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: center;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 10px;
+        background: rgba(8, 13, 21, 0.58);
         padding: 14px;
         text-decoration: none;
       }
 
-      .link-card strong {
+      .route-icon {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        border: 1px solid rgba(94, 234, 212, 0.25);
+        background: rgba(15, 118, 110, 0.24);
+        color: #99f6e4;
+        font-weight: 950;
+      }
+
+      .route-card strong,
+      .route-card span {
+        display: block;
+      }
+
+      .route-card strong {
         font-size: 15px;
       }
 
-      .link-card span {
+      .route-card span {
+        margin-top: 3px;
         color: var(--muted);
         font-size: 13px;
         font-weight: 800;
+        line-height: 1.45;
       }
 
-      .link-card:hover {
-        border-color: rgba(20, 184, 166, 0.7);
-        background: rgba(15, 118, 110, 0.14);
+      .foot {
+        margin-top: 6px;
+        color: #718096;
+        font-size: 12px;
+        font-weight: 800;
       }
 
-      @media (max-width: 820px) {
+      @media (max-width: 860px) {
         .topbar {
           align-items: flex-start;
           flex-direction: column;
         }
 
-        nav {
+        .nav {
           width: 100%;
           justify-content: stretch;
         }
 
-        nav a {
+        .nav a {
           flex: 1 1 42%;
         }
 
-        .shell {
+        .layout {
           grid-template-columns: 1fr;
+        }
+
+        .hero {
+          min-height: auto;
         }
       }
     </style>
   </head>
   <body>
-    <header class="topbar">
-      <a class="brand" href="/" aria-label="홈으로 이동">
-        <img src="/assets/home-banner.png" alt="" />
-        <div>
-          <p>용정 전용 시간표</p>
-          <h1>용정 시간표</h1>
-        </div>
-      </a>
-
-      <nav aria-label="주요 페이지">
-        <a href="/">조회</a>
-        <a href="/slide">슬라이드쇼</a>
-        <a href="/download">다운로드</a>
-        <a href="/admin">관리자</a>
-      </nav>
-    </header>
-
-    <main>
-      <section class="shell" aria-labelledby="pageTitle">
-        <article class="hero">
-          <div class="badge">Page Not Found</div>
-          <div class="code">404</div>
-          <h2 id="pageTitle">찾는 페이지가 없어요</h2>
-          <p>
-            주소가 바뀌었거나 더 이상 사용하지 않는 링크일 수 있습니다.
-            아래 바로가기로 필요한 화면으로 이동해 주세요.
-          </p>
-          <div class="actions">
-            <a class="button primary" href="/">시간표 조회로 이동</a>
-            <a class="button secondary" href="javascript:history.back()">이전 페이지</a>
+    <div class="page">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="용정 시간표 홈으로 이동">
+          <img src="/assets/home-banner.png" alt="" />
+          <div>
+            <p>용정 전용 시간표</p>
+            <h1>용정 시간표</h1>
           </div>
-        </article>
+        </a>
 
-        <aside class="quick-links" aria-label="빠른 이동">
-          <p class="eyebrow">바로가기</p>
-          <h3>필요한 화면으로 바로 이동</h3>
-          <a class="link-card" href="/slide">
-            <strong>슬라이드쇼</strong>
-            <span>전자칠판에 자동 슬라이드 화면 표시</span>
-          </a>
-          <a class="link-card" href="/download">
-            <strong>다운로드</strong>
-            <span>Windows 위젯과 전자칠판 APK 설치 파일</span>
-          </a>
-          <a class="link-card" href="/admin">
-            <strong>관리자</strong>
-            <span>시간표 변경, 행사, 안내사항 관리</span>
-          </a>
-          <a class="link-card" href="/widget/widget.html">
-            <strong>위젯 화면</strong>
-            <span>브라우저에서 Windows 위젯 화면 확인</span>
-          </a>
-        </aside>
-      </section>
-    </main>
+        <nav class="nav" aria-label="주요 페이지">
+          <a href="/">조회</a>
+          <a href="/slide">슬라이드쇼</a>
+          <a href="/download">다운로드</a>
+          <a href="/admin">관리자</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="layout" aria-labelledby="title">
+          <article class="hero">
+            <div class="status">404 · 잘못된 주소</div>
+            <div class="code">404</div>
+            <h2 id="title">이 주소에는 시간표가 없어요</h2>
+            <p class="hero-copy">
+              페이지가 이동되었거나 링크가 잘못 입력된 것 같습니다.
+              아래 버튼으로 바로 조회 화면으로 돌아가거나 필요한 메뉴를 선택해 주세요.
+            </p>
+            <div class="actions">
+              <a class="button primary" href="/">시간표 조회</a>
+              <a class="button secondary" href="javascript:history.back()">이전 화면</a>
+            </div>
+          </article>
+
+          <aside class="panel" aria-label="빠른 이동">
+            <p class="eyebrow">빠른 이동</p>
+            <h3>어디로 갈까요?</h3>
+            <p class="panel-note">현재 사용할 수 있는 용정 시간표 화면입니다.</p>
+
+            <a class="route-card" href="/slide">
+              <span class="route-icon">S</span>
+              <span>
+                <strong>슬라이드쇼</strong>
+                <span>전자칠판용 자동 슬라이드 화면</span>
+              </span>
+            </a>
+
+            <a class="route-card" href="/download">
+              <span class="route-icon">D</span>
+              <span>
+                <strong>다운로드</strong>
+                <span>Windows 위젯과 Android APK 설치 파일</span>
+              </span>
+            </a>
+
+            <a class="route-card" href="/admin">
+              <span class="route-icon">A</span>
+              <span>
+                <strong>관리자</strong>
+                <span>시간표 변경, 행사, 안내사항 관리</span>
+              </span>
+            </a>
+
+            <a class="route-card" href="/widget/widget.html">
+              <span class="route-icon">W</span>
+              <span>
+                <strong>위젯 화면</strong>
+                <span>브라우저에서 위젯 화면 확인</span>
+              </span>
+            </a>
+
+            <div class="foot">용정중학교 전자시간표 서비스</div>
+          </aside>
+        </section>
+      </main>
+    </div>
   </body>
 </html>
