@@ -280,6 +280,26 @@
     return "/";
   }
 
+  async function enterFullscreen() {
+    if (document.fullscreenElement || isBoardMode) return;
+    const target = document.documentElement;
+    if (!target.requestFullscreen) return;
+    try {
+      await target.requestFullscreen();
+    } catch {
+      showSlideshowToast("전체화면이 차단되면 F11을 눌러주세요.");
+    }
+  }
+
+  async function exitFullscreen() {
+    if (!document.fullscreenElement || !document.exitFullscreen) return;
+    try {
+      await document.exitFullscreen();
+    } catch {
+      // Browser may reject if fullscreen was already dismissed.
+    }
+  }
+
   function refreshAdminAuth() {
     const loggedIn = isLoggedIn();
     els.loginPanel.classList.toggle("is-hidden", loggedIn);
@@ -299,8 +319,10 @@
 
     if (route === "slideshow") {
       startSlideshow();
+      if (options.fullscreen) enterFullscreen();
     } else {
       stopSlideshow();
+      exitFullscreen();
     }
 
     const nextPath = pathForRoute(route);
@@ -748,6 +770,14 @@
 
     slideshowIndex = (slideshowIndex + delta + slides.length) % slides.length;
     renderSlideshow();
+  }
+
+  function jumpSlideshow(index) {
+    const slides = slideshowSlides();
+    if (!slides.length) return;
+    slideshowIndex = clamp(index, 0, slides.length - 1);
+    renderSlideshow();
+    startSlideshow();
   }
 
   function stopSlideshow() {
@@ -1243,7 +1273,7 @@
   function bindEvents() {
     $$(".nav-button").forEach((button) => {
       button.addEventListener("click", () => {
-        routeTo(button.dataset.route);
+        routeTo(button.dataset.route, { fullscreen: button.dataset.route === "slideshow" });
         refreshAdminAuth();
       });
     });
@@ -1283,13 +1313,36 @@
         }
       }
       if (currentRoute !== "slideshow") return;
-      if (event.key === "ArrowRight" || event.key === " ") {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        routeTo("view");
+        return;
+      }
+      if (event.key === "Home") {
+        event.preventDefault();
+        jumpSlideshow(0);
+        return;
+      }
+      if (event.key === "End") {
+        event.preventDefault();
+        jumpSlideshow(slideshowSlides().length - 1);
+        return;
+      }
+      if (/^[1-9]$/.test(event.key)) {
+        event.preventDefault();
+        jumpSlideshow(Number(event.key) - 1);
+        return;
+      }
+      if (["ArrowRight", "ArrowDown", "PageDown", "Enter", " ", "n", "N"].includes(event.key)) {
         event.preventDefault();
         moveSlideshow(1, true);
+        startSlideshow();
+        return;
       }
-      if (event.key === "ArrowLeft") {
+      if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace", "p", "P"].includes(event.key)) {
         event.preventDefault();
         moveSlideshow(-1, true);
+        startSlideshow();
       }
     });
     window.addEventListener("popstate", () => {
