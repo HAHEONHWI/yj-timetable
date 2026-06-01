@@ -21,6 +21,11 @@
   let slideshowTimer = null;
   let slideshowRefreshTimer = null;
   let slideshowToastTimer = null;
+  let mainEggToastTimer = null;
+  let mainEggResetTimer = null;
+  let mainEggLogoClicks = 0;
+  let mainEggTodayClicks = 0;
+  let mainEggSequence = "";
   let boardRefreshTimer = null;
   let remoteUnsubscribe = null;
   let pendingRetryMessage = "";
@@ -230,6 +235,24 @@
     target._timer = window.setTimeout(() => {
       target.textContent = "";
     }, 2600);
+  }
+
+  function showMainEggToast(message) {
+    let toast = document.querySelector("#mainEggToast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "mainEggToast";
+      toast.className = "main-egg-toast";
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add("is-visible");
+    window.clearTimeout(mainEggToastTimer);
+    mainEggToastTimer = window.setTimeout(() => {
+      toast.classList.remove("is-visible");
+    }, 2200);
   }
 
   function clamp(value, min, max) {
@@ -1213,14 +1236,41 @@
       });
     });
 
-    els.homeButton.addEventListener("click", goHome);
+    els.homeButton.addEventListener("click", () => {
+      goHome();
+      mainEggLogoClicks += 1;
+      window.clearTimeout(mainEggResetTimer);
+      mainEggResetTimer = window.setTimeout(() => {
+        mainEggLogoClicks = 0;
+      }, 1400);
+      if (mainEggLogoClicks < 5) return;
+      mainEggLogoClicks = 0;
+      els.homeButton.classList.add("is-egg-highlight");
+      showMainEggToast("용정 시간표 상태: 정상 운영 중");
+      window.setTimeout(() => {
+        els.homeButton.classList.remove("is-egg-highlight");
+      }, 2200);
+    });
     document.addEventListener("click", (event) => {
       if (!event.target.closest("[data-retry-save]")) return;
       retrySaveState();
     });
     document.addEventListener("keydown", (event) => {
-      if (currentRoute !== "slideshow") return;
       if (event.target && ["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(event.target.tagName)) return;
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && currentRoute === "view") {
+        const key = event.key.toLowerCase();
+        if (key.length === 1) {
+          mainEggSequence = (mainEggSequence + key).slice(-2);
+          if (mainEggSequence === "yj") {
+            showMainEggToast("YJ route 확인 완료");
+            els.homeButton.classList.add("is-egg-highlight");
+            window.setTimeout(() => {
+              els.homeButton.classList.remove("is-egg-highlight");
+            }, 1800);
+          }
+        }
+      }
+      if (currentRoute !== "slideshow") return;
       if (event.key === "ArrowRight" || event.key === " ") {
         event.preventDefault();
         moveSlideshow(1, true);
@@ -1240,6 +1290,22 @@
       if (!button) return;
       selectedDate = button.dataset.date;
       renderView();
+    });
+
+    els.todayLabel.addEventListener("click", () => {
+      if (currentRoute !== "view") return;
+      mainEggTodayClicks += 1;
+      window.clearTimeout(mainEggResetTimer);
+      mainEggResetTimer = window.setTimeout(() => {
+        mainEggTodayClicks = 0;
+      }, 1400);
+      if (mainEggTodayClicks < 3) return;
+      mainEggTodayClicks = 0;
+      els.todayLabel.classList.add("is-egg-highlight");
+      showMainEggToast("오늘도 시간표 확인 완료");
+      window.setTimeout(() => {
+        els.todayLabel.classList.remove("is-egg-highlight");
+      }, 2200);
     });
 
     els.viewClass.addEventListener("change", () => {

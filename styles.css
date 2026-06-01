@@ -876,6 +876,37 @@ body.board-mode.board-light .board-lesson.is-merge {
   opacity: 1;
 }
 
+.main-egg-toast {
+  position: fixed;
+  right: clamp(16px, 3vw, 32px);
+  bottom: clamp(16px, 3vw, 32px);
+  z-index: 20;
+  transform: translateY(10px);
+  border: 1px solid rgba(94, 234, 212, 0.42);
+  border-radius: 999px;
+  background: rgba(8, 13, 21, 0.94);
+  color: var(--ink);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.main-egg-toast.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.brand.is-egg-highlight,
+#todayLabel.is-egg-highlight {
+  outline: 2px solid rgba(94, 234, 212, 0.75);
+  outline-offset: 4px;
+}
+
 .slideshow-stage {
   display: grid;
   align-items: stretch;
