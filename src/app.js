@@ -21,6 +21,7 @@
   let slideshowTimer = null;
   let slideshowRefreshTimer = null;
   let slideshowToastTimer = null;
+  let globalStatusTimer = null;
   let mainEggToastTimer = null;
   let mainEggResetTimer = null;
   let mainEggLogoClicks = 0;
@@ -93,6 +94,7 @@
     slideEventFontScale: $("#slideEventFontScale"),
     slideEventFontScaleLabel: $("#slideEventFontScaleLabel"),
     saveEventButton: $("#saveEventButton"),
+    cancelEventEditButton: $("#cancelEventEditButton"),
     eventList: $("#eventList"),
     noticeTitle: $("#noticeTitle"),
     noticeBody: $("#noticeBody"),
@@ -968,6 +970,7 @@
       input.checked = true;
     });
     els.saveEventButton.textContent = "행사 저장";
+    els.cancelEventEditButton.classList.add("is-hidden");
     renderEventList();
   }
 
@@ -987,6 +990,7 @@
       input.checked = item.classes.includes(input.value);
     });
     els.saveEventButton.textContent = "행사 수정 저장";
+    els.cancelEventEditButton.classList.remove("is-hidden");
     renderEventList();
     showMessage(els.adminMessage, "행사 내용을 불러왔습니다. 수정 후 저장하세요.");
   }
@@ -1137,6 +1141,7 @@
       statusBox.id = "globalStatus";
       document.body.prepend(statusBox);
     }
+    window.clearTimeout(globalStatusTimer);
     statusBox.className = `global-status is-${type}`;
     statusBox.textContent = message;
 
@@ -1146,6 +1151,11 @@
       retryButton.dataset.retrySave = "true";
       retryButton.textContent = "다시 저장";
       statusBox.appendChild(retryButton);
+    }
+    if (options.autoHide) {
+      globalStatusTimer = window.setTimeout(() => {
+        statusBox.remove();
+      }, options.duration || 2400);
     }
   }
 
@@ -1158,6 +1168,7 @@
     if (statusBox) {
       statusBox.remove();
     }
+    window.clearTimeout(globalStatusTimer);
   }
 
   async function saveState(message) {
@@ -1179,12 +1190,13 @@
       return;
     }
     pendingRetryMessage = "";
-    clearGlobalStatus();
+    showGlobalStatus(message, "success", { autoHide: true });
     showMessage(els.adminMessage, message);
   }
 
   function retrySaveState() {
     if (!pendingRetryMessage) return;
+    showGlobalStatus("Supabase에 다시 저장하는 중입니다.", "info");
     showMessage(els.adminMessage, "Supabase에 다시 저장하는 중입니다.");
     saveState(pendingRetryMessage);
   }
@@ -1520,6 +1532,11 @@
       state.events.push(nextEvent);
       resetEventForm();
       saveState("행사 시간표를 저장했습니다.");
+    });
+
+    els.cancelEventEditButton.addEventListener("click", () => {
+      resetEventForm();
+      showMessage(els.adminMessage, "행사 수정을 취소했습니다.");
     });
 
     els.eventList.addEventListener("click", (event) => {
