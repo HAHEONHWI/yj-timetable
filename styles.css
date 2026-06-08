@@ -384,11 +384,12 @@ button:focus-visible {
 }
 
 .schedule-shell {
-  overflow-x: auto;
+  overflow: auto;
+  padding-bottom: 14px;
 }
 
 .page-view .schedule-shell {
-  min-height: min(68vh, 820px);
+  min-height: min(72vh, 860px);
 }
 
 body.board-mode .view-tools {
@@ -651,9 +652,9 @@ body.board-mode.board-light .board-lesson.is-merge {
 .schedule-grid.class-columns {
   width: 100%;
   min-width: 780px;
-  height: min(68vh, 820px);
+  min-height: min(72vh, 860px);
   grid-template-columns: 78px repeat(var(--class-count), minmax(108px, 1fr));
-  grid-template-rows: 42px repeat(9, minmax(54px, 1fr));
+  grid-template-rows: 42px repeat(9, minmax(64px, 1fr));
 }
 
 .schedule-grid.slideshow-grid {
