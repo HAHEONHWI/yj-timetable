@@ -114,6 +114,7 @@
     slidePeriodHeaderFontScaleLabel: $("#slidePeriodHeaderFontScaleLabel"),
     slideInterval: $("#slideInterval"),
     slideRefreshInterval: $("#slideRefreshInterval"),
+    slideScheduleDate: $("#slideScheduleDate"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
     forceSlideReloadButton: $("#forceSlideReloadButton"),
@@ -187,6 +188,18 @@
     const now = new Date();
     const today = toISO(now);
     const days = schoolDaysForTwoWeeks();
+    const selectedDate = state.slideshow && state.slideshow.scheduleDate ? String(state.slideshow.scheduleDate) : "";
+    const expiresOn =
+      state.slideshow && state.slideshow.scheduleDateExpiresOn ? String(state.slideshow.scheduleDateExpiresOn) : "";
+    if (selectedDate && (!expiresOn || today < expiresOn)) {
+      return (
+        days.find((day) => day.iso === selectedDate) || {
+          iso: selectedDate,
+          weekday: { key: "special", label: weekdayLabelForDate(selectedDate) },
+          weekLabel: "선택",
+        }
+      );
+    }
     if (now.getHours() >= 18) {
       const target = new Date(now);
       target.setDate(target.getDate() + 1);
@@ -199,6 +212,12 @@
       return { iso: today, weekday: { key: "special", label: weekdayLabelForDate(today) }, weekLabel: "특별" };
     }
     return null;
+  }
+
+  function nextDateIso(value) {
+    const date = fromISO(value);
+    date.setDate(date.getDate() + 1);
+    return toISO(date);
   }
 
   function escapeHtml(value) {
@@ -1090,6 +1109,27 @@
     </article>`;
   }
 
+  function renderSlideScheduleDateOptions() {
+    const today = toISO(new Date());
+    if (state.slideshow.scheduleDateExpiresOn && today >= state.slideshow.scheduleDateExpiresOn) {
+      state.slideshow.scheduleDate = "";
+      state.slideshow.scheduleDateExpiresOn = "";
+    }
+    const days = schoolDaysForTwoWeeks();
+    const selectedDate = state.slideshow.scheduleDate || "";
+    const selectedDateExists = !selectedDate || days.some((day) => day.iso === selectedDate);
+    const extraOption = selectedDate && !selectedDateExists
+      ? `<option value="${escapeHtml(selectedDate)}">${formatDate(selectedDate)} ${weekdayLabelForDate(selectedDate)}요일 · 선택됨</option>`
+      : "";
+    els.slideScheduleDate.innerHTML = `<option value="">자동: 18시 이후 다음 학교일</option>${extraOption}${days
+      .map((day) => {
+        const label = `${formatDate(day.iso)} ${day.weekday.label}요일 · ${day.weekLabel}`;
+        return `<option value="${escapeHtml(day.iso)}">${escapeHtml(label)}</option>`;
+      })
+      .join("")}`;
+    els.slideScheduleDate.value = selectedDateExists ? selectedDate : selectedDate;
+  }
+
   function renderAdmin() {
     renderBaseEditor();
     renderSpecialDateHint();
@@ -1101,6 +1141,7 @@
     renderChangeList();
     renderEventList();
     renderNoticeList();
+    renderSlideScheduleDateOptions();
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
@@ -1738,10 +1779,27 @@
     els.saveSlideSettingsButton.addEventListener("click", () => {
       const interval = Math.max(3, Math.min(120, Number(els.slideInterval.value) || 8));
       const refreshInterval = Math.max(10, Math.min(3600, Number(els.slideRefreshInterval.value) || 60));
+      const scheduleDate = els.slideScheduleDate.value;
+      const selectedNotice = state.notices.find((notice) => notice.id === selectedNoticeId);
       state.slideshow.intervalSeconds = interval;
       state.slideshow.refreshSeconds = refreshInterval;
+      state.slideshow.scheduleDate = scheduleDate;
+      state.slideshow.scheduleDateExpiresOn = scheduleDate ? nextDateIso(scheduleDate) : "";
+      state.slideshow.lessonFontScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
+      state.slideshow.classHeaderFontScale = clamp(Number(els.slideClassHeaderFontScale.value) || 100, 70, 170);
+      state.slideshow.periodHeaderFontScale = clamp(Number(els.slidePeriodHeaderFontScale.value) || 100, 70, 170);
+      state.slideshow.eventFontScale = clamp(Number(els.slideEventFontScale.value) || 100, 70, 150);
+      if (selectedNotice) {
+        selectedNotice.titleFontSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);
+        selectedNotice.detailFontSize = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
+      }
       els.slideInterval.value = interval;
       els.slideRefreshInterval.value = refreshInterval;
+      renderNoticePreview();
+      renderNoticeList();
+      if (currentRoute === "slideshow") {
+        startSlideshow();
+      }
       saveState("슬라이드쇼 설정을 저장했습니다.");
     });
 

@@ -280,11 +280,6 @@
               <label for="eventMemo">메모</label>
               <input id="eventMemo" type="text" placeholder="예: 전 학년 강당 이동" />
             </div>
-            <div class="field">
-              <label for="slideEventFontScale">슬라이드쇼 행사 글자 크기</label>
-              <input id="slideEventFontScale" type="range" min="70" max="150" step="5" />
-              <p id="slideEventFontScaleLabel" class="message"></p>
-            </div>
             <div class="button-row">
               <button id="saveEventButton" class="primary-button" type="button">행사 저장</button>
               <button id="cancelEventEditButton" class="ghost-button is-hidden" type="button">수정 취소</button>
@@ -304,36 +299,11 @@
               </div>
             </div>
             <div class="form-grid two">
-              <div class="field">
-                <label for="slideLessonFontScale">시간표 글자 크기</label>
-                <input id="slideLessonFontScale" type="range" min="70" max="150" step="5" />
-              </div>
-              <div class="field">
-                <label for="slideClassHeaderFontScale">학급 글자 크기</label>
-                <input id="slideClassHeaderFontScale" type="range" min="70" max="170" step="5" />
-              </div>
-              <div class="field">
-                <label for="slidePeriodHeaderFontScale">교시 글자 크기</label>
-                <input id="slidePeriodHeaderFontScale" type="range" min="70" max="170" step="5" />
-              </div>
-              <div class="field">
-                <label for="noticeTitleFontSize">제목 글자 크기</label>
-                <input id="noticeTitleFontSize" type="range" min="36" max="120" step="2" />
-              </div>
-              <div class="field">
-                <label for="noticeFontSize">세부 내용 글자 크기</label>
-                <input id="noticeFontSize" type="range" min="24" max="84" step="2" />
-              </div>
               <div id="noticePreview" class="notice-preview"></div>
             </div>
             <div class="button-row">
               <button id="addNoticeButton" class="ghost-button" type="button">페이지 추가</button>
               <button id="saveNoticeButton" class="primary-button" type="button">안내사항 저장</button>
-              <span id="slideLessonFontScaleLabel" class="message"></span>
-              <span id="slideClassHeaderFontScaleLabel" class="message"></span>
-              <span id="slidePeriodHeaderFontScaleLabel" class="message"></span>
-              <span id="noticeTitleFontSizeLabel" class="message"></span>
-              <span id="noticeFontSizeLabel" class="message"></span>
             </div>
             <div id="noticeList" class="list"></div>
           </section>
@@ -347,6 +317,46 @@
               <div class="field">
                 <label for="slideRefreshInterval">데이터 새로고침 간격</label>
                 <input id="slideRefreshInterval" type="number" min="10" max="3600" step="5" />
+              </div>
+              <div class="field">
+                <label for="slideScheduleDate">시간표 표시 날짜</label>
+                <select id="slideScheduleDate"></select>
+                <p class="message">특정 날짜를 선택하면 다음날 00시에 자동 표시로 돌아갑니다.</p>
+              </div>
+            </div>
+            <div class="subsection">
+              <h3>글자 크기</h3>
+              <div class="form-grid two">
+                <div class="field">
+                  <label for="slideLessonFontScale">시간표 수업 글자</label>
+                  <input id="slideLessonFontScale" type="range" min="70" max="150" step="5" />
+                  <p id="slideLessonFontScaleLabel" class="message"></p>
+                </div>
+                <div class="field">
+                  <label for="slideClassHeaderFontScale">학급 글자</label>
+                  <input id="slideClassHeaderFontScale" type="range" min="70" max="170" step="5" />
+                  <p id="slideClassHeaderFontScaleLabel" class="message"></p>
+                </div>
+                <div class="field">
+                  <label for="slidePeriodHeaderFontScale">교시 글자</label>
+                  <input id="slidePeriodHeaderFontScale" type="range" min="70" max="170" step="5" />
+                  <p id="slidePeriodHeaderFontScaleLabel" class="message"></p>
+                </div>
+                <div class="field">
+                  <label for="slideEventFontScale">행사 글자</label>
+                  <input id="slideEventFontScale" type="range" min="70" max="150" step="5" />
+                  <p id="slideEventFontScaleLabel" class="message"></p>
+                </div>
+                <div class="field">
+                  <label for="noticeTitleFontSize">안내 제목 글자</label>
+                  <input id="noticeTitleFontSize" type="range" min="36" max="120" step="2" />
+                  <p id="noticeTitleFontSizeLabel" class="message"></p>
+                </div>
+                <div class="field">
+                  <label for="noticeFontSize">안내 내용 글자</label>
+                  <input id="noticeFontSize" type="range" min="24" max="84" step="2" />
+                  <p id="noticeFontSizeLabel" class="message"></p>
+                </div>
               </div>
             </div>
             <div class="button-row">

@@ -54,6 +54,8 @@
         periodHeaderFontScale: 100,
         eventFontScale: 100,
         reloadToken: "",
+        scheduleDate: "",
+        scheduleDateExpiresOn: "",
       },
     };
   }
@@ -91,6 +93,9 @@
           periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
           eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
           reloadToken: parsed.slideshow && parsed.slideshow.reloadToken ? String(parsed.slideshow.reloadToken) : "",
+          scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
+          scheduleDateExpiresOn:
+            parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
         },
       };
     } catch {
@@ -134,6 +139,9 @@
         periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
         eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
         reloadToken: parsed.slideshow && parsed.slideshow.reloadToken ? String(parsed.slideshow.reloadToken) : "",
+        scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
+        scheduleDateExpiresOn:
+          parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
       },
     };
   }
