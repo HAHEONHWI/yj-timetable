@@ -128,6 +128,8 @@
         intervalSeconds: Number(parsed.slideshow && parsed.slideshow.intervalSeconds) || 8,
         refreshSeconds: Number(parsed.slideshow && parsed.slideshow.refreshSeconds) || 60,
         lessonFontScale: Number(parsed.slideshow && parsed.slideshow.lessonFontScale) || 100,
+        classHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.classHeaderFontScale) || 100,
+        periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
         eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
       },
     };

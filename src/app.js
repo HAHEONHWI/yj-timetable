@@ -1090,9 +1090,14 @@
     renderChangeList();
     renderEventList();
     renderNoticeList();
-    renderNoticePreview();
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
+    els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
+    els.slideClassHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170);
+    els.slidePeriodHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170);
+    els.slideEventFontScale.value = clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
+    els.slideEventFontScaleLabel.textContent = `행사 ${els.slideEventFontScale.value}%`;
+    renderNoticePreview();
   }
 
   function cleanupExpiredScheduleData() {
