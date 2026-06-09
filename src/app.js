@@ -472,22 +472,25 @@
           const colSpan = placement.columnEnd - placement.columnStart;
           const hasMemo = Boolean(item.memo);
           const isEventCell = className.includes("event-cell");
+          const isBaseMergeCell = className.includes("base-merge-cell");
+          const showMeta = compact ? (isEventCell ? hasMemo : !isBaseMergeCell) : true;
+          const hasVisibleMeta = hasMemo && showMeta;
           const lengthPenalty = Math.max(0, String(item.title).length - 6) * (compact ? 1 : 1.2);
           const titleMax =
             rowSpan === 1
               ? compact
-                ? hasMemo
+                ? hasVisibleMeta
                   ? 28
                   : 46
                 : 22
               : rowSpan === 2
                 ? compact
-                  ? hasMemo
+                  ? hasVisibleMeta
                     ? 44
                     : 54
                   : 30
                 : compact
-                  ? hasMemo
+                  ? hasVisibleMeta
                     ? 52
                     : 64
                   : 36;
@@ -502,17 +505,16 @@
             titleMax
           );
           const metaSize = clamp(
-            hasMemo ? (rowSpan === 1 ? 11 : titleSize * 0.4) : rowSpan === 1 ? 10 : titleSize * 0.32,
+            hasVisibleMeta ? (rowSpan === 1 ? 11 : titleSize * 0.4) : rowSpan === 1 ? 10 : titleSize * 0.32,
             10,
-            hasMemo ? (rowSpan === 1 ? 12 : compact ? 18 : 15) : rowSpan === 1 ? 12 : 14
+            hasVisibleMeta ? (rowSpan === 1 ? 12 : compact ? 18 : 15) : rowSpan === 1 ? 12 : 14
           );
-          const titleLines = hasMemo ? (rowSpan === 1 ? 1 : 2) : rowSpan === 1 ? 2 : 3;
+          const titleLines = hasVisibleMeta ? (rowSpan === 1 ? 1 : 2) : rowSpan === 1 ? 2 : 3;
           const metaLines = rowSpan === 1 ? 1 : 2;
           const periodStart = placement.periodStart || item.start;
           const periodEnd = placement.periodEnd || item.end;
           const eventScale = isEventCell && compact ? clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150) / 100 : 1;
-          const showMeta = !(isEventCell && compact && !hasMemo);
-          return `<div class="${className}${hasMemo ? " has-memo" : " is-no-memo"}${rowSpan === 1 ? " is-single-row" : ""}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize * eventScale}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? (hasMemo ? 3 : 1) : 4}px;--merge-padding:${rowSpan === 1 ? 5 : 8}px">
+          return `<div class="${className}${hasVisibleMeta ? " has-memo" : " is-no-memo"}${rowSpan === 1 ? " is-single-row" : ""}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize * eventScale}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? (hasVisibleMeta ? 3 : 1) : 4}px;--merge-padding:${rowSpan === 1 ? 5 : 8}px">
             <strong>${escapeHtml(item.title)}</strong>
             ${showMeta ? `<small>${formatPeriodRange(periodStart, periodEnd)}${item.memo ? ` · ${escapeHtml(item.memo)}` : ""}</small>` : ""}
           </div>`;
