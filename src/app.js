@@ -108,6 +108,10 @@
     noticeList: $("#noticeList"),
     slideLessonFontScale: $("#slideLessonFontScale"),
     slideLessonFontScaleLabel: $("#slideLessonFontScaleLabel"),
+    slideClassHeaderFontScale: $("#slideClassHeaderFontScale"),
+    slideClassHeaderFontScaleLabel: $("#slideClassHeaderFontScaleLabel"),
+    slidePeriodHeaderFontScale: $("#slidePeriodHeaderFontScale"),
+    slidePeriodHeaderFontScaleLabel: $("#slidePeriodHeaderFontScaleLabel"),
     slideInterval: $("#slideInterval"),
     slideRefreshInterval: $("#slideRefreshInterval"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
@@ -554,7 +558,11 @@
       .join("");
 
     const lessonScale = variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150) / 100 : 1;
-    return `<div class="schedule-grid class-columns ${variant}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale}">
+    const classHeaderScale =
+      variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170) / 100 : 1;
+    const periodHeaderScale =
+      variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170) / 100 : 1;
+    return `<div class="schedule-grid class-columns ${variant}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale};--class-head-font-scale:${classHeaderScale};--period-head-font-scale:${periodHeaderScale}">
       <div class="corner-cell" style="grid-column:1;grid-row:1">교시</div>
       ${classColumns}
       ${periodRows}
@@ -1058,7 +1066,11 @@
     const titleSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);
     const bodySize = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
     const lessonScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
+    const classHeaderScale = clamp(Number(els.slideClassHeaderFontScale.value) || 100, 70, 170);
+    const periodHeaderScale = clamp(Number(els.slidePeriodHeaderFontScale.value) || 100, 70, 170);
     els.slideLessonFontScaleLabel.textContent = `시간표 ${lessonScale}%`;
+    els.slideClassHeaderFontScaleLabel.textContent = `학급 ${classHeaderScale}%`;
+    els.slidePeriodHeaderFontScaleLabel.textContent = `교시 ${periodHeaderScale}%`;
     els.noticeTitleFontSizeLabel.textContent = `제목 ${titleSize}px`;
     els.noticeFontSizeLabel.textContent = `내용 ${bodySize}px`;
     els.noticePreview.innerHTML = `<article class="notice-preview-card" style="--notice-preview-title-size:${titleSize}px;--notice-preview-size:${bodySize}px">
@@ -1258,6 +1270,8 @@
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
+    els.slideClassHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170);
+    els.slidePeriodHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170);
     els.slideEventFontScale.value = clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
     els.slideEventFontScaleLabel.textContent = `행사 ${els.slideEventFontScale.value}%`;
     els.noticeTitleFontSize.value = "72";
@@ -1619,7 +1633,15 @@
       saveState("슬라이드쇼 행사 글자 크기를 저장했습니다.");
     });
 
-    [els.noticeTitle, els.noticeBody, els.slideLessonFontScale, els.noticeTitleFontSize, els.noticeFontSize].forEach((input) => {
+    [
+      els.noticeTitle,
+      els.noticeBody,
+      els.slideLessonFontScale,
+      els.slideClassHeaderFontScale,
+      els.slidePeriodHeaderFontScale,
+      els.noticeTitleFontSize,
+      els.noticeFontSize,
+    ].forEach((input) => {
       input.addEventListener("input", renderNoticePreview);
     });
 
@@ -1628,6 +1650,18 @@
       renderView();
       if (currentRoute === "slideshow") renderSlideshow();
       saveState("슬라이드쇼 시간표 글자 크기를 저장했습니다.");
+    });
+
+    els.slideClassHeaderFontScale.addEventListener("change", () => {
+      state.slideshow.classHeaderFontScale = clamp(Number(els.slideClassHeaderFontScale.value) || 100, 70, 170);
+      if (currentRoute === "slideshow") renderSlideshow();
+      saveState("슬라이드쇼 학급 글자 크기를 저장했습니다.");
+    });
+
+    els.slidePeriodHeaderFontScale.addEventListener("change", () => {
+      state.slideshow.periodHeaderFontScale = clamp(Number(els.slidePeriodHeaderFontScale.value) || 100, 70, 170);
+      if (currentRoute === "slideshow") renderSlideshow();
+      saveState("슬라이드쇼 교시 글자 크기를 저장했습니다.");
     });
 
     els.addNoticeButton.addEventListener("click", () => {

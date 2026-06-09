@@ -768,6 +768,23 @@ body.board-mode.board-light .board-lesson.is-merge {
   font-size: clamp(14px, 1.25vw, 22px);
 }
 
+.slideshow-grid .corner-cell,
+.slideshow-grid .period-head {
+  font-size: clamp(
+    calc(14px * var(--period-head-font-scale, 1)),
+    calc(1.25vw * var(--period-head-font-scale, 1)),
+    calc(28px * var(--period-head-font-scale, 1))
+  );
+}
+
+.slideshow-grid .class-head {
+  font-size: clamp(
+    calc(14px * var(--class-head-font-scale, 1)),
+    calc(1.25vw * var(--class-head-font-scale, 1)),
+    calc(28px * var(--class-head-font-scale, 1))
+  );
+}
+
 .slideshow-grid .lesson-cell {
   container-type: size;
   padding: 4px;
