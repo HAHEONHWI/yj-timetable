@@ -115,6 +115,8 @@
     slideInterval: $("#slideInterval"),
     slideRefreshInterval: $("#slideRefreshInterval"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
+    slideReloadPassword: $("#slideReloadPassword"),
+    forceSlideReloadButton: $("#forceSlideReloadButton"),
   };
 
   function pad(value) {
@@ -1131,9 +1133,16 @@
     const { keepNoticeSelection = false, restartSlideshow = true } = options;
     const previousSlideSeconds = Number(state.slideshow.intervalSeconds) || 8;
     const previousRefreshSeconds = Number(state.slideshow.refreshSeconds) || 60;
+    const previousReloadToken = state.slideshow && state.slideshow.reloadToken ? String(state.slideshow.reloadToken) : "";
+    const nextReloadToken =
+      remoteState.slideshow && remoteState.slideshow.reloadToken ? String(remoteState.slideshow.reloadToken) : "";
     state = remoteState;
     const nextSlideSeconds = Number(state.slideshow.intervalSeconds) || 8;
     const nextRefreshSeconds = Number(state.slideshow.refreshSeconds) || 60;
+    if (currentRoute === "slideshow" && nextReloadToken && nextReloadToken !== previousReloadToken) {
+      window.location.reload();
+      return;
+    }
     if (!keepNoticeSelection || !state.notices.some((notice) => notice.id === selectedNoticeId)) {
       selectedNoticeId = state.notices[0] ? state.notices[0].id : "";
     }
@@ -1727,6 +1736,22 @@
       els.slideInterval.value = interval;
       els.slideRefreshInterval.value = refreshInterval;
       saveState("슬라이드쇼 설정을 저장했습니다.");
+    });
+
+    els.forceSlideReloadButton.addEventListener("click", async () => {
+      const password = els.slideReloadPassword.value;
+      if (!password) {
+        showMessage(els.adminMessage, "관리자 비밀번호를 입력하세요.");
+        return;
+      }
+      const result = await verifyAdminPassword(password);
+      if (!result.ok) {
+        showMessage(els.adminMessage, "비밀번호가 맞지 않습니다.");
+        return;
+      }
+      els.slideReloadPassword.value = "";
+      state.slideshow.reloadToken = `${Date.now()}`;
+      saveState("슬라이드쇼 화면에 강제 새로고침 명령을 보냈습니다.");
     });
   }
 

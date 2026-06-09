@@ -53,6 +53,7 @@
         classHeaderFontScale: 100,
         periodHeaderFontScale: 100,
         eventFontScale: 100,
+        reloadToken: "",
       },
     };
   }
@@ -89,6 +90,7 @@
           classHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.classHeaderFontScale) || 100,
           periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
           eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
+          reloadToken: parsed.slideshow && parsed.slideshow.reloadToken ? String(parsed.slideshow.reloadToken) : "",
         },
       };
     } catch {
@@ -131,6 +133,7 @@
         classHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.classHeaderFontScale) || 100,
         periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
         eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
+        reloadToken: parsed.slideshow && parsed.slideshow.reloadToken ? String(parsed.slideshow.reloadToken) : "",
       },
     };
   }

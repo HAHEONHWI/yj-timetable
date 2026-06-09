@@ -349,7 +349,20 @@
                 <input id="slideRefreshInterval" type="number" min="10" max="3600" step="5" />
               </div>
             </div>
-            <button id="saveSlideSettingsButton" class="primary-button" type="button">설정 저장</button>
+            <div class="button-row">
+              <button id="saveSlideSettingsButton" class="primary-button" type="button">설정 저장</button>
+            </div>
+            <div class="subsection">
+              <h3>슬라이드쇼 화면 제어</h3>
+              <p class="muted">현재 슬라이드쇼를 띄운 화면이 있으면 다음 새로고침 주기에 전체 창을 다시 불러옵니다.</p>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="slideReloadPassword">관리자 비밀번호</label>
+                  <input id="slideReloadPassword" type="password" placeholder="비밀번호 입력" />
+                </div>
+              </div>
+              <button id="forceSlideReloadButton" class="danger-button" type="button">슬라이드쇼 강제 새로고침</button>
+            </div>
           </section>
 
           <p id="adminMessage" class="message"></p>
