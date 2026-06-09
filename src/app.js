@@ -184,8 +184,15 @@
   }
 
   function currentSchoolDay() {
-    const today = toISO(new Date());
+    const now = new Date();
+    const today = toISO(now);
     const days = schoolDaysForTwoWeeks();
+    if (now.getHours() >= 18) {
+      const target = new Date(now);
+      target.setDate(target.getDate() + 1);
+      const targetIso = toISO(target);
+      return days.find((day) => day.iso >= targetIso) || null;
+    }
     const regularDay = days.find((day) => day.iso === today);
     if (regularDay) return regularDay;
     if (state.specialSchedules[today]) {
