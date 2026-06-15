@@ -1071,35 +1071,95 @@ body.board-mode.board-light .board-lesson.is-merge {
 .privacy-page {
   display: grid;
   gap: 24px;
+  overflow: hidden;
 }
 
 .privacy-head {
-  display: grid;
-  gap: 8px;
-  max-width: 760px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 22px;
 }
 
 .privacy-head h2 {
   font-size: clamp(28px, 4vw, 42px);
 }
 
+.privacy-head .muted {
+  max-width: 640px;
+}
+
+.privacy-badge {
+  flex: 0 0 auto;
+  border: 1px solid rgba(94, 234, 212, 0.45);
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.18);
+  color: #ccfbf1;
+  padding: 9px 13px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.privacy-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.privacy-summary div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(20, 184, 166, 0.12), rgba(59, 130, 246, 0.08));
+  padding: 16px;
+}
+
+.privacy-summary span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.privacy-summary strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
 .privacy-content {
   display: grid;
   gap: 16px;
-  max-width: 860px;
 }
 
 .privacy-content article {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #101826;
-  padding: clamp(16px, 2.5vw, 22px);
+  padding: clamp(18px, 2.5vw, 24px);
 }
 
 .privacy-content h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 10px;
   color: var(--ink);
   font-size: 18px;
+}
+
+.privacy-content h3 span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .privacy-content p,
@@ -1111,11 +1171,6 @@ body.board-mode.board-light .board-lesson.is-merge {
 .privacy-content ul {
   margin: 0;
   padding-left: 20px;
-}
-
-.privacy-date {
-  color: #cbd5e1;
-  font-weight: 800;
 }
 
 .notice-slide,
@@ -1370,6 +1425,15 @@ textarea {
   .download-head .muted {
     max-width: none;
     text-align: left;
+  }
+
+  .privacy-head {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .privacy-summary {
+    grid-template-columns: 1fr;
   }
 
   .download-grid {
