@@ -41,6 +41,7 @@
     viewPage: $("#viewPage"),
     slideshowPage: $("#slideshowPage"),
     downloadPage: $("#downloadPage"),
+    privacyPage: $("#privacyPage"),
     adminPage: $("#adminPage"),
     homeButton: $("#homeButton"),
     todayLabel: $("#todayLabel"),
@@ -304,6 +305,7 @@
     if (path === "/admin") return "admin";
     if (path === "/slide" || path === "/slideshow") return "slideshow";
     if (path === "/download" || path === "/downloads") return "download";
+    if (path === "/privacy") return "privacy";
     return "view";
   }
 
@@ -311,6 +313,7 @@
     if (route === "admin") return "/admin";
     if (route === "slideshow") return "/slide";
     if (route === "download") return "/download";
+    if (route === "privacy") return "/privacy";
     return "/";
   }
 
@@ -353,6 +356,7 @@
     els.viewPage.classList.toggle("is-hidden", route !== "view");
     els.slideshowPage.classList.toggle("is-hidden", route !== "slideshow");
     els.downloadPage.classList.toggle("is-hidden", route !== "download");
+    els.privacyPage.classList.toggle("is-hidden", route !== "privacy");
     els.adminPage.classList.toggle("is-hidden", route !== "admin");
     document.body.classList.toggle("slideshow-mode", route === "slideshow");
     $$(".nav-button").forEach((button) => {
@@ -1360,7 +1364,7 @@
   }
 
   function bindEvents() {
-    $$(".nav-button").forEach((button) => {
+    $$("[data-route]").forEach((button) => {
       button.addEventListener("click", () => {
         routeTo(button.dataset.route, { fullscreen: button.dataset.route === "slideshow" });
         refreshAdminAuth();

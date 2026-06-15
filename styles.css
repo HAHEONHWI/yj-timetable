@@ -200,11 +200,31 @@ body.board-mode.board-light .page-view {
 }
 
 .footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
   width: min(1180px, calc(100% - 32px));
   margin: -24px auto 32px;
   color: var(--muted);
   font-size: 14px;
   text-align: center;
+}
+
+.footer-link {
+  border: 0;
+  background: transparent;
+  color: #93c5fd;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer-link:hover {
+  color: #bfdbfe;
 }
 
 .global-status {
@@ -1046,6 +1066,56 @@ body.board-mode.board-light .board-lesson.is-merge {
 
 .download-button:hover {
   background: var(--blue-dark);
+}
+
+.privacy-page {
+  display: grid;
+  gap: 24px;
+}
+
+.privacy-head {
+  display: grid;
+  gap: 8px;
+  max-width: 760px;
+}
+
+.privacy-head h2 {
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.privacy-content {
+  display: grid;
+  gap: 16px;
+  max-width: 860px;
+}
+
+.privacy-content article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #101826;
+  padding: clamp(16px, 2.5vw, 22px);
+}
+
+.privacy-content h3 {
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.privacy-content p,
+.privacy-content li {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.privacy-content ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.privacy-date {
+  color: #cbd5e1;
+  font-weight: 800;
 }
 
 .notice-slide,

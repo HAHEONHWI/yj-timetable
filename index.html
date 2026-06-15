@@ -135,6 +135,51 @@
         </div>
       </section>
 
+      <section id="privacyPage" class="page privacy-page is-hidden">
+        <div class="privacy-head">
+          <p class="eyebrow">개인정보 보호</p>
+          <h2>개인정보처리방침</h2>
+          <p class="muted">용정 시간표 서비스는 필요한 범위 안에서 최소한의 정보를 이용합니다.</p>
+        </div>
+
+        <div class="privacy-content">
+          <article>
+            <h3>1. 수집하는 정보</h3>
+            <p>서비스는 시간표 조회 기능 제공을 위해 사용자가 직접 입력한 시간표, 행사, 안내사항 등 관리자 입력 데이터를 저장할 수 있습니다.</p>
+            <p>또한 서비스 품질 개선과 이용 통계 확인을 위해 Google Analytics 4를 사용하며, 이 과정에서 접속 기록, 페이지 이용 기록, 브라우저 및 기기 정보, 대략적인 지역 정보 등이 수집될 수 있습니다.</p>
+          </article>
+
+          <article>
+            <h3>2. 이용 목적</h3>
+            <ul>
+              <li>전자시간표 조회 및 슬라이드쇼 기능 제공</li>
+              <li>관리자가 입력한 시간표, 행사, 안내사항 저장 및 동기화</li>
+              <li>서비스 이용 통계 확인, 오류 파악, 화면 구성 개선</li>
+            </ul>
+          </article>
+
+          <article>
+            <h3>3. 외부 서비스 사용</h3>
+            <p>서비스는 데이터 저장 및 동기화를 위해 Supabase를 사용할 수 있고, 이용 통계 분석을 위해 Google Analytics 4를 사용합니다.</p>
+            <p>Google Analytics 4에서 수집되는 정보는 Google의 정책에 따라 처리됩니다.</p>
+          </article>
+
+          <article>
+            <h3>4. 보관 및 삭제</h3>
+            <p>시간표 및 관리자 입력 데이터는 서비스 운영에 필요한 기간 동안 보관됩니다. 불필요한 단일 변경 및 행사 정보는 서비스 내부 기준에 따라 정리될 수 있습니다.</p>
+            <p>브라우저에 저장되는 일부 설정 값은 사용자가 브라우저 데이터 삭제 기능을 통해 직접 삭제할 수 있습니다.</p>
+          </article>
+
+          <article>
+            <h3>5. 문의</h3>
+            <p>개인정보처리방침 또는 서비스 이용과 관련한 문의는 서비스 제작자에게 문의해 주세요.</p>
+            <p>제작자: 23기 하헌휘</p>
+          </article>
+
+          <p class="privacy-date">시행일: 2026년 6월 15일</p>
+        </div>
+      </section>
+
       <section id="adminPage" class="page is-hidden">
         <div id="loginPanel" class="login-panel">
           <h2>관리자 로그인</h2>
@@ -389,7 +434,10 @@
       </section>
     </main>
 
-    <footer class="footer">© 2026 23기 하헌휘. All rights reserved.</footer>
+    <footer class="footer">
+      <span>© 2026 23기 하헌휘. All rights reserved.</span>
+      <button class="footer-link" data-route="privacy" type="button">개인정보처리방침</button>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./src/supabase-config.js"></script>
