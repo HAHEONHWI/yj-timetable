@@ -30,6 +30,8 @@
   let boardRefreshTimer = null;
   let remoteUnsubscribe = null;
   let pendingRetryMessage = "";
+  let analyticsRouteTrackingReady = false;
+  const gaMeasurementId = "G-TTWC1RKWGL";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
 
   const $ = (selector) => document.querySelector(selector);
@@ -338,6 +340,14 @@
     els.adminWorkspace.classList.toggle("is-hidden", !loggedIn);
   }
 
+  function trackRoutePageView(route) {
+    if (!analyticsRouteTrackingReady || typeof window.gtag !== "function") return;
+    window.gtag("config", gaMeasurementId, {
+      page_path: pathForRoute(route),
+      page_title: document.title,
+    });
+  }
+
   function routeTo(route, options = {}) {
     currentRoute = route;
     els.viewPage.classList.toggle("is-hidden", route !== "view");
@@ -362,6 +372,7 @@
       const method = options.replace ? "replaceState" : "pushState";
       history[method]({ route }, "", nextPath);
     }
+    trackRoutePageView(route);
   }
 
   function goHome() {
@@ -1830,6 +1841,7 @@
     renderView();
     renderAdmin();
     routeTo(currentRoute);
+    analyticsRouteTrackingReady = true;
     startRemoteSync();
     if (isBoardMode) {
       const seconds = Math.max(10, Number(state.slideshow && state.slideshow.refreshSeconds) || 60);
