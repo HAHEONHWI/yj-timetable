@@ -10,7 +10,8 @@
   --change: #253245;
   --change-line: #64748b;
   --subject-highlight: #123c52;
-  --subject-highlight-line: #22d3ee;
+  --subject-highlight-line: #38bdf8;
+  --subject-highlight-weak-line: #7dd3fc;
   --subject-highlight-text: #e0faff;
   --event: #064e3b;
   --event-line: #10b981;
@@ -39,7 +40,8 @@ body.theme-dark {
   --change-line: #64748b;
   --change-text: #f1f5f9;
   --subject-highlight: #123c52;
-  --subject-highlight-line: #22d3ee;
+  --subject-highlight-line: #38bdf8;
+  --subject-highlight-weak-line: #7dd3fc;
   --subject-highlight-text: #e0faff;
   --event: #064e3b;
   --event-line: #10b981;
@@ -73,7 +75,8 @@ body.theme-light {
   --change-line: #94a3b8;
   --change-text: #1f2937;
   --subject-highlight: #dff7ff;
-  --subject-highlight-line: #0891b2;
+  --subject-highlight-line: #0284c7;
+  --subject-highlight-weak-line: #38bdf8;
   --subject-highlight-text: #083344;
   --event: #dcfce7;
   --event-line: #059669;
@@ -230,8 +233,8 @@ button {
   z-index: 20;
   display: grid;
   gap: 4px;
-  width: 190px;
-  max-height: 260px;
+  width: 210px;
+  max-height: 320px;
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -254,6 +257,32 @@ button {
   color: var(--ink);
   font-size: 13px;
   font-weight: 900;
+}
+
+.subject-section {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.subject-section strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.subject-grade-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.subject-grade-options .subject-option {
+  justify-content: center;
+  gap: 4px;
+  padding: 0 4px;
 }
 
 .subject-option {
@@ -407,7 +436,12 @@ main {
 }
 
 .lesson.is-subject-highlight {
-  border: 2px solid var(--subject-highlight-line);
+  border: 3px solid var(--subject-highlight-line);
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.34);
+}
+
+.lesson.is-subject-highlight-weak {
+  border: 2px solid var(--subject-highlight-weak-line);
 }
 
 .empty-state {

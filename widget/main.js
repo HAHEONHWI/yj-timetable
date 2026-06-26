@@ -17,6 +17,7 @@ function defaultSettings() {
     fontScale: 1,
     subjectFilter: "all",
     subjectFilters: [],
+    excludedGrades: [],
   };
 }
 
@@ -95,6 +96,9 @@ app.whenReady().then(() => {
     settings.subjectFilter = typeof settings.subjectFilter === "string" ? settings.subjectFilter : "all";
     settings.subjectFilters = Array.isArray(settings.subjectFilters)
       ? settings.subjectFilters.filter((subject) => typeof subject === "string" && subject.trim())
+      : [];
+    settings.excludedGrades = Array.isArray(settings.excludedGrades)
+      ? settings.excludedGrades.filter((grade) => ["1", "2", "3"].includes(String(grade)))
       : [];
     writeSettings(settings);
     applyLoginSettings(settings);
