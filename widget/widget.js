@@ -151,7 +151,7 @@
 
     if (change) {
       const original = getSubjectsForDate(date, className)[periodIndex] || "-";
-      return `<div class="lesson is-change${subjectHighlightClass(change.subject, { className, weak: true })}">
+      return `<div class="lesson is-change${subjectHighlightClass(change.subject, { className })}">
         <strong>${escapeHtml(change.subject)}</strong>
         <small>${escapeHtml(original)} 변경${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
       </div>`;
@@ -201,7 +201,7 @@
     if (!selected.size) return "";
     if (isHighlightExcluded(options)) return "";
     if (!selected.has(normalizedSubject(subject))) return "";
-    return options.weak ? " is-subject-highlight-weak" : " is-subject-highlight";
+    return " is-subject-highlight";
   }
 
   function collectBaseSubjects() {
