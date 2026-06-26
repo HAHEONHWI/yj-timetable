@@ -489,6 +489,8 @@ main {
 
 .lesson.is-subject-highlight {
   border: 3px solid var(--subject-highlight-line);
+  background: var(--subject-highlight);
+  color: var(--subject-highlight-text);
   box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.34);
 }
 
