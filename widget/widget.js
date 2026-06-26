@@ -12,7 +12,6 @@
   let state = read();
   let refreshTimer = null;
   let remoteUnsubscribe = null;
-  let subjectMenuTab = "subjects";
   let settings = {
     opacity: 0.96,
     alwaysOnTop: true,
@@ -252,48 +251,31 @@
     settings.subjectGradeFilters = selectedGradeFilters;
 
     const optionHtml = [
-      `<div class="subject-tabs">
-        <button type="button" class="${subjectMenuTab === "subjects" ? "is-active" : ""}" data-subject-tab="subjects">과목</button>
-        <button type="button" class="${subjectMenuTab === "settings" ? "is-active" : ""}" data-subject-tab="settings">설정</button>
-      </div>`,
-      `<div class="subject-tab-panel ${subjectMenuTab === "subjects" ? "is-active" : ""}">
-        <button class="subject-clear" type="button" data-clear-subjects>전체 보기</button>
-        <div class="subject-section"><strong>강조 과목</strong></div>
-        ${uniqueSubjects
-          .map((subject) => {
-            const checked = selected.includes(subject) ? " checked" : "";
-            return `<label class="subject-option">
-              <input type="checkbox" value="${escapeHtml(subject)}" data-subject-filter${checked} />
-              <span>${escapeHtml(subject)}</span>
-            </label>`;
-          })
-          .join("")}
-      </div>`,
-      `<div class="subject-tab-panel ${subjectMenuTab === "settings" ? "is-active" : ""}">
-        ${
-          selected.length
-            ? selected
-                .map((subject) => {
-                  const grades = gradesForSubject(subject);
-                  return `<div class="subject-grade-row">
-                    <strong>${escapeHtml(subject)}</strong>
-                    <div class="subject-grade-options">
-                      ${["1", "2", "3"]
-                        .map((grade) => {
-                          const checked = grades.includes(grade) ? " checked" : "";
-                          return `<label class="subject-option">
-                            <input type="checkbox" value="${grade}" data-subject-grade="${escapeHtml(subject)}"${checked} />
-                            <span>${grade}</span>
-                          </label>`;
-                        })
-                        .join("")}
-                    </div>
-                  </div>`;
-                })
-                .join("")
-            : '<div class="subject-empty">과목 탭에서 강조할 과목을 먼저 선택하세요.</div>'
-        }
-      </div>`,
+      '<div class="subject-settings-head"><strong>설정</strong><span>과목과 표시 학년을 선택하세요.</span></div>',
+      '<button class="subject-clear" type="button" data-clear-subjects>전체 보기</button>',
+      ...uniqueSubjects.map((subject) => {
+        const isSelected = selected.includes(subject);
+        const subjectChecked = isSelected ? " checked" : "";
+        const disabled = isSelected ? "" : " disabled";
+        const grades = gradesForSubject(subject);
+        return `<div class="subject-setting-row${isSelected ? " is-active" : ""}">
+          <label class="subject-setting-subject">
+            <input type="checkbox" value="${escapeHtml(subject)}" data-subject-filter${subjectChecked} />
+            <span>${escapeHtml(subject)}</span>
+          </label>
+          <div class="subject-grade-options" aria-label="${escapeHtml(subject)} 표시 학년">
+            ${["1", "2", "3"]
+              .map((grade) => {
+                const checked = grades.includes(grade) ? " checked" : "";
+                return `<label class="subject-option">
+                  <input type="checkbox" value="${grade}" data-subject-grade="${escapeHtml(subject)}"${checked}${disabled} />
+                  <span>${grade}</span>
+                </label>`;
+              })
+              .join("")}
+          </div>
+        </div>`;
+      }),
     ].join("");
     if (els.subjectFilterMenu.innerHTML !== optionHtml) {
       els.subjectFilterMenu.innerHTML = optionHtml;
@@ -556,12 +538,6 @@
       els.subjectFilterMenu.hidden = !els.subjectFilterMenu.hidden;
     });
     els.subjectFilterMenu.addEventListener("click", (event) => {
-      const tabButton = event.target.closest("[data-subject-tab]");
-      if (tabButton) {
-        subjectMenuTab = tabButton.dataset.subjectTab === "settings" ? "settings" : "subjects";
-        syncSubjectFilterOptions();
-        return;
-      }
       if (event.target.closest("[data-clear-subjects]")) {
         saveSettings({ subjectFilters: [], subjectGradeFilters: {} });
         render();

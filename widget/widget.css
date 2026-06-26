@@ -244,37 +244,23 @@ button {
   display: none;
 }
 
-.subject-tabs {
+.subject-settings-head {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  padding: 3px;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+  padding: 2px 2px 8px;
 }
 
-.subject-tabs button {
-  min-height: 30px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  padding: 0 8px;
-}
-
-.subject-tabs button.is-active {
-  background: var(--panel-soft);
+.subject-settings-head strong {
   color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
 }
 
-.subject-tab-panel {
-  display: none;
-  gap: 4px;
-}
-
-.subject-tab-panel.is-active {
-  display: grid;
+.subject-settings-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .subject-option,
@@ -303,17 +289,33 @@ button {
   font-weight: 900;
 }
 
-.subject-grade-row {
+.subject-setting-row {
   display: grid;
-  gap: 6px;
-  border-top: 1px solid var(--line);
-  padding-top: 8px;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 8px;
 }
 
-.subject-grade-row strong {
+.subject-setting-row.is-active {
+  border-color: var(--subject-highlight-line);
+}
+
+.subject-setting-subject {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--ink);
   font-size: 13px;
   font-weight: 900;
+}
+
+.subject-setting-subject input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--blue);
 }
 
 .subject-grade-options {
@@ -337,6 +339,10 @@ button {
   height: 15px;
   margin: 0;
   accent-color: var(--blue);
+}
+
+.subject-option input:disabled + span {
+  opacity: 0.42;
 }
 
 .subject-clear {
