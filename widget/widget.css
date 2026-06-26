@@ -223,44 +223,65 @@ button {
   white-space: nowrap;
 }
 
-.subject-filter-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
+.subject-filter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
   display: grid;
-  gap: 4px;
-  width: 210px;
-  max-height: 320px;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--control-bg);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
-  padding: 8px;
+  place-items: center;
+  background: rgba(3, 7, 18, 0.55);
+  padding: 18px;
 }
 
-.subject-filter-menu[hidden] {
+.subject-filter-overlay[hidden] {
   display: none;
 }
 
-.subject-settings-head {
+.subject-filter-dialog {
   display: grid;
-  gap: 2px;
-  border-bottom: 1px solid var(--line);
-  padding: 2px 2px 8px;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+  width: min(520px, 100%);
+  max-height: min(640px, calc(100vh - 36px));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--control-bg);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
+  padding: 12px;
 }
 
-.subject-settings-head strong {
+.subject-filter-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.subject-filter-dialog-head div {
+  display: grid;
+  gap: 2px;
+}
+
+.subject-filter-dialog-head strong {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 900;
 }
 
-.subject-settings-head span {
+.subject-filter-dialog-head span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
+}
+
+.subject-filter-menu {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .subject-option,

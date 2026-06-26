@@ -34,7 +34,9 @@
     startupToggle: document.querySelector("#startupToggle"),
     status: document.querySelector("#status"),
     subjectFilterButton: document.querySelector("#subjectFilterButton"),
+    subjectFilterClose: document.querySelector("#subjectFilterClose"),
     subjectFilterMenu: document.querySelector("#subjectFilterMenu"),
+    subjectFilterOverlay: document.querySelector("#subjectFilterOverlay"),
     themeToggle: document.querySelector("#themeToggle"),
   };
 
@@ -251,7 +253,6 @@
     settings.subjectGradeFilters = selectedGradeFilters;
 
     const optionHtml = [
-      '<div class="subject-settings-head"><strong>설정</strong><span>과목과 표시 학년을 선택하세요.</span></div>',
       '<button class="subject-clear" type="button" data-clear-subjects>전체 보기</button>',
       ...uniqueSubjects.map((subject) => {
         const isSelected = selected.includes(subject);
@@ -535,7 +536,16 @@
       saveSettings({ theme: els.themeToggle.checked ? "light" : "dark" });
     });
     els.subjectFilterButton.addEventListener("click", () => {
-      els.subjectFilterMenu.hidden = !els.subjectFilterMenu.hidden;
+      syncSubjectFilterOptions();
+      els.subjectFilterOverlay.hidden = false;
+    });
+    els.subjectFilterClose.addEventListener("click", () => {
+      els.subjectFilterOverlay.hidden = true;
+    });
+    els.subjectFilterOverlay.addEventListener("click", (event) => {
+      if (event.target === els.subjectFilterOverlay) {
+        els.subjectFilterOverlay.hidden = true;
+      }
     });
     els.subjectFilterMenu.addEventListener("click", (event) => {
       if (event.target.closest("[data-clear-subjects]")) {
@@ -561,9 +571,9 @@
       saveSettings({ subjectFilters, subjectGradeFilters });
       render();
     });
-    document.addEventListener("click", (event) => {
-      if (!event.target.closest(".subject-control")) {
-        els.subjectFilterMenu.hidden = true;
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        els.subjectFilterOverlay.hidden = true;
       }
     });
     els.refreshButton.addEventListener("click", refresh);
