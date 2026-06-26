@@ -7,8 +7,8 @@
   --muted: #9aa8bd;
   --blue: #3b82f6;
   --today: #172554;
-  --change: #5a2a08;
-  --change-line: #f59e0b;
+  --change: #253245;
+  --change-line: #64748b;
   --subject-highlight: #123c52;
   --subject-highlight-line: #22d3ee;
   --subject-highlight-text: #e0faff;
@@ -35,9 +35,9 @@ body.theme-dark {
   --control-bg: #0f1623;
   --header-bg: rgba(7, 17, 29, 0.96);
   --widget-bg: linear-gradient(180deg, #081320 0%, #0d1117 100%);
-  --change: #5a2a08;
-  --change-line: #f59e0b;
-  --change-text: #fde68a;
+  --change: #253245;
+  --change-line: #64748b;
+  --change-text: #f1f5f9;
   --subject-highlight: #123c52;
   --subject-highlight-line: #22d3ee;
   --subject-highlight-text: #e0faff;
@@ -69,9 +69,9 @@ body.theme-light {
   --control-bg: #f8fbff;
   --header-bg: rgba(248, 251, 255, 0.96);
   --widget-bg: linear-gradient(180deg, #f8fbff 0%, #eaf1fb 100%);
-  --change: #fff1b8;
-  --change-line: #d97706;
-  --change-text: #6b3b00;
+  --change: #edf2f7;
+  --change-line: #94a3b8;
+  --change-text: #1f2937;
   --subject-highlight: #dff7ff;
   --subject-highlight-line: #0891b2;
   --subject-highlight-text: #083344;
