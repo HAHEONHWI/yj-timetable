@@ -190,6 +190,7 @@ button {
 .opacity-control,
 .font-control,
 .subject-control {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -212,10 +213,66 @@ button {
   accent-color: var(--blue);
 }
 
-.subject-control select {
+.subject-filter-button {
   min-height: 28px;
-  max-width: 128px;
+  min-width: 96px;
+  max-width: 150px;
+  overflow: hidden;
   padding: 0 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subject-filter-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+  width: 190px;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--control-bg);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+  padding: 8px;
+}
+
+.subject-filter-menu[hidden] {
+  display: none;
+}
+
+.subject-option,
+.subject-clear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.subject-option {
+  padding: 0 6px;
+}
+
+.subject-option input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.subject-clear {
+  justify-content: center;
+  width: 100%;
+  min-height: 32px;
+  border-color: var(--line);
+  background: var(--panel-soft);
 }
 
 button {

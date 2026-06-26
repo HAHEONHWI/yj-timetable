@@ -18,7 +18,7 @@
     openAtLogin: false,
     theme: "dark",
     fontScale: 1,
-    subjectFilter: "all",
+    subjectFilters: [],
   };
 
   const els = {
@@ -32,7 +32,8 @@
     schedule: document.querySelector("#schedule"),
     startupToggle: document.querySelector("#startupToggle"),
     status: document.querySelector("#status"),
-    subjectFilter: document.querySelector("#subjectFilter"),
+    subjectFilterButton: document.querySelector("#subjectFilterButton"),
+    subjectFilterMenu: document.querySelector("#subjectFilterMenu"),
     themeToggle: document.querySelector("#themeToggle"),
   };
 
@@ -148,7 +149,7 @@
 
     if (change) {
       const original = getSubjectsForDate(date, className)[periodIndex] || "-";
-      return `<div class="lesson is-change${subjectHighlightClass(change.subject)}">
+      return `<div class="lesson is-change${subjectHighlightClass(change.subject, original)}">
         <strong>${escapeHtml(change.subject)}</strong>
         <small>${escapeHtml(original)} 변경${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
       </div>`;
@@ -164,52 +165,63 @@
     return String(value || "").trim();
   }
 
-  function subjectHighlightClass(subject) {
-    const selected = normalizedSubject(settings.subjectFilter);
-    if (!selected || selected === "all") return "";
-    return normalizedSubject(subject) === selected ? " is-subject-highlight" : "";
+  function normalizedSubjectFilters(value = settings.subjectFilters) {
+    const rawFilters = Array.isArray(value)
+      ? value
+      : String(value || settings.subjectFilter || "")
+          .split(",")
+          .map((subject) => subject.trim());
+    return [...new Set(rawFilters.map(normalizedSubject).filter((subject) => subject && subject !== "all"))];
   }
 
-  function syncSubjectFilterOptions(subjects) {
-    if (!els.subjectFilter) return;
-    const selected = normalizedSubject(settings.subjectFilter) || "all";
-    const uniqueSubjects = [...new Set(subjects.map(normalizedSubject).filter((subject) => subject && subject !== "-"))].sort(
-      (a, b) => a.localeCompare(b, "ko-KR"),
-    );
-    const optionHtml = [
-      '<option value="all">전체</option>',
-      ...uniqueSubjects.map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`),
-    ].join("");
-    if (els.subjectFilter.innerHTML !== optionHtml) {
-      els.subjectFilter.innerHTML = optionHtml;
-    }
-    els.subjectFilter.value = uniqueSubjects.includes(selected) ? selected : "all";
-    if (els.subjectFilter.value === "all" && selected !== "all") {
-      settings.subjectFilter = "all";
-    }
+  function subjectHighlightClass(...subjects) {
+    const selected = new Set(normalizedSubjectFilters());
+    if (!selected.size) return "";
+    return subjects.some((subject) => selected.has(normalizedSubject(subject))) ? " is-subject-highlight" : "";
   }
 
-  function collectVisibleSubjects(date, baseMerges) {
+  function collectBaseSubjects() {
     const subjects = [];
-    const hasRenderedBaseMerge = (className, period) => {
-      return baseMerges.some((merge) => {
-        return merge.classes.includes(className) && period >= merge.start && period <= merge.end;
-      });
-    };
-
-    baseMerges.forEach((merge) => subjects.push(merge.title));
-    getEventsForDate(date).forEach((event) => subjects.push(event.title));
-
-    periods.forEach((period, periodIndex) => {
-      classes.forEach((className) => {
-        if (hasEventCovering(date, className, period)) return;
-        if (hasRenderedBaseMerge(className, period)) return;
-        const change = getChange(date, className, period);
-        subjects.push(change ? change.subject : getSubjectsForDate(date, className)[periodIndex]);
+    classes.forEach((className) => {
+      weekdays.forEach((weekday) => {
+        const classSubjects = state.base[className] && state.base[className][weekday.key];
+        if (Array.isArray(classSubjects)) subjects.push(...classSubjects);
       });
     });
-
+    state.baseMerges.forEach((merge) => subjects.push(merge.title));
     return subjects;
+  }
+
+  function syncSubjectFilterOptions() {
+    if (!els.subjectFilterButton || !els.subjectFilterMenu) return;
+    const uniqueSubjects = [...new Set(collectBaseSubjects().map(normalizedSubject).filter((subject) => subject && subject !== "-"))].sort(
+      (a, b) => a.localeCompare(b, "ko-KR"),
+    );
+    const validSubjects = new Set(uniqueSubjects);
+    const selected = normalizedSubjectFilters().filter((subject) => validSubjects.has(subject));
+    settings.subjectFilters = selected;
+
+    const optionHtml = [
+      '<button class="subject-clear" type="button" data-clear-subjects>전체 보기</button>',
+      ...uniqueSubjects.map((subject) => {
+        const checked = selected.includes(subject) ? " checked" : "";
+        return `<label class="subject-option">
+          <input type="checkbox" value="${escapeHtml(subject)}"${checked} />
+          <span>${escapeHtml(subject)}</span>
+        </label>`;
+      }),
+    ].join("");
+    if (els.subjectFilterMenu.innerHTML !== optionHtml) {
+      els.subjectFilterMenu.innerHTML = optionHtml;
+    }
+
+    if (!selected.length) {
+      els.subjectFilterButton.textContent = "전체";
+    } else if (selected.length === 1) {
+      els.subjectFilterButton.textContent = selected[0];
+    } else {
+      els.subjectFilterButton.textContent = `${selected[0]} 외 ${selected.length - 1}`;
+    }
   }
 
   function render() {
@@ -226,7 +238,7 @@
       .join("");
 
     if (!hasScheduleForToday(today)) {
-      syncSubjectFilterOptions([]);
+      syncSubjectFilterOptions();
       els.schedule.innerHTML = `<div class="empty-state">
         <strong>오늘 등록된 시간표가 없습니다.</strong>
         <span>평일 기본 시간표 또는 오늘 특별시간표가 등록되면 전체 학급 시간표가 표시됩니다.</span>
@@ -251,7 +263,7 @@
           .filter((merge) => merge.classes.length > 0)
       : [];
 
-    syncSubjectFilterOptions(collectVisibleSubjects(today, baseMerges));
+    syncSubjectFilterOptions();
 
     const hasRenderedBaseMerge = (className, period) => {
       return baseMerges.some((merge) => {
@@ -334,7 +346,11 @@
 
   async function loadSettings() {
     if (window.widgetApi) {
-      settings = { ...settings, ...(await window.widgetApi.getSettings()) };
+      const storedSettings = await window.widgetApi.getSettings();
+      settings = { ...settings, ...storedSettings };
+      if (!Array.isArray(storedSettings.subjectFilters)) {
+        settings.subjectFilters = normalizedSubjectFilters(storedSettings.subjectFilter || "all");
+      }
     } else {
       settings = {
         opacity: Number(localStorage.getItem("widget-opacity")) || 0.96,
@@ -342,10 +358,11 @@
         openAtLogin: localStorage.getItem("widget-startup") === "true",
         theme: localStorage.getItem("widget-theme") === "light" ? "light" : "dark",
         fontScale: Number(localStorage.getItem("widget-font-scale")) || 1,
-        subjectFilter: localStorage.getItem("widget-subject-filter") || "all",
+        subjectFilters: parseStoredSubjectFilters(),
       };
       document.body.style.opacity = settings.opacity;
     }
+    settings.subjectFilters = normalizedSubjectFilters(settings.subjectFilters);
     applyTheme(settings.theme);
     applyFontScale(settings.fontScale);
     els.opacityRange.value = Math.round(settings.opacity * 100);
@@ -353,21 +370,26 @@
     els.fontScaleLabel.textContent = `글씨 ${els.fontScaleRange.value}%`;
     els.pinToggle.checked = Boolean(settings.alwaysOnTop);
     els.startupToggle.checked = Boolean(settings.openAtLogin);
-    els.subjectFilter.value = settings.subjectFilter || "all";
+    syncSubjectFilterOptions();
     els.themeToggle.checked = settings.theme === "light";
   }
 
   async function saveSettings(patch) {
     settings = { ...settings, ...patch };
+    settings.subjectFilters = normalizedSubjectFilters(settings.subjectFilters);
+    settings.subjectFilter = settings.subjectFilters[0] || "all";
     if (window.widgetApi) {
       settings = await window.widgetApi.updateSettings(settings);
+      settings.subjectFilters = normalizedSubjectFilters(settings.subjectFilters);
+      settings.subjectFilter = settings.subjectFilters[0] || "all";
     } else {
       localStorage.setItem("widget-opacity", String(settings.opacity));
       localStorage.setItem("widget-pin", String(settings.alwaysOnTop));
       localStorage.setItem("widget-startup", String(settings.openAtLogin));
       localStorage.setItem("widget-theme", settings.theme);
       localStorage.setItem("widget-font-scale", String(settings.fontScale));
-      localStorage.setItem("widget-subject-filter", settings.subjectFilter || "all");
+      localStorage.setItem("widget-subject-filters", JSON.stringify(settings.subjectFilters));
+      localStorage.setItem("widget-subject-filter", settings.subjectFilters[0] || "all");
       document.body.style.opacity = settings.opacity;
     }
     applyTheme(settings.theme);
@@ -377,8 +399,18 @@
     els.fontScaleLabel.textContent = `글씨 ${els.fontScaleRange.value}%`;
     els.pinToggle.checked = Boolean(settings.alwaysOnTop);
     els.startupToggle.checked = Boolean(settings.openAtLogin);
-    els.subjectFilter.value = settings.subjectFilter || "all";
+    syncSubjectFilterOptions();
     els.themeToggle.checked = settings.theme === "light";
+  }
+
+  function parseStoredSubjectFilters() {
+    try {
+      const storedFilters = JSON.parse(localStorage.getItem("widget-subject-filters") || "[]");
+      if (Array.isArray(storedFilters)) return normalizedSubjectFilters(storedFilters);
+    } catch {
+      // Fall back to the previous single-select key.
+    }
+    return normalizedSubjectFilters(localStorage.getItem("widget-subject-filter") || "all");
   }
 
   function applyTheme(theme) {
@@ -411,9 +443,24 @@
     els.themeToggle.addEventListener("change", () => {
       saveSettings({ theme: els.themeToggle.checked ? "light" : "dark" });
     });
-    els.subjectFilter.addEventListener("change", () => {
-      saveSettings({ subjectFilter: els.subjectFilter.value });
+    els.subjectFilterButton.addEventListener("click", () => {
+      els.subjectFilterMenu.hidden = !els.subjectFilterMenu.hidden;
+    });
+    els.subjectFilterMenu.addEventListener("click", (event) => {
+      if (event.target.closest("[data-clear-subjects]")) {
+        saveSettings({ subjectFilters: [] });
+        render();
+      }
+    });
+    els.subjectFilterMenu.addEventListener("change", () => {
+      const subjectFilters = [...els.subjectFilterMenu.querySelectorAll("input:checked")].map((input) => input.value);
+      saveSettings({ subjectFilters });
       render();
+    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".subject-control")) {
+        els.subjectFilterMenu.hidden = true;
+      }
     });
     els.refreshButton.addEventListener("click", refresh);
     els.closeButton.addEventListener("click", () => {
