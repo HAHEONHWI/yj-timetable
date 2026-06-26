@@ -18,6 +18,7 @@ function defaultSettings() {
     subjectFilter: "all",
     subjectFilters: [],
     excludedGrades: [],
+    subjectGradeFilters: {},
   };
 }
 
@@ -100,6 +101,15 @@ app.whenReady().then(() => {
     settings.excludedGrades = Array.isArray(settings.excludedGrades)
       ? settings.excludedGrades.filter((grade) => ["1", "2", "3"].includes(String(grade)))
       : [];
+    settings.subjectGradeFilters =
+      settings.subjectGradeFilters && typeof settings.subjectGradeFilters === "object" && !Array.isArray(settings.subjectGradeFilters)
+        ? Object.fromEntries(
+            Object.entries(settings.subjectGradeFilters).map(([subject, grades]) => [
+              subject,
+              Array.isArray(grades) ? grades.filter((grade) => ["1", "2", "3"].includes(String(grade))) : [],
+            ]),
+          )
+        : {};
     writeSettings(settings);
     applyLoginSettings(settings);
     if (mainWindow) {

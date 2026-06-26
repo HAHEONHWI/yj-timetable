@@ -12,6 +12,7 @@
   let state = read();
   let refreshTimer = null;
   let remoteUnsubscribe = null;
+  let subjectMenuTab = "subjects";
   let settings = {
     opacity: 0.96,
     alwaysOnTop: true,
@@ -19,7 +20,7 @@
     theme: "dark",
     fontScale: 1,
     subjectFilters: [],
-    excludedGrades: [],
+    subjectGradeFilters: {},
   };
 
   const els = {
@@ -176,7 +177,7 @@
     return [...new Set(rawFilters.map(normalizedSubject).filter((subject) => subject && subject !== "all"))];
   }
 
-  function normalizedExcludedGrades(value = settings.excludedGrades) {
+  function normalizedGrades(value) {
     const rawGrades = Array.isArray(value)
       ? value
       : String(value || "")
@@ -185,22 +186,42 @@
     return [...new Set(rawGrades.filter((grade) => ["1", "2", "3"].includes(grade)))];
   }
 
+  function normalizedSubjectGradeFilters(value = settings.subjectGradeFilters) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(
+      Object.entries(value)
+        .map(([subject, grades]) => [normalizedSubject(subject), normalizedGrades(grades)])
+        .filter(([subject]) => subject),
+    );
+  }
+
+  function gradesForSubject(subject) {
+    const subjectName = normalizedSubject(subject);
+    const gradeFilters = normalizedSubjectGradeFilters();
+    if (Object.prototype.hasOwnProperty.call(gradeFilters, subjectName)) {
+      return gradeFilters[subjectName];
+    }
+    return ["1", "2", "3"];
+  }
+
   function gradeForClassName(className) {
     const grade = String(className || "").split("-")[0];
     return ["1", "2", "3"].includes(grade) ? grade : "";
   }
 
-  function isHighlightExcluded(options = {}) {
-    const excludedGrades = new Set(normalizedExcludedGrades());
+  function isSubjectAllowedForClasses(subject, options = {}) {
     const classNames = options.classNames || (options.className ? [options.className] : []);
-    return classNames.length > 0 && classNames.every((className) => excludedGrades.has(gradeForClassName(className)));
+    if (!classNames.length) return true;
+    const allowedGrades = new Set(gradesForSubject(subject));
+    if (!allowedGrades.size) return false;
+    return classNames.some((className) => allowedGrades.has(gradeForClassName(className)));
   }
 
   function subjectHighlightClass(subject, options = {}) {
     const selected = new Set(normalizedSubjectFilters());
     if (!selected.size) return "";
-    if (isHighlightExcluded(options)) return "";
     if (!selected.has(normalizedSubject(subject))) return "";
+    if (!isSubjectAllowedForClasses(subject, options)) return "";
     return " is-subject-highlight";
   }
 
@@ -223,34 +244,56 @@
     );
     const validSubjects = new Set(uniqueSubjects);
     const selected = normalizedSubjectFilters().filter((subject) => validSubjects.has(subject));
-    const excludedGrades = normalizedExcludedGrades();
+    const gradeFilters = normalizedSubjectGradeFilters();
+    const selectedGradeFilters = Object.fromEntries(
+      selected.map((subject) => [subject, Object.prototype.hasOwnProperty.call(gradeFilters, subject) ? gradeFilters[subject] : ["1", "2", "3"]]),
+    );
     settings.subjectFilters = selected;
-    settings.excludedGrades = excludedGrades;
+    settings.subjectGradeFilters = selectedGradeFilters;
 
     const optionHtml = [
-      '<button class="subject-clear" type="button" data-clear-subjects>전체 보기</button>',
-      `<div class="subject-section">
-        <strong>제외 학년</strong>
-        <div class="subject-grade-options">
-          ${["1", "2", "3"]
-            .map((grade) => {
-              const checked = excludedGrades.includes(grade) ? " checked" : "";
-              return `<label class="subject-option">
-                <input type="checkbox" value="${grade}" data-excluded-grade${checked} />
-                <span>${grade}학년</span>
-              </label>`;
-            })
-            .join("")}
-        </div>
+      `<div class="subject-tabs">
+        <button type="button" class="${subjectMenuTab === "subjects" ? "is-active" : ""}" data-subject-tab="subjects">과목</button>
+        <button type="button" class="${subjectMenuTab === "settings" ? "is-active" : ""}" data-subject-tab="settings">설정</button>
       </div>`,
-      '<div class="subject-section"><strong>강조 과목</strong></div>',
-      ...uniqueSubjects.map((subject) => {
-        const checked = selected.includes(subject) ? " checked" : "";
-        return `<label class="subject-option">
-          <input type="checkbox" value="${escapeHtml(subject)}" data-subject-filter${checked} />
-          <span>${escapeHtml(subject)}</span>
-        </label>`;
-      }),
+      `<div class="subject-tab-panel ${subjectMenuTab === "subjects" ? "is-active" : ""}">
+        <button class="subject-clear" type="button" data-clear-subjects>전체 보기</button>
+        <div class="subject-section"><strong>강조 과목</strong></div>
+        ${uniqueSubjects
+          .map((subject) => {
+            const checked = selected.includes(subject) ? " checked" : "";
+            return `<label class="subject-option">
+              <input type="checkbox" value="${escapeHtml(subject)}" data-subject-filter${checked} />
+              <span>${escapeHtml(subject)}</span>
+            </label>`;
+          })
+          .join("")}
+      </div>`,
+      `<div class="subject-tab-panel ${subjectMenuTab === "settings" ? "is-active" : ""}">
+        ${
+          selected.length
+            ? selected
+                .map((subject) => {
+                  const grades = gradesForSubject(subject);
+                  return `<div class="subject-grade-row">
+                    <strong>${escapeHtml(subject)}</strong>
+                    <div class="subject-grade-options">
+                      ${["1", "2", "3"]
+                        .map((grade) => {
+                          const checked = grades.includes(grade) ? " checked" : "";
+                          return `<label class="subject-option">
+                            <input type="checkbox" value="${grade}" data-subject-grade="${escapeHtml(subject)}"${checked} />
+                            <span>${grade}</span>
+                          </label>`;
+                        })
+                        .join("")}
+                    </div>
+                  </div>`;
+                })
+                .join("")
+            : '<div class="subject-empty">과목 탭에서 강조할 과목을 먼저 선택하세요.</div>'
+        }
+      </div>`,
     ].join("");
     if (els.subjectFilterMenu.innerHTML !== optionHtml) {
       els.subjectFilterMenu.innerHTML = optionHtml;
@@ -400,12 +443,12 @@
         theme: localStorage.getItem("widget-theme") === "light" ? "light" : "dark",
         fontScale: Number(localStorage.getItem("widget-font-scale")) || 1,
         subjectFilters: parseStoredSubjectFilters(),
-        excludedGrades: parseStoredExcludedGrades(),
+        subjectGradeFilters: parseStoredSubjectGradeFilters(),
       };
       document.body.style.opacity = settings.opacity;
     }
     settings.subjectFilters = normalizedSubjectFilters(settings.subjectFilters);
-    settings.excludedGrades = normalizedExcludedGrades(settings.excludedGrades);
+    settings.subjectGradeFilters = migrateSubjectGradeFilters(settings);
     applyTheme(settings.theme);
     applyFontScale(settings.fontScale);
     els.opacityRange.value = Math.round(settings.opacity * 100);
@@ -420,12 +463,12 @@
   async function saveSettings(patch) {
     settings = { ...settings, ...patch };
     settings.subjectFilters = normalizedSubjectFilters(settings.subjectFilters);
-    settings.excludedGrades = normalizedExcludedGrades(settings.excludedGrades);
+    settings.subjectGradeFilters = normalizedSubjectGradeFilters(settings.subjectGradeFilters);
     settings.subjectFilter = settings.subjectFilters[0] || "all";
     if (window.widgetApi) {
       settings = await window.widgetApi.updateSettings(settings);
       settings.subjectFilters = normalizedSubjectFilters(settings.subjectFilters);
-      settings.excludedGrades = normalizedExcludedGrades(settings.excludedGrades);
+      settings.subjectGradeFilters = normalizedSubjectGradeFilters(settings.subjectGradeFilters);
       settings.subjectFilter = settings.subjectFilters[0] || "all";
     } else {
       localStorage.setItem("widget-opacity", String(settings.opacity));
@@ -435,7 +478,7 @@
       localStorage.setItem("widget-font-scale", String(settings.fontScale));
       localStorage.setItem("widget-subject-filters", JSON.stringify(settings.subjectFilters));
       localStorage.setItem("widget-subject-filter", settings.subjectFilters[0] || "all");
-      localStorage.setItem("widget-excluded-grades", JSON.stringify(settings.excludedGrades));
+      localStorage.setItem("widget-subject-grade-filters", JSON.stringify(settings.subjectGradeFilters));
       document.body.style.opacity = settings.opacity;
     }
     applyTheme(settings.theme);
@@ -459,14 +502,24 @@
     return normalizedSubjectFilters(localStorage.getItem("widget-subject-filter") || "all");
   }
 
-  function parseStoredExcludedGrades() {
+  function parseStoredSubjectGradeFilters() {
     try {
-      const storedGrades = JSON.parse(localStorage.getItem("widget-excluded-grades") || "[]");
-      if (Array.isArray(storedGrades)) return normalizedExcludedGrades(storedGrades);
+      const storedGradeFilters = JSON.parse(localStorage.getItem("widget-subject-grade-filters") || "{}");
+      return normalizedSubjectGradeFilters(storedGradeFilters);
     } catch {
-      return [];
+      return {};
     }
-    return [];
+  }
+
+  function migrateSubjectGradeFilters(sourceSettings) {
+    const gradeFilters = normalizedSubjectGradeFilters(sourceSettings.subjectGradeFilters);
+    if (Object.keys(gradeFilters).length) return gradeFilters;
+
+    const excludedGrades = normalizedGrades(sourceSettings.excludedGrades);
+    if (!excludedGrades.length) return {};
+
+    const allowedGrades = ["1", "2", "3"].filter((grade) => !excludedGrades.includes(grade));
+    return Object.fromEntries(normalizedSubjectFilters(sourceSettings.subjectFilters).map((subject) => [subject, allowedGrades]));
   }
 
   function applyTheme(theme) {
@@ -503,8 +556,14 @@
       els.subjectFilterMenu.hidden = !els.subjectFilterMenu.hidden;
     });
     els.subjectFilterMenu.addEventListener("click", (event) => {
+      const tabButton = event.target.closest("[data-subject-tab]");
+      if (tabButton) {
+        subjectMenuTab = tabButton.dataset.subjectTab === "settings" ? "settings" : "subjects";
+        syncSubjectFilterOptions();
+        return;
+      }
       if (event.target.closest("[data-clear-subjects]")) {
-        saveSettings({ subjectFilters: [] });
+        saveSettings({ subjectFilters: [], subjectGradeFilters: {} });
         render();
       }
     });
@@ -512,10 +571,18 @@
       const subjectFilters = [...els.subjectFilterMenu.querySelectorAll("input[data-subject-filter]:checked")].map(
         (input) => input.value,
       );
-      const excludedGrades = [...els.subjectFilterMenu.querySelectorAll("input[data-excluded-grade]:checked")].map(
-        (input) => input.value,
+      const subjectGradeFilters = Object.fromEntries(
+        subjectFilters.map((subject) => {
+          const gradeInputs = [
+            ...els.subjectFilterMenu.querySelectorAll(`input[data-subject-grade="${CSS.escape(subject)}"]`),
+          ];
+          const grades = gradeInputs.length
+            ? gradeInputs.filter((input) => input.checked).map((input) => input.value)
+            : gradesForSubject(subject);
+          return [subject, grades];
+        }),
       );
-      saveSettings({ subjectFilters, excludedGrades });
+      saveSettings({ subjectFilters, subjectGradeFilters });
       render();
     });
     document.addEventListener("click", (event) => {
