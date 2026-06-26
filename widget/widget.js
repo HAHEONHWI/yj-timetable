@@ -18,6 +18,7 @@
     openAtLogin: false,
     theme: "dark",
     fontScale: 1,
+    subjectFilter: "all",
   };
 
   const els = {
@@ -31,6 +32,7 @@
     schedule: document.querySelector("#schedule"),
     startupToggle: document.querySelector("#startupToggle"),
     status: document.querySelector("#status"),
+    subjectFilter: document.querySelector("#subjectFilter"),
     themeToggle: document.querySelector("#themeToggle"),
   };
 
@@ -133,7 +135,7 @@
         const columnEnd = group[group.length - 1] + 3;
         const memo = item.memo ? ` · ${escapeHtml(item.memo)}` : "";
         const prefix = options.prefix ? `${options.prefix} · ` : "";
-        return `<div class="lesson ${className}" style="grid-column:${columnStart}/${columnEnd};grid-row:${rowStart}/${rowEnd}">
+        return `<div class="lesson ${className}${subjectHighlightClass(item.title)}" style="grid-column:${columnStart}/${columnEnd};grid-row:${rowStart}/${rowEnd}">
           <strong>${escapeHtml(item.title)}</strong>
           <small>${prefix}${formatPeriodRange(start, end)}${memo}</small>
         </div>`;
@@ -146,16 +148,68 @@
 
     if (change) {
       const original = getSubjectsForDate(date, className)[periodIndex] || "-";
-      return `<div class="lesson is-change">
+      return `<div class="lesson is-change${subjectHighlightClass(change.subject)}">
         <strong>${escapeHtml(change.subject)}</strong>
         <small>${escapeHtml(original)} 변경${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
       </div>`;
     }
 
     const subject = getSubjectsForDate(date, className)[periodIndex] || "-";
-    return `<div class="lesson">
+    return `<div class="lesson${subjectHighlightClass(subject)}">
       <strong>${escapeHtml(subject)}</strong>
     </div>`;
+  }
+
+  function normalizedSubject(value) {
+    return String(value || "").trim();
+  }
+
+  function subjectHighlightClass(subject) {
+    const selected = normalizedSubject(settings.subjectFilter);
+    if (!selected || selected === "all") return "";
+    return normalizedSubject(subject) === selected ? " is-subject-highlight" : "";
+  }
+
+  function syncSubjectFilterOptions(subjects) {
+    if (!els.subjectFilter) return;
+    const selected = normalizedSubject(settings.subjectFilter) || "all";
+    const uniqueSubjects = [...new Set(subjects.map(normalizedSubject).filter((subject) => subject && subject !== "-"))].sort(
+      (a, b) => a.localeCompare(b, "ko-KR"),
+    );
+    const optionHtml = [
+      '<option value="all">전체</option>',
+      ...uniqueSubjects.map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`),
+    ].join("");
+    if (els.subjectFilter.innerHTML !== optionHtml) {
+      els.subjectFilter.innerHTML = optionHtml;
+    }
+    els.subjectFilter.value = uniqueSubjects.includes(selected) ? selected : "all";
+    if (els.subjectFilter.value === "all" && selected !== "all") {
+      settings.subjectFilter = "all";
+    }
+  }
+
+  function collectVisibleSubjects(date, baseMerges) {
+    const subjects = [];
+    const hasRenderedBaseMerge = (className, period) => {
+      return baseMerges.some((merge) => {
+        return merge.classes.includes(className) && period >= merge.start && period <= merge.end;
+      });
+    };
+
+    baseMerges.forEach((merge) => subjects.push(merge.title));
+    getEventsForDate(date).forEach((event) => subjects.push(event.title));
+
+    periods.forEach((period, periodIndex) => {
+      classes.forEach((className) => {
+        if (hasEventCovering(date, className, period)) return;
+        if (hasRenderedBaseMerge(className, period)) return;
+        const change = getChange(date, className, period);
+        subjects.push(change ? change.subject : getSubjectsForDate(date, className)[periodIndex]);
+      });
+    });
+
+    return subjects;
   }
 
   function render() {
@@ -172,6 +226,7 @@
       .join("");
 
     if (!hasScheduleForToday(today)) {
+      syncSubjectFilterOptions([]);
       els.schedule.innerHTML = `<div class="empty-state">
         <strong>오늘 등록된 시간표가 없습니다.</strong>
         <span>평일 기본 시간표 또는 오늘 특별시간표가 등록되면 전체 학급 시간표가 표시됩니다.</span>
@@ -195,6 +250,8 @@
           })
           .filter((merge) => merge.classes.length > 0)
       : [];
+
+    syncSubjectFilterOptions(collectVisibleSubjects(today, baseMerges));
 
     const hasRenderedBaseMerge = (className, period) => {
       return baseMerges.some((merge) => {
@@ -277,7 +334,7 @@
 
   async function loadSettings() {
     if (window.widgetApi) {
-      settings = await window.widgetApi.getSettings();
+      settings = { ...settings, ...(await window.widgetApi.getSettings()) };
     } else {
       settings = {
         opacity: Number(localStorage.getItem("widget-opacity")) || 0.96,
@@ -285,6 +342,7 @@
         openAtLogin: localStorage.getItem("widget-startup") === "true",
         theme: localStorage.getItem("widget-theme") === "light" ? "light" : "dark",
         fontScale: Number(localStorage.getItem("widget-font-scale")) || 1,
+        subjectFilter: localStorage.getItem("widget-subject-filter") || "all",
       };
       document.body.style.opacity = settings.opacity;
     }
@@ -295,6 +353,7 @@
     els.fontScaleLabel.textContent = `글씨 ${els.fontScaleRange.value}%`;
     els.pinToggle.checked = Boolean(settings.alwaysOnTop);
     els.startupToggle.checked = Boolean(settings.openAtLogin);
+    els.subjectFilter.value = settings.subjectFilter || "all";
     els.themeToggle.checked = settings.theme === "light";
   }
 
@@ -308,6 +367,7 @@
       localStorage.setItem("widget-startup", String(settings.openAtLogin));
       localStorage.setItem("widget-theme", settings.theme);
       localStorage.setItem("widget-font-scale", String(settings.fontScale));
+      localStorage.setItem("widget-subject-filter", settings.subjectFilter || "all");
       document.body.style.opacity = settings.opacity;
     }
     applyTheme(settings.theme);
@@ -317,6 +377,7 @@
     els.fontScaleLabel.textContent = `글씨 ${els.fontScaleRange.value}%`;
     els.pinToggle.checked = Boolean(settings.alwaysOnTop);
     els.startupToggle.checked = Boolean(settings.openAtLogin);
+    els.subjectFilter.value = settings.subjectFilter || "all";
     els.themeToggle.checked = settings.theme === "light";
   }
 
@@ -349,6 +410,10 @@
     });
     els.themeToggle.addEventListener("change", () => {
       saveSettings({ theme: els.themeToggle.checked ? "light" : "dark" });
+    });
+    els.subjectFilter.addEventListener("change", () => {
+      saveSettings({ subjectFilter: els.subjectFilter.value });
+      render();
     });
     els.refreshButton.addEventListener("click", refresh);
     els.closeButton.addEventListener("click", () => {

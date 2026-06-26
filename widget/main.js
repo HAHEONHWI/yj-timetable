@@ -15,6 +15,7 @@ function defaultSettings() {
     openAtLogin: false,
     theme: "dark",
     fontScale: 1,
+    subjectFilter: "all",
   };
 }
 
@@ -90,6 +91,7 @@ app.whenReady().then(() => {
     settings.openAtLogin = Boolean(settings.openAtLogin);
     settings.theme = settings.theme === "light" ? "light" : "dark";
     settings.fontScale = Math.min(1.5, Math.max(0.8, Number(settings.fontScale) || 1));
+    settings.subjectFilter = typeof settings.subjectFilter === "string" ? settings.subjectFilter : "all";
     writeSettings(settings);
     applyLoginSettings(settings);
     if (mainWindow) {

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>용정시간표-Widget</title>
+    <title>용정시간표 - Widget</title>
     <link rel="stylesheet" href="./widget.css" />
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-TTWC1RKWGL"></script>
@@ -45,6 +45,12 @@
           <label class="font-control" for="fontScaleRange">
             <span id="fontScaleLabel">글씨 100%</span>
             <input id="fontScaleRange" type="range" min="80" max="150" step="5" />
+          </label>
+          <label class="subject-control" for="subjectFilter">
+            <span>과목</span>
+            <select id="subjectFilter">
+              <option value="all">전체</option>
+            </select>
           </label>
           <button id="refreshButton" type="button">새로고침</button>
           <button id="closeButton" class="icon-button" type="button" aria-label="닫기">×</button>

@@ -7,8 +7,11 @@
   --muted: #9aa8bd;
   --blue: #3b82f6;
   --today: #172554;
-  --change: #422006;
+  --change: #5a2a08;
   --change-line: #f59e0b;
+  --subject-highlight: #123c52;
+  --subject-highlight-line: #22d3ee;
+  --subject-highlight-text: #e0faff;
   --event: #064e3b;
   --event-line: #10b981;
   --label: #cbd5e1;
@@ -32,9 +35,12 @@ body.theme-dark {
   --control-bg: #0f1623;
   --header-bg: rgba(7, 17, 29, 0.96);
   --widget-bg: linear-gradient(180deg, #081320 0%, #0d1117 100%);
-  --change: #422006;
+  --change: #5a2a08;
   --change-line: #f59e0b;
   --change-text: #fde68a;
+  --subject-highlight: #123c52;
+  --subject-highlight-line: #22d3ee;
+  --subject-highlight-text: #e0faff;
   --event: #064e3b;
   --event-line: #10b981;
   --event-text: #ecfdf5;
@@ -63,9 +69,12 @@ body.theme-light {
   --control-bg: #f8fbff;
   --header-bg: rgba(248, 251, 255, 0.96);
   --widget-bg: linear-gradient(180deg, #f8fbff 0%, #eaf1fb 100%);
-  --change: #fff7d6;
+  --change: #fff1b8;
   --change-line: #d97706;
   --change-text: #6b3b00;
+  --subject-highlight: #dff7ff;
+  --subject-highlight-line: #0891b2;
+  --subject-highlight-text: #083344;
   --event: #dcfce7;
   --event-line: #059669;
   --event-text: #064e3b;
@@ -159,7 +168,8 @@ select {
 
 .controls label,
 .opacity-control span,
-.font-control span {
+.font-control span,
+.subject-control span {
   color: var(--label);
   font-size: 13px;
   font-weight: 900;
@@ -178,7 +188,8 @@ button {
 
 .toggle,
 .opacity-control,
-.font-control {
+.font-control,
+.subject-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -199,6 +210,12 @@ button {
 .font-control input {
   width: 96px;
   accent-color: var(--blue);
+}
+
+.subject-control select {
+  min-height: 28px;
+  max-width: 128px;
+  padding: 0 8px;
 }
 
 button {
@@ -330,6 +347,13 @@ main {
 .lesson.is-merge {
   background: var(--merge);
   color: var(--merge-text);
+}
+
+.lesson.is-subject-highlight {
+  border: 2px solid var(--subject-highlight-line);
+  background: var(--subject-highlight);
+  color: var(--subject-highlight-text);
+  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.28);
 }
 
 .empty-state {
