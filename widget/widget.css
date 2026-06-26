@@ -408,9 +408,6 @@ main {
 
 .lesson.is-subject-highlight {
   border: 2px solid var(--subject-highlight-line);
-  background: var(--subject-highlight);
-  color: var(--subject-highlight-text);
-  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.28);
 }
 
 .empty-state {
