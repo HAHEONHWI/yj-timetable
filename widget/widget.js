@@ -149,7 +149,7 @@
 
     if (change) {
       const original = getSubjectsForDate(date, className)[periodIndex] || "-";
-      return `<div class="lesson is-change${subjectHighlightClass(change.subject, original)}">
+      return `<div class="lesson is-change${subjectHighlightClass(change.subject)}">
         <strong>${escapeHtml(change.subject)}</strong>
         <small>${escapeHtml(original)} 변경${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
       </div>`;
