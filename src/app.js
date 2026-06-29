@@ -317,6 +317,17 @@
     return "/";
   }
 
+  function titleForRoute(route) {
+    const labels = {
+      view: "조회",
+      slideshow: "슬라이드쇼",
+      download: "다운로드",
+      admin: "관리자",
+      privacy: "개인정보처리방침",
+    };
+    return `용정시간표 - ${labels[route] || "조회"}`;
+  }
+
   async function enterFullscreen() {
     if (document.fullscreenElement || isBoardMode) return;
     const target = document.documentElement;
@@ -353,6 +364,7 @@
 
   function routeTo(route, options = {}) {
     currentRoute = route;
+    document.title = titleForRoute(route);
     els.viewPage.classList.toggle("is-hidden", route !== "view");
     els.slideshowPage.classList.toggle("is-hidden", route !== "slideshow");
     els.downloadPage.classList.toggle("is-hidden", route !== "download");
