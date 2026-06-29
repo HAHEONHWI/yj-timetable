@@ -3,6 +3,8 @@ const fs = require("fs");
 const path = require("path");
 
 let mainWindow = null;
+const WIDGET_URL = "https://schedule.yjms.kr/widget/widget.html";
+const WIDGET_ORIGIN = new URL(WIDGET_URL).origin;
 
 function settingsPath() {
   return path.join(app.getPath("userData"), "widget-settings.json");
@@ -75,7 +77,19 @@ function createWindow() {
 
   applyWindowSettings(mainWindow, settings);
   applyLoginSettings(settings);
-  mainWindow.loadFile(path.join(__dirname, "widget.html"));
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const nextUrl = new URL(url);
+    if (nextUrl.protocol !== "file:" && nextUrl.origin !== WIDGET_ORIGIN) {
+      event.preventDefault();
+    }
+  });
+  mainWindow.webContents.on("did-fail-load", (_event, _errorCode, _errorDescription, validatedUrl, isMainFrame) => {
+    if (isMainFrame && validatedUrl === WIDGET_URL) {
+      mainWindow.loadFile(path.join(__dirname, "widget.html"));
+    }
+  });
+  mainWindow.loadURL(WIDGET_URL);
 }
 
 app.whenReady().then(() => {
