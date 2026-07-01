@@ -338,6 +338,40 @@ body.board-mode.board-light .page-view {
   margin-bottom: 18px;
 }
 
+.admin-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-save-status {
+  margin: 0;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #0f1623;
+  color: #cbd5e1;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-save-status.is-stale {
+  color: #fbbf24;
+  border-color: #854d0e;
+  background: #281e0a;
+}
+
+.admin-save-status.is-error {
+  color: #fecaca;
+  border-color: #7f1d1d;
+  background: #2a1111;
+}
+
 .field {
   display: grid;
   gap: 8px;

@@ -9,6 +9,7 @@
     subscribeRemoteChanges,
     verifyAdminPassword,
     clearAdminPassword,
+    isSupabaseEnabled,
     changeKey,
   } = window.TimetableStore;
   let state = read();
@@ -32,6 +33,7 @@
   let pendingRetryMessage = "";
   let analyticsRouteTrackingReady = false;
   const gaMeasurementId = "G-TTWC1RKWGL";
+  const LAST_SAVE_KEY = "timetable-last-save-at";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
 
   const $ = (selector) => document.querySelector(selector);
@@ -61,7 +63,7 @@
     logoutButton: $("#logoutButton"),
     loginMessage: $("#loginMessage"),
     adminMessage: $("#adminMessage"),
-    baseClass: $("#baseClass"),
+    lastSaveStatus: $("#lastSaveStatus"),
     baseWeekday: $("#baseWeekday"),
     baseEditor: $("#baseEditor"),
     saveBaseButton: $("#saveBaseButton"),
@@ -274,6 +276,55 @@
     }, 2600);
   }
 
+  function formatDateTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  function friendlyRemoteError(error) {
+    const text = String(error && (error.message || error.error || error) ? error.message || error.error || error : "");
+    if (/관리자 비밀번호 세션|session/i.test(text)) {
+      return "관리자 로그인 세션이 없습니다. 다시 로그인한 뒤 저장하세요.";
+    }
+    if (/Incorrect password|401|403|권한|unauthorized|forbidden/i.test(text)) {
+      return "관리자 권한이 확인되지 않았습니다. 다시 로그인하거나 관리자 비밀번호를 확인하세요.";
+    }
+    if (/Failed to fetch|NetworkError|Load failed|연결|network|fetch/i.test(text)) {
+      return "Supabase에 연결하지 못했습니다. 인터넷 연결이나 Supabase 상태를 확인한 뒤 다시 저장하세요.";
+    }
+    if (/Invalid state|400/i.test(text)) {
+      return "저장할 시간표 데이터 형식이 올바르지 않습니다. 방금 입력한 항목을 확인하세요.";
+    }
+    if (/ADMIN_PASSWORD/i.test(text)) {
+      return "서버 관리자 비밀번호 설정이 누락되었습니다. Supabase Edge Function 시크릿을 확인하세요.";
+    }
+    return text ? `원격 저장 중 오류가 발생했습니다. ${text}` : "원격 저장 중 알 수 없는 오류가 발생했습니다.";
+  }
+
+  function updateLastSaveStatus(status = "idle") {
+    if (!els.lastSaveStatus) return;
+    const savedAt = localStorage.getItem(LAST_SAVE_KEY);
+    const formatted = formatDateTime(savedAt);
+    els.lastSaveStatus.classList.toggle("is-error", status === "error");
+    els.lastSaveStatus.classList.toggle("is-stale", status === "saving" || status === "stale");
+    if (status === "saving") {
+      els.lastSaveStatus.textContent = formatted ? `저장 중 · 마지막 저장: ${formatted}` : "저장 중 · 마지막 저장: 아직 없음";
+      return;
+    }
+    if (status === "error") {
+      els.lastSaveStatus.textContent = formatted ? `저장 실패 · 마지막 성공: ${formatted}` : "저장 실패 · 마지막 성공 없음";
+      return;
+    }
+    els.lastSaveStatus.textContent = formatted ? `마지막 저장: ${formatted}` : "마지막 저장: 아직 없음";
+  }
+
+  function markLastSaveSuccess() {
+    localStorage.setItem(LAST_SAVE_KEY, new Date().toISOString());
+    updateLastSaveStatus();
+  }
+
   function showMainEggToast(message) {
     let toast = document.querySelector("#mainEggToast");
     if (!toast) {
@@ -348,10 +399,18 @@
     }
   }
 
+  function selectAdminTab(tabName) {
+    $$(".admin-tab").forEach((tab) => tab.classList.toggle("is-active", tab.dataset.adminTab === tabName));
+    $$(".admin-panel").forEach((panel) => panel.classList.add("is-hidden"));
+    const panel = $(`#${tabName}Panel`);
+    if (panel) panel.classList.remove("is-hidden");
+  }
+
   function refreshAdminAuth() {
     const loggedIn = isLoggedIn();
     els.loginPanel.classList.toggle("is-hidden", loggedIn);
     els.adminWorkspace.classList.toggle("is-hidden", !loggedIn);
+    if (loggedIn) selectAdminTab("change");
   }
 
   function trackRoutePageView(route) {
@@ -874,17 +933,30 @@
   }
 
   function renderBaseEditor() {
-    const className = els.baseClass.value;
     const weekday = els.baseWeekday.value;
-    const subjects = state.base[className][weekday];
-    els.baseEditor.innerHTML = periods
-      .map((period, index) => {
-        return `<div class="period-input">
-          <label for="basePeriod${period}">${period}교시</label>
-          <input id="basePeriod${period}" data-period-index="${index}" type="text" value="${escapeHtml(subjects[index] || "")}" />
-        </div>`;
+    const headerCells = classes
+      .map((className, index) => {
+        return `<div class="special-head" style="grid-column:${index + 2};grid-row:1">${escapeHtml(className)}</div>`;
       })
       .join("");
+    const rows = periods
+      .map((period, periodIndex) => {
+        const inputs = classes
+          .map((className, classIndex) => {
+            const subjects = state.base[className][weekday] || [];
+            return `<div class="special-input" style="grid-column:${classIndex + 2};grid-row:${periodIndex + 2}">
+              <input data-base-class="${className}" data-period-index="${periodIndex}" type="text" value="${escapeHtml(subjects[periodIndex] || "")}" aria-label="${className} ${period}교시" />
+            </div>`;
+          })
+          .join("");
+        return `<div class="special-head" style="grid-column:1;grid-row:${periodIndex + 2}">${period}교시</div>${inputs}`;
+      })
+      .join("");
+    els.baseEditor.innerHTML = `<div class="special-grid" style="--class-count:${classes.length}">
+      <div class="special-head" style="grid-column:1;grid-row:1">교시</div>
+      ${headerCells}
+      ${rows}
+    </div>`;
   }
 
   function renderSpecialDateHint() {
@@ -1158,6 +1230,7 @@
   }
 
   function renderAdmin() {
+    updateLastSaveStatus();
     renderBaseEditor();
     renderSpecialDateHint();
     renderSpecialEditor();
@@ -1249,9 +1322,7 @@
       applyRemoteState(remoteState, options);
     } catch (error) {
       showGlobalError(
-        `Supabase 연결 실패: 브라우저에 저장된 시간표를 계속 표시합니다. 관리자 저장은 원격 연결이 복구된 뒤 다시 시도하세요. ${
-          error.message || "Supabase DB 연결에 실패했습니다."
-        }`
+        `Supabase 연결 실패: 브라우저에 저장된 시간표를 계속 표시합니다. ${friendlyRemoteError(error)}`
       );
     }
   }
@@ -1306,25 +1377,29 @@
 
   async function saveState(message) {
     pendingRetryMessage = message;
+    updateLastSaveStatus("saving");
     const resultPromise = write(state);
     renderView();
     renderAdmin();
+    updateLastSaveStatus("saving");
     if (currentRoute === "slideshow") {
       startSlideshow();
     }
 
     const result = await resultPromise;
     if (result && result.ok === false) {
-      const detail = result.error || "알 수 없는 오류";
-      showGlobalError(`Supabase 저장 실패: 화면에는 반영됐지만 다른 기기에는 아직 공유되지 않았습니다. ${detail}`, {
+      const detail = friendlyRemoteError(result.error);
+      updateLastSaveStatus("error");
+      showGlobalError(`원격 저장 실패: 이 브라우저 화면에는 반영됐지만 다른 기기에는 아직 공유되지 않았습니다. ${detail}`, {
         retry: true,
       });
-      showMessage(els.adminMessage, `브라우저에는 반영됨 · Supabase 저장 실패: ${detail}`);
+      showMessage(els.adminMessage, `브라우저에는 반영됨 · 원격 저장 실패: ${detail}`);
       return;
     }
     pendingRetryMessage = "";
+    markLastSaveSuccess();
     showGlobalStatus(message, "success", { autoHide: true });
-    showMessage(els.adminMessage, message);
+    showMessage(els.adminMessage, `${message} · ${isSupabaseEnabled && isSupabaseEnabled() ? "원격 동기화 완료" : "이 브라우저에 저장됨"}`);
   }
 
   function retrySaveState() {
@@ -1336,7 +1411,6 @@
 
   function initControls() {
     fillSelect(els.viewClass, isBoardMode ? classes : ["all", ...classes], (value) => (value === "all" ? "전체 학급" : value));
-    fillSelect(els.baseClass, classes);
     fillSelect(els.changeClass, classes);
     fillSelect(els.baseWeekday, weekdays.map((day) => day.key), (key) => weekdays.find((day) => day.key === key).label);
     fillSelect(els.changePeriod, periods, (period) => `${period}교시`);
@@ -1492,7 +1566,6 @@
     els.exitSlideshowButton.addEventListener("click", () => {
       routeTo("view");
     });
-    els.baseClass.addEventListener("change", renderBaseEditor);
     els.baseWeekday.addEventListener("change", renderBaseEditor);
     els.specialDate.addEventListener("change", () => {
       renderSpecialDateHint();
@@ -1526,7 +1599,7 @@
         }
         return;
       }
-      showMessage(els.loginMessage, result.error ? `로그인 함수 오류: ${result.error}` : "비밀번호가 올바르지 않습니다.");
+      showMessage(els.loginMessage, result.error ? friendlyRemoteError(result.error) : "비밀번호가 올바르지 않습니다. 다시 확인하세요.");
     });
 
     els.adminPassword.addEventListener("keydown", (event) => {
@@ -1542,16 +1615,18 @@
 
     $$(".admin-tab").forEach((button) => {
       button.addEventListener("click", () => {
-        $$(".admin-tab").forEach((tab) => tab.classList.toggle("is-active", tab === button));
-        $$(".admin-panel").forEach((panel) => panel.classList.add("is-hidden"));
-        $(`#${button.dataset.adminTab}Panel`).classList.remove("is-hidden");
+        selectAdminTab(button.dataset.adminTab);
       });
     });
 
     els.saveBaseButton.addEventListener("click", () => {
-      const className = els.baseClass.value;
       const weekday = els.baseWeekday.value;
-      state.base[className][weekday] = $$("#baseEditor input").map((input) => input.value.trim());
+      classes.forEach((className) => {
+        state.base[className][weekday] = periods.map((_, periodIndex) => {
+          const input = $(`#baseEditor input[data-base-class="${className}"][data-period-index="${periodIndex}"]`);
+          return input ? input.value.trim() : "";
+        });
+      });
       saveState("기본 시간표를 저장했습니다.");
     });
 
