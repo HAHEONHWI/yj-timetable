@@ -12,25 +12,70 @@ import org.json.JSONObject;
 
 public class LocalTimetableRenderer {
 
-    // 칩 가로폭에 맞게 글씨 크기를 자동 조절하여 칸 탈출(Overflow)을 원천 방지하는 헬퍼 메서드
+    // 칩 가로폭에 맞게 글씨 크기를 조절하며, 길 경우 자동으로 2줄 분리(Multi-line)하여 큼직하게 그리는 고출력 드로잉 엔진
     private static void drawTextFitWidth(Canvas canvas, String text, float centerX, float centerY, Paint paint, float maxWidth) {
         if (text == null || text.isEmpty()) return;
         
         float originalSize = paint.getTextSize();
-        float size = originalSize;
         
-        // 텍스트 가로 폭이 maxWidth를 초과하는 경우, 1dp씩 점진적으로 크기 축소 (최대 원래 크기의 40% 수준까지 허용)
-        while (paint.measureText(text) > maxWidth && size > originalSize * 0.4f) {
+        // 1. 한 줄에 들어오면 원본 크기로 중앙에 깨끗이 드로잉
+        if (paint.measureText(text) <= maxWidth) {
+            Paint.FontMetrics fm = paint.getFontMetrics();
+            float offset = (fm.descent + fm.ascent) / 2f;
+            canvas.drawText(text, centerX, centerY - offset, paint);
+            return;
+        }
+
+        // 2. 너비를 넘어서는 경우 자연스러운 공백 경계 혹은 중앙 지점에서 2줄 분리
+        String line1 = text;
+        String line2 = "";
+        
+        int center = text.length() / 2;
+        int spaceIdx = -1;
+        int minDiff = Integer.MAX_VALUE;
+        int searchIdx = text.indexOf(' ');
+        while (searchIdx != -1) {
+            int diff = Math.abs(searchIdx - center);
+            if (diff < minDiff) {
+                minDiff = diff;
+                spaceIdx = searchIdx;
+            }
+            searchIdx = text.indexOf(' ', searchIdx + 1);
+        }
+
+        if (spaceIdx != -1) {
+            line1 = text.substring(0, spaceIdx);
+            line2 = text.substring(spaceIdx + 1);
+        } else {
+            // 공백이 없는 긴 단어는 절반 지점에서 잘라 2줄로 배치
+            line1 = text.substring(0, center);
+            line2 = text.substring(center);
+        }
+
+        // 2줄로 나눈 뒤에도 너비를 초과하면 폰트 크기를 단계적 감쇄
+        float size = originalSize;
+        while ((paint.measureText(line1) > maxWidth || paint.measureText(line2) > maxWidth) && size > originalSize * 0.4f) {
             size -= 1.0f;
             paint.setTextSize(size);
         }
-        
-        // 텍스트 중앙 세로 기준선 보정 적용
+
+        // 2줄 행간 간격 산정 및 드로잉
         Paint.FontMetrics fm = paint.getFontMetrics();
-        float offset = (fm.descent + fm.ascent) / 2f;
-        canvas.drawText(text, centerX, centerY - offset, paint);
-        
-        // 원본 크기로 원복하여 페인트 전역 상태 유지
+        float lineHeight = fm.descent - fm.ascent;
+        float y1 = centerY - (lineHeight * 0.28f);
+        float y2 = centerY + (lineHeight * 0.45f);
+
+        Paint.FontMetrics fm1 = paint.getFontMetrics();
+        float offset1 = (fm1.descent + fm1.ascent) / 2f;
+        canvas.drawText(line1, centerX, y1 - offset1, paint);
+
+        if (!line2.isEmpty()) {
+            Paint.FontMetrics fm2 = paint.getFontMetrics();
+            float offset2 = (fm2.descent + fm2.ascent) / 2f;
+            canvas.drawText(line2, centerX, y2 - offset2, paint);
+        }
+
+        // 페인트 크기 복원
         paint.setTextSize(originalSize);
     }
 
