@@ -3,10 +3,25 @@ const path = require("path");
 const fs = require("fs");
 
 let fontBuffer = null;
-try {
-  fontBuffer = fs.readFileSync(path.join(__dirname, "fonts", "NanumGothic-Regular.ttf"));
-} catch (err) {
-  console.error("Failed to load font buffer:", err);
+const fontPaths = [
+  path.join(__dirname, "fonts", "NanumGothic-Regular.ttf"),
+  path.join(__dirname, "netlify", "functions", "fonts", "NanumGothic-Regular.ttf"),
+  path.join(process.cwd(), "netlify", "functions", "fonts", "NanumGothic-Regular.ttf"),
+];
+
+for (const fp of fontPaths) {
+  try {
+    if (fs.existsSync(fp)) {
+      fontBuffer = fs.readFileSync(fp);
+      break;
+    }
+  } catch (err) {
+    // ignore
+  }
+}
+
+if (!fontBuffer) {
+  console.error("Critical: NanumGothic font buffer could not be loaded from any path:", fontPaths);
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://jzcectvzwbfvbgiszjkt.supabase.co";
@@ -364,7 +379,7 @@ function renderWallpaperSvg(state, query) {
   <circle cx="1000" cy="950" r="280" fill="#8b5cf6" opacity="0.18" filter="url(#glow)" />
   <circle cx="1000" cy="2100" r="350" fill="#ec4899" opacity="0.15" filter="url(#glow)" />
   <circle cx="150" cy="2000" r="320" fill="#14b8a6" opacity="0.18" filter="url(#glow)" />
-  <g font-family="Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+  <g font-family="NanumGothic, Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
     ${renderText("용정 시간표", 64, 530, { size: 28, fill: "#64748b", weight: 900 })}
     ${renderText(titleLabel, 64, 594, { size: titleSize, fill: "#f8fafc", weight: 900 })}
     ${renderText(subjectLabel, 64, 640, { size: 28, fill: "#2dd4bf", weight: 900 })}
