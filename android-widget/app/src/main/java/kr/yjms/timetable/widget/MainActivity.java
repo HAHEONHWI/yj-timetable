@@ -298,6 +298,32 @@ public class MainActivity extends Activity {
         if (chkSubHis.isChecked()) selectedSubs.add("역사");
         if (chkSubPe.isChecked()) selectedSubs.add("체육");
         if (chkSubMus.isChecked()) selectedSubs.add("음악");
+        // 선생님 이름이 과목명에 일부 포함된 모든 과목들을 기본 시간표 캐시에서 자동 스캔하여 추가
+        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+        String jsonCache = prefs.getString("last_timetable_json", "");
+        if (!jsonCache.isEmpty() && !name.isEmpty()) {
+            try {
+                JSONObject root = new JSONObject(jsonCache);
+                JSONArray gridArr = root.getJSONArray("grid");
+                for (int d = 0; d < gridArr.length(); d++) {
+                    JSONArray dayRow = gridArr.optJSONArray(d);
+                    if (dayRow == null) continue;
+                    for (int p = 0; p < dayRow.length(); p++) {
+                        JSONArray cellMatches = dayRow.optJSONArray(p);
+                        if (cellMatches == null) continue;
+                        for (int m = 0; m < cellMatches.length(); m++) {
+                            JSONObject match = cellMatches.getJSONObject(m);
+                            String title = match.getString("title");
+                            if (title.contains(name) && !selectedSubs.contains(title)) {
+                                selectedSubs.add(title);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         String subsStr = joinList(selectedSubs, ",");
 
         // 학년 빌드
@@ -320,7 +346,6 @@ public class MainActivity extends Activity {
         String themeStr = rbThemeLight.isChecked() ? "light" : "dark";
 
         // SharedPreferences 저장
-        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("name", name);
         editor.putString("days", daysStr);
@@ -736,6 +761,11 @@ public class MainActivity extends Activity {
                         mainHandler.post(new Runnable() {
                             @Override
                             public void run() {
+                                // 최신 시간표 JSON 데이터를 SharedPreferences 에 캐싱 보관
+                                SharedPreferences.Editor editor = prefs.edit();
+                                editor.putString("last_timetable_json", jsonString);
+                                editor.apply();
+
                                 updateAppGrid(jsonString);
                             }
                         });
