@@ -110,6 +110,10 @@ public class LocalTimetableRenderer {
                     JSONObject match = cellMatches.getJSONObject(0);
                     String title = match.getString("title");
                     String note = match.optString("note", "");
+                    String className = match.optString("className", "");
+                    if (note.isEmpty() && !className.isEmpty()) {
+                        note = className;
+                    }
                     String type = match.optString("type", "");
 
                     // 연속된 세로 교시 병합(rowspan) 감지
