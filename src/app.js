@@ -891,6 +891,46 @@
     return url.toString();
   }
 
+  function wallpaperAutomationText(settings) {
+    const dayLabels = weekdays.filter((weekday) => settings.days.includes(weekday.key)).map((weekday) => weekday.label).join(", ");
+    return [
+      "용정시간표 iPhone 배경화면 자동화 설정",
+      "",
+      `과목: ${settings.subjects.join(", ") || "선택 안 됨"}`,
+      `요일: ${dayLabels || "월, 화, 수, 목, 금"}`,
+      "",
+      "이미지 URL:",
+      wallpaperImageUrl(settings),
+      "",
+      "단축어 액션 순서:",
+      "1. URL",
+      "2. URL 콘텐츠 가져오기",
+      "3. 이미지 변환: JPEG 또는 PNG",
+      "4. 배경화면 설정",
+      "",
+      "자동화 설정:",
+      "1. 단축어 앱 > 자동화",
+      "2. 시간",
+      "3. 매일",
+      "4. 원하는 시간 선택",
+      "5. 위 단축어 실행",
+      "6. 가능하면 실행 전에 묻기 끄기",
+      "",
+      "참고: iOS 정책상 웹사이트가 자동화를 직접 설치할 수는 없습니다.",
+    ].join("\n");
+  }
+
+  function downloadWallpaperAutomation(settings) {
+    const blob = new Blob([wallpaperAutomationText(settings)], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `yj-wallpaper-shortcut-${settings.subjects.join("-") || "setup"}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+  }
+
   function wallpaperLesson(date, className, period, periodIndex) {
     const event = getEventsForDate(date).find((item) => {
       return item.classes.includes(className) && period >= item.start && period <= item.end;
@@ -957,6 +997,7 @@
       </label>
       <div class="button-row">
         <button class="primary-button" data-copy-wallpaper-url type="button">URL 복사</button>
+        <button class="ghost-button" data-download-wallpaper-automation type="button">설정 파일 다운로드</button>
         <a class="ghost-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">이미지 열기</a>
       </div>
       <figure class="wallpaper-image-preview">
@@ -1757,6 +1798,16 @@
         document.execCommand("copy");
         showGlobalStatus("단축어 이미지 URL을 복사했습니다.", "success", { autoHide: true });
       }
+    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-download-wallpaper-automation]")) return;
+      const settings = wallpaperSettings();
+      if (!settings.subjects.length) {
+        showGlobalError("과목을 먼저 선택하세요.", { autoHide: true });
+        return;
+      }
+      downloadWallpaperAutomation(settings);
+      showGlobalStatus("단축어 설정 파일을 다운로드했습니다.", "success", { autoHide: true });
     });
     document.addEventListener("keydown", (event) => {
       if (event.target && ["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(event.target.tagName)) return;
