@@ -237,7 +237,7 @@ function matchesForCell(state, date, className, period, periodIndex, subjects, g
   }
 
   const lesson = lessonFor(state, date, className, period, periodIndex);
-  if (subjectSet.has(lesson.title) && isSubjectAllowed(gradesBySubject, lesson.title, className)) {
+  if (lesson.type === "event" || (subjectSet.has(lesson.title) && isSubjectAllowed(gradesBySubject, lesson.title, className))) {
     matches.push({ className, title: lesson.title, note: "", type: lesson.type });
   }
   return matches;
@@ -286,6 +286,9 @@ function renderWallpaperSvg(state, query) {
   const allowedDaySet = new Set(selectedDays.length ? selectedDays : weekdays.map((day) => day.key));
   const now = kstNow();
   const today = toISO(now);
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  const updateTimeStr = `${today} ${hh}:${mm}`;
   const days = schoolDaysForCurrentWeek(now).filter((day) => allowedDaySet.has(day.weekday.key));
 
   const tableX = 0;
@@ -397,7 +400,7 @@ function renderWallpaperSvg(state, query) {
       anchor: "middle",
       weight: 800,
     })}
-    ${renderText(`업데이트 ${today}`, 585, 2470, { size: 24, fill: "#475569", anchor: "middle" })}
+    ${renderText(`업데이트 ${updateTimeStr}`, 585, 2470, { size: 24, fill: "#475569", anchor: "middle" })}
   </g>
 </svg>`;
 }
