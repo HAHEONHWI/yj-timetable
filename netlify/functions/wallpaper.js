@@ -260,17 +260,25 @@ function chipColors(type) {
 
 function renderChip(match, x, y, width, height, isFullSize = false) {
   const colors = chipColors(match.type);
-  const classSize = isFullSize ? 28 : 23;
-  const titleSize = isFullSize ? 36 : 19;
-  const noteSize = isFullSize ? 18 : 13;
+  const hasClassName = !!match.className;
 
-  const classY = isFullSize ? y + 42 : y + 22;
-  const titleY = isFullSize ? y + 84 : y + 45;
-  const noteY = isFullSize ? y + 118 : y + 64;
+  const classSize = isFullSize ? 28 : 23;
+  const titleSize = isFullSize ? (match.title.length > 6 ? 26 : 32) : 17;
+  const noteSize = isFullSize ? 14 : 11;
+
+  let classY, titleY, noteY;
+  if (hasClassName) {
+    classY = y + (height / 2) - 25;
+    titleY = y + (height / 2) + 12;
+    noteY = y + (height / 2) + 42;
+  } else {
+    titleY = y + (height / 2) - 5;
+    noteY = y + (height / 2) + 26;
+  }
 
   return `
     <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="${colors.bg}" stroke="${colors.line}" stroke-width="2" />
-    ${renderText(match.className, x + width / 2, classY, { size: classSize, fill: colors.fg, anchor: "middle", weight: 900 })}
+    ${hasClassName ? renderText(match.className, x + width / 2, classY, { size: classSize, fill: colors.fg, anchor: "middle", weight: 900 }) : ""}
     ${renderText(match.title, x + width / 2, titleY, { size: titleSize, fill: colors.fg, anchor: "middle", weight: 900 })}
     ${match.note ? renderText(match.note, x + width / 2, noteY, { size: noteSize, fill: colors.note, anchor: "middle", weight: 800 }) : ""}
   `;
@@ -298,8 +306,7 @@ function mergeSameEvents(matches) {
 
   for (const title in eventGroups) {
     const group = eventGroups[title];
-    const totalClassesCount = 6;
-    group.className = group.classes.length === totalClassesCount ? "전교 공통" : "공통";
+    group.className = "";
     group.note = group.classes.join(", ");
     merged.push(group);
   }
@@ -331,6 +338,19 @@ function renderWallpaperSvg(state, query) {
   const rowHeight = 145;
   const tableHeight = headerHeight + periods.length * rowHeight;
 
+  const grid = [];
+  for (let d = 0; d < days.length; d++) {
+    grid[d] = [];
+    for (let p = 0; p < periods.length; p++) {
+      const day = days[d];
+      const period = periods[p];
+      const rawMatches = classes.flatMap((className) =>
+        matchesForCell(state, day.iso, className, period, p, subjects, gradesBySubject)
+      );
+      grid[d][p] = mergeSameEvents(rawMatches);
+    }
+  }
+
   const headerCells = days
     .map((day, index) => {
       const x = tableX + periodWidth + index * dayWidth;
@@ -353,52 +373,89 @@ function renderWallpaperSvg(state, query) {
       const dayCells = days
         .map((day, dayIndex) => {
           const x = tableX + periodWidth + dayIndex * dayWidth;
-          const rawMatches = classes.flatMap((className) =>
-            matchesForCell(state, day.iso, className, period, periodIndex, subjects, gradesBySubject)
-          );
-          const matches = mergeSameEvents(rawMatches);
-
-          let chips = "";
-          if (matches.length === 1) {
-            const chipWidth = dayWidth - 16;
-            const chipHeight = rowHeight - 20;
-            chips = renderChip(matches[0], x + 8, y + 10, chipWidth, chipHeight, true);
-          } else if (matches.length === 2) {
-            const chipWidth = dayWidth / 2 - 12;
-            const chipHeight = rowHeight - 20;
-            chips = matches
-              .map((match, matchIndex) => {
-                const chipX = x + 8 + matchIndex * (chipWidth + 8);
-                return renderChip(match, chipX, y + 10, chipWidth, chipHeight, false);
-              })
-              .join("");
-          } else {
-            const chipWidth = Math.max(92, dayWidth / 2 - 10);
-            const chipHeight = 70;
-            chips = matches
-              .slice(0, 4)
-              .map((match, matchIndex) => {
-                const chipX = x + 8 + (matchIndex % 2) * (chipWidth + 8);
-                const chipY = y + 10 + Math.floor(matchIndex / 2) * (chipHeight + 8);
-                return renderChip(match, chipX, chipY, chipWidth, chipHeight, false);
-              })
-              .join("");
-          }
-
-          const overflow =
-            matches.length > 4
-              ? renderText(`+${matches.length - 4}`, x + dayWidth - 22, y + rowHeight - 14, {
-                  size: 18,
-                  fill: "#94a3b8",
-                  anchor: "end",
-                })
-              : "";
-          return `<rect x="${x}" y="${y}" width="${dayWidth}" height="${rowHeight}" fill="#1e293b" fill-opacity="0.4" stroke="#334155" stroke-width="2" />${chips}${overflow}`;
+          return `<rect x="${x}" y="${y}" width="${dayWidth}" height="${rowHeight}" fill="#1e293b" fill-opacity="0.4" stroke="#334155" stroke-width="2" />`;
         })
         .join("");
       return periodCell + dayCells;
     })
     .join("");
+
+  let chipsMarkup = "";
+  const visited = [];
+  for (let d = 0; d < days.length; d++) {
+    visited[d] = Array(periods.length).fill(false);
+  }
+
+  for (let d = 0; d < days.length; d++) {
+    const x = tableX + periodWidth + d * dayWidth;
+    for (let p = 0; p < periods.length; p++) {
+      if (visited[d][p]) continue;
+
+      const cellMatches = grid[d][p];
+      if (!cellMatches || cellMatches.length === 0) continue;
+
+      const firstMatch = cellMatches[0];
+      if (cellMatches.length === 1 && firstMatch.type === "event") {
+        let rowspan = 1;
+        for (let nextP = p + 1; nextP < periods.length; nextP++) {
+          const nextCell = grid[d][nextP];
+          if (nextCell && nextCell.length === 1 && nextCell[0].type === "event" && nextCell[0].title === firstMatch.title) {
+            rowspan++;
+            visited[d][nextP] = true;
+          } else {
+            break;
+          }
+        }
+
+        const y = tableY + headerHeight + p * rowHeight;
+        const chipWidth = dayWidth - 16;
+        const chipHeight = rowspan * rowHeight - 20;
+
+        chipsMarkup += renderChip(firstMatch, x + 8, y + 10, chipWidth, chipHeight, true);
+        visited[d][p] = true;
+      } else {
+        const y = tableY + headerHeight + p * rowHeight;
+        let cellChips = "";
+        if (cellMatches.length === 1) {
+          const chipWidth = dayWidth - 16;
+          const chipHeight = rowHeight - 20;
+          cellChips = renderChip(cellMatches[0], x + 8, y + 10, chipWidth, chipHeight, true);
+        } else if (cellMatches.length === 2) {
+          const chipWidth = dayWidth / 2 - 12;
+          const chipHeight = rowHeight - 20;
+          cellChips = cellMatches
+            .map((match, matchIndex) => {
+              const chipX = x + 8 + matchIndex * (chipWidth + 8);
+              return renderChip(match, chipX, y + 10, chipWidth, chipHeight, false);
+            })
+            .join("");
+        } else {
+          const chipWidth = Math.max(92, dayWidth / 2 - 10);
+          const chipHeight = 70;
+          cellChips = cellMatches
+            .slice(0, 4)
+            .map((match, matchIndex) => {
+              const chipX = x + 8 + (matchIndex % 2) * (chipWidth + 8);
+              const chipY = y + 10 + Math.floor(matchIndex / 2) * (chipHeight + 8);
+              return renderChip(match, chipX, chipY, chipWidth, chipHeight, false);
+            })
+            .join("");
+        }
+
+        const overflow =
+          cellMatches.length > 4
+            ? renderText(`+${cellMatches.length - 4}`, x + dayWidth - 22, y + rowHeight - 14, {
+                size: 18,
+                fill: "#94a3b8",
+                anchor: "end",
+              })
+            : "";
+
+        chipsMarkup += cellChips + overflow;
+        visited[d][p] = true;
+      }
+    }
+  }
 
   const subjectLabel = subjects.length ? subjects.join(", ") : "선택된 과목이 없습니다.";
   const gradeLabel = subjects
@@ -425,6 +482,7 @@ function renderWallpaperSvg(state, query) {
     ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f8fafc", anchor: "middle", weight: 900 })}
     ${headerCells}
     ${rows}
+    ${chipsMarkup}
     <rect x="46" y="2260" width="1078" height="78" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="2" rx="12" />
     ${renderText("수업 변경: 주황색 · 취소된 원래 수업: 회색 · 행사: 민트색", 585, 2306, {
       size: 20,
