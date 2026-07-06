@@ -911,6 +911,18 @@
       JSON.stringify(Object.fromEntries(subjects.map((subject) => [subject, normalizedGrades(grades[subject])])))
     );
     localStorage.setItem(WALLPAPER_NAME_KEY, name);
+
+    // 안드로이드 하이브리드 앱에 실시간 설정값 동기화 보고
+    if (window.AndroidApp) {
+      try {
+        const gradesStr = subjects.map((subject) => `${subject}:${normalizedGrades(grades[subject]).join("|")}`).join(";");
+        const subjectsStr = subjects.join(",");
+        const daysStr = days.join(",");
+        window.AndroidApp.saveFilters(subjectsStr, gradesStr, daysStr);
+      } catch (e) {
+        console.error("AndroidApp saveFilters failed:", e);
+      }
+    }
   }
 
   function wallpaperImageUrl(settings) {
@@ -1838,6 +1850,19 @@
   }
 
   function initControls() {
+    // 안드로이드 앱 모드인 경우 이름 입력 필드 숨기기
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("app") === "true") {
+      document.body.classList.add("is-app-mode");
+      const nameInput = document.getElementById("wallpaperName");
+      if (nameInput) {
+        const parentGroup = nameInput.closest(".wallpaper-tool-group");
+        if (parentGroup) {
+          parentGroup.style.display = "none";
+        }
+      }
+    }
+
     fillSelect(els.viewClass, isBoardMode ? classes : ["all", ...classes], (value) => (value === "all" ? "전체 학급" : value));
     fillSelect(els.changeClass, classes);
     fillSelect(els.baseWeekday, weekdays.map((day) => day.key), (key) => weekdays.find((day) => day.key === key).label);
