@@ -310,7 +310,7 @@ function renderWallpaperSvg(state, query) {
 
   const subjectLabel = subjects.length ? subjects.join(", ") : "선택된 과목이 없습니다.";
   const gradeLabel = subjects
-    .map((subject) => `${subject} ${normalizedGrades(gradesBySubject[subject]).join("")}학년`)
+    .map((subject) => `${subject} ${normalizedGrades(gradesBySubject[subject]).join(",")}학년`)
     .join(" · ");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1170" height="2532" viewBox="0 0 1170 2532">
