@@ -447,6 +447,7 @@
       const method = options.replace ? "replaceState" : "pushState";
       history[method]({ route }, "", nextPath);
     }
+    syncRemoteForRoute();
     trackRoutePageView(route);
   }
 
@@ -1256,6 +1257,13 @@
     const cutoffDate = toISO(mondayOf(new Date()));
     let changed = false;
 
+    Object.keys(state.specialSchedules || {}).forEach((date) => {
+      if (date < cutoffDate) {
+        delete state.specialSchedules[date];
+        changed = true;
+      }
+    });
+
     Object.keys(state.changes).forEach((key) => {
       const [date] = key.split("__");
       if (date < cutoffDate) {
@@ -1328,10 +1336,28 @@
   }
 
   function startRemoteSync() {
-    if (remoteUnsubscribe || typeof subscribeRemoteChanges !== "function") return;
+    if (!shouldUseRemoteSync() || remoteUnsubscribe || typeof subscribeRemoteChanges !== "function") return;
     remoteUnsubscribe = subscribeRemoteChanges((remoteState) => {
       applyRemoteState(remoteState, { keepNoticeSelection: true, restartSlideshow: false });
     });
+  }
+
+  function stopRemoteSync() {
+    if (!remoteUnsubscribe) return;
+    remoteUnsubscribe();
+    remoteUnsubscribe = null;
+  }
+
+  function shouldUseRemoteSync() {
+    return isBoardMode || currentRoute === "slideshow";
+  }
+
+  function syncRemoteForRoute() {
+    if (shouldUseRemoteSync()) {
+      startRemoteSync();
+    } else {
+      stopRemoteSync();
+    }
   }
 
   function confirmAction(message) {
@@ -1593,7 +1619,7 @@
         els.adminPassword.value = "";
         refreshAdminAuth();
         if (cleanupExpiredScheduleData()) {
-          saveState("지난 수업교체/행사를 자동 정리했습니다.");
+          saveState("지난 특별시간표/수업교체/행사를 자동 정리했습니다.");
         } else {
           renderAdmin();
         }
@@ -1933,7 +1959,7 @@
     renderAdmin();
     routeTo(currentRoute);
     analyticsRouteTrackingReady = true;
-    startRemoteSync();
+    syncRemoteForRoute();
     if (isBoardMode) {
       const seconds = Math.max(10, Number(state.slideshow && state.slideshow.refreshSeconds) || 60);
       boardRefreshTimer = window.setInterval(() => {
