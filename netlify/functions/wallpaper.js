@@ -4,9 +4,9 @@ const fs = require("fs");
 
 let fontBuffer = null;
 const fontPaths = [
-  path.join(__dirname, "fonts", "NanumGothic-Regular.ttf"),
-  path.join(__dirname, "netlify", "functions", "fonts", "NanumGothic-Regular.ttf"),
-  path.join(process.cwd(), "netlify", "functions", "fonts", "NanumGothic-Regular.ttf"),
+  path.join(__dirname, "fonts", "NanumGothic-Bold.ttf"),
+  path.join(__dirname, "netlify", "functions", "fonts", "NanumGothic-Bold.ttf"),
+  path.join(process.cwd(), "netlify", "functions", "fonts", "NanumGothic-Bold.ttf"),
 ];
 
 for (const fp of fontPaths) {
@@ -21,7 +21,7 @@ for (const fp of fontPaths) {
 }
 
 if (!fontBuffer) {
-  console.error("Critical: NanumGothic font buffer could not be loaded from any path:", fontPaths);
+  console.error("Critical: NanumGothic-Bold font buffer could not be loaded:", fontPaths);
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://jzcectvzwbfvbgiszjkt.supabase.co";
@@ -246,7 +246,7 @@ function renderText(text, x, y, options = {}) {
   const weight = options.weight || 800;
   const fill = options.fill || "#f8fafc";
   const anchor = options.anchor ? ` text-anchor="${options.anchor}"` : "";
-  return `<text x="${x}" y="${y}" font-size="${size}" font-weight="${weight}" fill="${fill}"${anchor}>${escapeXml(text)}</text>`;
+  return `<text x="${x}" y="${y}" font-family="NanumGothic, NanumGothic-Bold, Pretendard, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}"${anchor}>${escapeXml(text)}</text>`;
 }
 
 function chipColors(type) {
@@ -287,12 +287,12 @@ function renderWallpaperSvg(state, query) {
   const days = schoolDaysForCurrentWeek(now).filter((day) => allowedDaySet.has(day.weekday.key));
 
   const tableX = 0;
-  const tableY = 720;
+  const tableY = 830;
   const tableWidth = 1170;
   const periodWidth = 110;
   const dayWidth = (tableWidth - periodWidth) / Math.max(days.length, 1);
   const headerHeight = 76;
-  const rowHeight = 160;
+  const rowHeight = 145;
   const tableHeight = headerHeight + periods.length * rowHeight;
 
   const headerCells = days
@@ -379,11 +379,11 @@ function renderWallpaperSvg(state, query) {
   <circle cx="1000" cy="950" r="280" fill="#8b5cf6" opacity="0.18" filter="url(#glow)" />
   <circle cx="1000" cy="2100" r="350" fill="#ec4899" opacity="0.15" filter="url(#glow)" />
   <circle cx="150" cy="2000" r="320" fill="#14b8a6" opacity="0.18" filter="url(#glow)" />
-  <g font-family="NanumGothic, Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
-    ${renderText("용정 시간표", 64, 530, { size: 28, fill: "#64748b", weight: 900 })}
-    ${renderText(titleLabel, 64, 594, { size: titleSize, fill: "#f8fafc", weight: 900 })}
-    ${renderText(subjectLabel, 64, 640, { size: 28, fill: "#2dd4bf", weight: 900 })}
-    ${renderText(gradeLabel, 64, 674, { size: 20, fill: "#64748b", weight: 800 })}
+  <g font-family="NanumGothic, NanumGothic-Bold, Pretendard, sans-serif">
+    ${renderText("용정 시간표", 64, 670, { size: 28, fill: "#64748b", weight: 900 })}
+    ${renderText(titleLabel, 64, 725, { size: titleSize, fill: "#f8fafc", weight: 900 })}
+    ${renderText(subjectLabel, 64, 775, { size: 28, fill: "#2dd4bf", weight: 900 })}
+    ${renderText(gradeLabel, 64, 805, { size: 20, fill: "#64748b", weight: 800 })}
     <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
     ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f8fafc", anchor: "middle", weight: 900 })}
     ${headerCells}
@@ -403,6 +403,39 @@ function renderWallpaperSvg(state, query) {
 exports.handler = async (event) => {
   const state = await readState();
   const query = event.queryStringParameters || {};
+  
+  if (query.debug === "true") {
+    const debugInfo = {
+      __dirname,
+      cwd: process.cwd(),
+      activeFontPath,
+      fontPathsEvaluated: fontPaths.map(fp => ({
+        path: fp,
+        exists: fs.existsSync(fp)
+      })),
+      filesInDirname: fs.existsSync(__dirname) ? fs.readdirSync(__dirname) : null,
+      filesInCwd: fs.existsSync(process.cwd()) ? fs.readdirSync(process.cwd()) : null,
+      parentDirs: []
+    };
+    try {
+      let current = __dirname;
+      for (let i = 0; i < 3; i++) {
+        current = path.dirname(current);
+        debugInfo.parentDirs.push({
+          dir: current,
+          files: fs.existsSync(current) ? fs.readdirSync(current) : null
+        });
+      }
+    } catch (e) {}
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+      body: JSON.stringify(debugInfo, null, 2),
+    };
+  }
+
   const svg = renderWallpaperSvg(state, query);
 
   const isPng = (event.path && event.path.endsWith(".png")) || query.format === "png";
