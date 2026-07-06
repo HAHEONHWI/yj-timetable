@@ -8,10 +8,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.RemoteViews;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -39,7 +39,7 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
             int[] appWidgetIds = appWidgetManager.getAppWidgetIds(new ComponentName(context, TimetableWidgetProvider.class));
             
-            // 백그라운드 스레드에서 iOS 병합 규격 시간표 이미지 다운로드 기동
+            // 이미지 다운로드가 아닌, 시간표 JSON 데이터를 수신하여 로컬 캔버스 드로잉 기동
             refreshWidgetData(context, appWidgetManager, appWidgetIds);
         }
     }
@@ -47,7 +47,7 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
     private static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.timetable_widget);
 
-        // 1. 새로고침 수동 🔄 단추 바인딩
+        // 새로고침 수동 🔄 단추 바인딩
         Intent refreshIntent = new Intent(context, TimetableWidgetProvider.class);
         refreshIntent.setAction(ACTION_REFRESH);
         PendingIntent refreshPending = PendingIntent.getBroadcast(
@@ -58,7 +58,7 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
         );
         views.setOnClickPendingIntent(R.id.widget_refresh_button, refreshPending);
 
-        // 2. 위젯 바디 터치 시 설정 앱 열기 펜딩 인텐트
+        // 위젯 바디 터치 시 설정 앱 열기 펜딩 인텐트
         Intent configIntent = new Intent(context, MainActivity.class);
         PendingIntent configPending = PendingIntent.getActivity(
             context, 
@@ -83,8 +83,8 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
                     String grades = prefs.getString("grades", "");
                     String days = prefs.getString("days", "mon,tue,wed,thu,fri");
 
-                    // iOS 시간표 배경화면과 동일한 고화질 이미지(PNG) 조합 URL 생성
-                    StringBuilder urlBuilder = new StringBuilder("https://schedule.yjms.kr/wallpaper.png?dpr=2"); // 선명도 향상 dpr
+                    // 1. 이미지(PNG)를 다운로드 받는게 아니라, JSON 데이터 포맷만 수신
+                    StringBuilder urlBuilder = new StringBuilder("https://schedule.yjms.kr/wallpaper.png?format=json");
                     urlBuilder.append("&name=").append(URLEncoder.encode(name, "UTF-8"));
                     urlBuilder.append("&subjects=").append(URLEncoder.encode(subjects, "UTF-8"));
                     urlBuilder.append("&grades=").append(URLEncoder.encode(grades, "UTF-8"));
@@ -93,24 +93,35 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
 
                     URL url = new URL(urlBuilder.toString());
                     conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(10000);
-                    conn.setReadTimeout(10000);
+                    conn.setConnectTimeout(8000);
+                    conn.setReadTimeout(8000);
                     conn.connect();
 
                     if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
                         InputStream in = conn.getInputStream();
-                        final Bitmap bitmap = BitmapFactory.decodeStream(in);
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, length);
+                        }
                         in.close();
 
-                        if (bitmap != null) {
+                        String jsonString = out.toString("UTF-8");
+
+                        // 2. 수신한 JSON 데이터를 사용하여 로컬 캔버스 상에 칩 병합 직접 드로잉
+                        final Bitmap localBitmap = LocalTimetableRenderer.drawTimetable(context, jsonString);
+
+                        if (localBitmap != null) {
                             mainHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
                                     for (int appWidgetId : appWidgetIds) {
                                         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.timetable_widget);
-                                        views.setImageViewBitmap(R.id.widget_image, bitmap);
+                                        views.setImageViewBitmap(R.id.widget_image, localBitmap);
                                         appWidgetManager.partiallyUpdateAppWidget(appWidgetId, views);
                                     }
+                                    android.widget.Toast.makeText(context, "시간표 새로고침 완료", android.widget.Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }

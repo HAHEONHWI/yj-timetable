@@ -38,6 +38,7 @@ javac \
   -d "$BUILD_DIR/classes" \
   "$APP_DIR/src/main/java/kr/yjms/timetable/widget/MainActivity.java" \
   "$APP_DIR/src/main/java/kr/yjms/timetable/widget/TimetableWidgetProvider.java" \
+  "$APP_DIR/src/main/java/kr/yjms/timetable/widget/LocalTimetableRenderer.java" \
   "$BUILD_DIR/generated/kr/yjms/timetable/widget/R.java"
 
 CLASS_FILES=$(find "$BUILD_DIR/classes" -name "*.class")
