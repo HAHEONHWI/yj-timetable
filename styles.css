@@ -1564,6 +1564,27 @@ textarea {
   font-size: 13px;
 }
 
+.wallpaper-image-preview {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.wallpaper-image-preview img {
+  width: min(100%, 220px);
+  aspect-ratio: 9 / 19.5;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background: #07111d;
+  object-fit: cover;
+}
+
+.wallpaper-image-preview figcaption {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .wallpaper-automation-card ol {
   display: grid;
   gap: 6px;

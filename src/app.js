@@ -959,6 +959,10 @@
         <button class="primary-button" data-copy-wallpaper-url type="button">URL 복사</button>
         <a class="ghost-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">이미지 열기</a>
       </div>
+      <figure class="wallpaper-image-preview">
+        <img src="${escapeHtml(url)}" alt="선택한 과목 배경화면 이미지 미리보기" loading="lazy" />
+        <figcaption>단축어에서 가져갈 실제 이미지입니다.</figcaption>
+      </figure>
       <ol>
         <li>단축어 앱에서 새 단축어를 만듭니다.</li>
         <li>URL 액션에 위 이미지 URL을 넣습니다.</li>
