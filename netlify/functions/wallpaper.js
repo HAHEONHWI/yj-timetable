@@ -276,6 +276,37 @@ function renderChip(match, x, y, width, height, isFullSize = false) {
   `;
 }
 
+function mergeSameEvents(matches) {
+  const merged = [];
+  const eventGroups = {};
+
+  for (const match of matches) {
+    if (match.type === "event") {
+      if (!eventGroups[match.title]) {
+        eventGroups[match.title] = {
+          title: match.title,
+          type: "event",
+          classes: [match.className],
+        };
+      } else {
+        eventGroups[match.title].classes.push(match.className);
+      }
+    } else {
+      merged.push(match);
+    }
+  }
+
+  for (const title in eventGroups) {
+    const group = eventGroups[title];
+    const totalClassesCount = 6;
+    group.className = group.classes.length === totalClassesCount ? "전교 공통" : "공통";
+    group.note = group.classes.join(", ");
+    merged.push(group);
+  }
+
+  return merged;
+}
+
 function renderWallpaperSvg(state, query) {
   const name = query.name || query.n || "";
   const titleLabel = name ? `${name} 선생님의 이번 주 시간표` : "내 과목 주간표";
@@ -322,9 +353,10 @@ function renderWallpaperSvg(state, query) {
       const dayCells = days
         .map((day, dayIndex) => {
           const x = tableX + periodWidth + dayIndex * dayWidth;
-          const matches = classes.flatMap((className) =>
+          const rawMatches = classes.flatMap((className) =>
             matchesForCell(state, day.iso, className, period, periodIndex, subjects, gradesBySubject)
           );
+          const matches = mergeSameEvents(rawMatches);
 
           let chips = "";
           if (matches.length === 1) {
