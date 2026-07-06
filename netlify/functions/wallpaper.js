@@ -252,10 +252,10 @@ function renderText(text, x, y, options = {}) {
 }
 
 function chipColors(type) {
-  if (type === "change") return { bg: "rgba(245, 158, 11, 0.18)", line: "#f59e0b", fg: "#fef3c7", note: "#fbbf24" };
-  if (type === "original") return { bg: "rgba(148, 163, 184, 0.18)", line: "#94a3b8", fg: "#cbd5e1", note: "#94a3b8" };
-  if (type === "event" || type === "merge") return { bg: "rgba(20, 184, 166, 0.18)", line: "#14b8a6", fg: "#ccfbf1", note: "#2dd4bf" };
-  return { bg: "rgba(30, 41, 59, 0.6)", line: "#475569", fg: "#e2e8f0", note: "#94a3b8" };
+  if (type === "change") return { bg: "rgba(43, 27, 10, 0.95)", line: "#f59e0b", fg: "#fef3c7", note: "#fbbf24" };
+  if (type === "original") return { bg: "rgba(23, 29, 38, 0.95)", line: "#94a3b8", fg: "#cbd5e1", note: "#94a3b8" };
+  if (type === "event" || type === "merge") return { bg: "rgba(10, 37, 43, 0.95)", line: "#14b8a6", fg: "#ccfbf1", note: "#2dd4bf" };
+  return { bg: "rgba(15, 23, 42, 0.95)", line: "#475569", fg: "#e2e8f0", note: "#94a3b8" };
 }
 
 function renderChip(match, x, y, width, height, isFullSize = false) {
