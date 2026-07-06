@@ -30,7 +30,9 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,9 +43,10 @@ public class MainActivity extends Activity {
 
     private EditText editName;
     private CheckBox chkMon, chkTue, chkWed, chkThu, chkFri;
-    private CheckBox chkGrade1, chkGrade2, chkGrade3;
     
-    // 프리셋 과목 체크박스들이 얹어질 컨테이너
+    // 글로벌 학년 체크박스 제거 (과목별 개별 학년 선택으로 마이그레이션)
+    
+    // 프리셋 과목 및 학년 체크박스들이 얹어질 컨테이너
     private LinearLayout layoutSubjectsContainer;
     
     private RadioGroup rgTheme;
@@ -91,6 +94,9 @@ public class MainActivity extends Activity {
         "특기적성", "한문"
     };
 
+    // 보안을 위해 관리자 비밀번호를 디스크에 영구저장하지 않고 메모리에만 유지하는 세션 변수
+    private static String adminPassword = "";
+
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -111,11 +117,6 @@ public class MainActivity extends Activity {
         chkWed = (CheckBox) findViewById(R.id.chk_wed);
         chkThu = (CheckBox) findViewById(R.id.chk_thu);
         chkFri = (CheckBox) findViewById(R.id.chk_fri);
-
-        // 학년 체크박스 매핑
-        chkGrade1 = (CheckBox) findViewById(R.id.chk_grade_1);
-        chkGrade2 = (CheckBox) findViewById(R.id.chk_grade_2);
-        chkGrade3 = (CheckBox) findViewById(R.id.chk_grade_3);
 
         // 동적 과목 컨테이너 매핑
         layoutSubjectsContainer = (LinearLayout) findViewById(R.id.layout_subjects_container);
@@ -184,7 +185,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 1. 프리셋 30종 과목 체크박스들을 화면에 즉각 드로잉 빌드
+        // 1. 프리셋 30종 과목 및 학년 체크박스들 드로잉 빌드
         buildPresetSubjectCheckboxes();
 
         // 2. 기존 설정값 로드 및 UI 체크 복원
@@ -247,13 +248,70 @@ public class MainActivity extends Activity {
     private void buildPresetSubjectCheckboxes() {
         layoutSubjectsContainer.removeAllViews();
         for (String subject : presetSubjects) {
-            CheckBox chk = new CheckBox(this);
-            chk.setText(subject);
-            chk.setTextColor(0xFFF8FAFC);
-            chk.setTextSize(13.5f);
-            chk.setPadding(6, 10, 6, 10);
-            layoutSubjectsContainer.addView(chk);
+            // 각 과목 아이템 및 학년 체크박스를 묶을 수직 레이아웃 생성
+            LinearLayout itemLayout = new LinearLayout(this);
+            itemLayout.setOrientation(LinearLayout.VERTICAL);
+            itemLayout.setPadding(0, 4, 0, 10);
+
+            // 1) 과목명 체크박스
+            final CheckBox chkSubject = new CheckBox(this);
+            chkSubject.setText(subject);
+            chkSubject.setTextColor(0xFFF8FAFC);
+            chkSubject.setTextSize(14f);
+            chkSubject.setPadding(4, 4, 4, 4);
+
+            // 2) 들여쓰기된 학년 선택 컨테이너 (가로 배치)
+            final LinearLayout gradeLayout = new LinearLayout(this);
+            gradeLayout.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams gradeParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            gradeParams.leftMargin = dpToPx(32); // 32dp 들여쓰기
+            gradeLayout.setLayoutParams(gradeParams);
+            gradeLayout.setVisibility(View.GONE); // 기본적으로 숨김
+
+            // 학년 체크박스 3종 생성
+            CheckBox chkG1 = new CheckBox(this); chkG1.setText("1학년"); chkG1.setTextColor(0xFF94A3B8); chkG1.setTextSize(12.5f); chkG1.setPadding(4, 2, 12, 2);
+            CheckBox chkG2 = new CheckBox(this); chkG2.setText("2학년"); chkG2.setTextColor(0xFF94A3B8); chkG2.setTextSize(12.5f); chkG2.setPadding(4, 2, 12, 2);
+            CheckBox chkG3 = new CheckBox(this); chkG3.setText("3학년"); chkG3.setTextColor(0xFF94A3B8); chkG3.setTextSize(12.5f); chkG3.setPadding(4, 2, 12, 2);
+
+            gradeLayout.addView(chkG1);
+            gradeLayout.addView(chkG2);
+            gradeLayout.addView(chkG3);
+
+            // 과목 체크 해제 시 학년 숨김 스위칭 이벤트 연동
+            final LinearLayout finalGradeLayout = gradeLayout;
+            final CheckBox finalChkG1 = chkG1;
+            final CheckBox finalChkG2 = chkG2;
+            final CheckBox finalChkG3 = chkG3;
+            
+            chkSubject.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    if (isChecked) {
+                        finalGradeLayout.setVisibility(View.VISIBLE);
+                        // 체크를 켰을 때 아무것도 선택되지 않았다면 기본 1,2,3학년 일괄 켜주기
+                        if (!finalChkG1.isChecked() && !finalChkG2.isChecked() && !finalChkG3.isChecked()) {
+                            finalChkG1.setChecked(true);
+                            finalChkG2.setChecked(true);
+                            finalChkG3.setChecked(true);
+                        }
+                    } else {
+                        finalGradeLayout.setVisibility(View.GONE);
+                    }
+                }
+            });
+
+            itemLayout.addView(chkSubject);
+            itemLayout.addView(gradeLayout);
+            layoutSubjectsContainer.addView(itemLayout);
         }
+    }
+
+    private int dpToPx(int dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round((float) dp * density);
     }
 
     private void loadSavedSettings() {
@@ -270,24 +328,56 @@ public class MainActivity extends Activity {
         chkThu.setChecked(days.contains("thu"));
         chkFri.setChecked(days.contains("fri"));
 
-        // 학년 체크 셋팅
-        String grades = prefs.getString("grades", "");
-        chkGrade1.setChecked(grades.contains("1"));
-        chkGrade2.setChecked(grades.contains("2"));
-        chkGrade3.setChecked(grades.contains("3"));
+        // 과목별 개별 학년 복원 복구
+        // grades: "영어:1|2;수학:2|3"
+        String savedGrades = prefs.getString("grades", "");
+        Map<String, String> gradeMap = new HashMap<>();
+        if (!savedGrades.isEmpty()) {
+            String[] tokens = savedGrades.split(";");
+            for (String token : tokens) {
+                String[] pair = token.split(":");
+                if (pair.length == 2) {
+                    gradeMap.put(pair[0], pair[1]);
+                }
+            }
+        }
 
-        // 동적 체크박스들에 대한 선택 복원
         String savedSubjects = prefs.getString("subjects", "");
         int childCount = layoutSubjectsContainer.getChildCount();
         for (int i = 0; i < childCount; i++) {
             View child = layoutSubjectsContainer.getChildAt(i);
-            if (child instanceof CheckBox) {
-                CheckBox chk = (CheckBox) child;
-                String text = chk.getText().toString();
-                if (savedSubjects.contains(text)) {
-                    chk.setChecked(true);
+            if (child instanceof LinearLayout) {
+                LinearLayout itemLayout = (LinearLayout) child;
+                CheckBox chkSubject = (CheckBox) itemLayout.getChildAt(0);
+                LinearLayout gradeLayout = (LinearLayout) itemLayout.getChildAt(1);
+
+                CheckBox chkG1 = (CheckBox) gradeLayout.getChildAt(0);
+                CheckBox chkG2 = (CheckBox) gradeLayout.getChildAt(1);
+                CheckBox chkG3 = (CheckBox) gradeLayout.getChildAt(2);
+
+                String subjectName = chkSubject.getText().toString();
+                if (savedSubjects.contains(subjectName)) {
+                    chkSubject.setChecked(true);
+                    gradeLayout.setVisibility(View.VISIBLE);
+
+                    // 학년 복원
+                    String subGrades = gradeMap.get(subjectName);
+                    if (subGrades != null) {
+                        chkG1.setChecked(subGrades.contains("1"));
+                        chkG2.setChecked(subGrades.contains("2"));
+                        chkG3.setChecked(subGrades.contains("3"));
+                    } else {
+                        // 기본값 전체 체크
+                        chkG1.setChecked(true);
+                        chkG2.setChecked(true);
+                        chkG3.setChecked(true);
+                    }
                 } else {
-                    chk.setChecked(false);
+                    chkSubject.setChecked(false);
+                    gradeLayout.setVisibility(View.GONE);
+                    chkG1.setChecked(false);
+                    chkG2.setChecked(false);
+                    chkG3.setChecked(false);
                 }
             }
         }
@@ -314,35 +404,45 @@ public class MainActivity extends Activity {
         if (chkFri.isChecked()) selectedDays.add("fri");
         String daysStr = joinList(selectedDays, ",");
 
-        // 30종 프리셋 체크박스로부터 수동 체크 수집
+        // 과목 및 과목별 학년 개별 수집
         List<String> selectedSubs = new ArrayList<>();
+        List<String> gradesList = new ArrayList<>();
+
         int childCount = layoutSubjectsContainer.getChildCount();
         for (int i = 0; i < childCount; i++) {
             View child = layoutSubjectsContainer.getChildAt(i);
-            if (child instanceof CheckBox) {
-                CheckBox chk = (CheckBox) child;
-                if (chk.isChecked()) {
-                    selectedSubs.add(chk.getText().toString());
+            if (child instanceof LinearLayout) {
+                LinearLayout itemLayout = (LinearLayout) child;
+                CheckBox chkSubject = (CheckBox) itemLayout.getChildAt(0);
+                LinearLayout gradeLayout = (LinearLayout) itemLayout.getChildAt(1);
+
+                CheckBox chkG1 = (CheckBox) gradeLayout.getChildAt(0);
+                CheckBox chkG2 = (CheckBox) gradeLayout.getChildAt(1);
+                CheckBox chkG3 = (CheckBox) gradeLayout.getChildAt(2);
+
+                if (chkSubject.isChecked()) {
+                    String subjectName = chkSubject.getText().toString();
+                    selectedSubs.add(subjectName);
+
+                    // 해당 과목의 학년 수집
+                    List<String> subGrades = new ArrayList<>();
+                    if (chkG1.isChecked()) subGrades.add("1");
+                    if (chkG2.isChecked()) subGrades.add("2");
+                    if (chkG3.isChecked()) subGrades.add("3");
+                    
+                    // 아무것도 체크하지 않았을 시에는 기본값으로 1|2|3학년 자동 할당
+                    if (subGrades.isEmpty()) {
+                        subGrades.add("1");
+                        subGrades.add("2");
+                        subGrades.add("3");
+                    }
+                    String grStr = joinList(subGrades, "|");
+                    gradesList.add(subjectName + ":" + grStr);
                 }
             }
         }
         String subsStr = joinList(selectedSubs, ",");
-
-        // 학년 빌드
-        List<String> selectedGrades = new ArrayList<>();
-        if (chkGrade1.isChecked()) selectedGrades.add("1");
-        if (chkGrade2.isChecked()) selectedGrades.add("2");
-        if (chkGrade3.isChecked()) selectedGrades.add("3");
-        String gradeNums = joinList(selectedGrades, "|");
-
-        StringBuilder gradesBuilder = new StringBuilder();
-        if (!selectedGrades.isEmpty()) {
-            for (int i = 0; i < selectedSubs.size(); i++) {
-                if (i > 0) gradesBuilder.append(";");
-                gradesBuilder.append(selectedSubs.get(i)).append(":").append(gradeNums);
-            }
-        }
-        String gradesStr = gradesBuilder.toString();
+        String gradesStr = joinList(gradesList, ";");
 
         // 테마 확인
         String themeStr = rbThemeLight.isChecked() ? "light" : "dark";
@@ -374,13 +474,17 @@ public class MainActivity extends Activity {
     }
 
     private void checkAdminLoginState() {
-        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
-        String savedPw = prefs.getString("admin_pw", "");
-        if (!savedPw.isEmpty()) {
+        // SharedPreferences 디스크 보존을 확인하지 않고 오직 static adminPassword만 체크하여 매 세션마다 재로그인하게 강제
+        if (!adminPassword.isEmpty()) {
             txtAdminStatus.setText("관리자 권한 획득 성공 (수업 변경 및 행사 관리 가능)");
             txtAdminStatus.setTextColor(0xFF2DD4BF);
             cardAdminChange.setVisibility(View.VISIBLE);
             cardAdminEvent.setVisibility(View.VISIBLE);
+        } else {
+            txtAdminStatus.setText("비로그인 상태 (변경 불가)");
+            txtAdminStatus.setTextColor(0xFF94A3B8);
+            cardAdminChange.setVisibility(View.GONE);
+            cardAdminEvent.setVisibility(View.GONE);
         }
     }
 
@@ -429,8 +533,8 @@ public class MainActivity extends Activity {
                             @Override
                             public void run() {
                                 if (ok) {
-                                    SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
-                                    prefs.edit().putString("admin_pw", pw).apply();
+                                    // SharedPreferences에 쓰지 않고 정적 메모리에만 암호 대입
+                                    adminPassword = pw;
 
                                     txtAdminStatus.setText("관리자 권한 획득 성공 (수업 변경 및 행사 관리 가능)");
                                     txtAdminStatus.setTextColor(0xFF2DD4BF);
@@ -487,9 +591,8 @@ public class MainActivity extends Activity {
             return;
         }
 
-        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
-        final String password = prefs.getString("admin_pw", "");
-        if (password.isEmpty()) {
+        // SharedPreferences 로드 대신 정적 세션 비밀번호 참조
+        if (adminPassword.isEmpty()) {
             Toast.makeText(this, "관리자 권한이 만료되었습니다. 다시 로그인하세요.", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -543,7 +646,7 @@ public class MainActivity extends Activity {
                             postConn.setDoOutput(true);
 
                             JSONObject postBody = new JSONObject();
-                            postBody.put("password", password);
+                            postBody.put("password", adminPassword);
                             postBody.put("state", rootState);
 
                             OutputStream os = postConn.getOutputStream();
@@ -611,9 +714,8 @@ public class MainActivity extends Activity {
             return;
         }
 
-        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
-        final String password = prefs.getString("admin_pw", "");
-        if (password.isEmpty()) {
+        // SharedPreferences 대신 정적 세션 패스워드 참조
+        if (adminPassword.isEmpty()) {
             Toast.makeText(this, "관리자 권한이 만료되었습니다. 다시 로그인하세요.", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -674,7 +776,7 @@ public class MainActivity extends Activity {
                             postConn.setDoOutput(true);
 
                             JSONObject postBody = new JSONObject();
-                            postBody.put("password", password);
+                            postBody.put("password", adminPassword);
                             postBody.put("state", rootState);
 
                             OutputStream os = postConn.getOutputStream();

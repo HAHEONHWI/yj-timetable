@@ -209,7 +209,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 3. 학년 다중 선택 카드 -->
+            <!-- 4. [동적] 담당 과목 및 과목별 학년 다중 선택 카드 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -221,41 +221,13 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="대상 학년"
+                    android:text="내 담당 과목 및 대상 학년"
                     android:textColor="#2dd4bf"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <CheckBox android:id="@+id/chk_grade_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="1학년" android:textColor="#f8fafc" android:textSize="13sp"/>
-                    <CheckBox android:id="@+id/chk_grade_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="2학년" android:textColor="#f8fafc" android:textSize="13sp"/>
-                    <CheckBox android:id="@+id/chk_grade_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="3학년" android:textColor="#f8fafc" android:textSize="13sp"/>
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- 4. [동적] 담당 과목 다중 선택 카드 (하드코딩 제거, 컨테이너 뷰 도입) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="#1e293b"
-                android:padding="12dp"
-                android:layout_marginBottom="12dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="내 담당 과목"
-                    android:textColor="#2dd4bf"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp" />
-
-                <!-- 동적으로 개설된 모든 과목 체크박스들이 얹어질 공간 -->
+                <!-- 동적으로 프리셋 30종 과목 및 학년 체크박스들이 얹어질 컨테이너 공간 -->
                 <LinearLayout
                     android:id="@+id/layout_subjects_container"
                     android:layout_width="match_parent"
