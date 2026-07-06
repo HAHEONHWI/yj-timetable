@@ -13,6 +13,7 @@ cp "$ROOT_DIR/src/app.js" "$ROOT_DIR/src/storage.js" "$ROOT_DIR/src/supabase-con
 cp "$ROOT_DIR/widget/widget.html" "$ROOT_DIR/widget/widget.css" "$ROOT_DIR/widget/widget.js" "$DEPLOY_DIR/widget/"
 cp "$ROOT_DIR/netlify/functions/wallpaper.js" "$DEPLOY_DIR/netlify/functions/"
 cp -r "$ROOT_DIR/netlify/functions/fonts" "$DEPLOY_DIR/netlify/functions/"
-cp "$ROOT_DIR/downloads/yj-timetable-board.apk" "$ROOT_DIR/downloads/yongjeong-timetable-widget-setup.exe" "$DEPLOY_DIR/downloads/"
+cp "$ROOT_DIR/android-widget/output/yj-timetable-widget.apk" "$ROOT_DIR/downloads/"
+cp "$ROOT_DIR/downloads/yj-timetable-board.apk" "$ROOT_DIR/downloads/yj-timetable-widget.apk" "$ROOT_DIR/downloads/yongjeong-timetable-widget-setup.exe" "$DEPLOY_DIR/downloads/"
 
 echo "Prepared Netlify deploy directory: $DEPLOY_DIR"

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0f172a"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="용정시간표 위젯 설정"
+            android:textColor="#f8fafc"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="안드로이드 바탕화면에 표시할 시간표 필터 옵션을 입력하세요."
+            android:textColor="#94a3b8"
+            android:textSize="14sp"
+            android:layout_gravity="center_horizontal"
+            android:textAlignment="center"
+            android:layout_marginBottom="32dp" />
+
+        <!-- 이름 입력 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="선생님 이름"
+            android:textColor="#2dd4bf"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/edit_name"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#1e293b"
+            android:textColor="#f8fafc"
+            android:hint="예: 홍길동"
+            android:textColorHint="#475569"
+            android:paddingHorizontal="14dp"
+            android:textSize="15sp"
+            android:singleLine="true"
+            android:layout_marginBottom="20dp" />
+
+        <!-- 강조 과목 입력 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="강조할 과목 (쉼표 구분)"
+            android:textColor="#2dd4bf"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/edit_subjects"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#1e293b"
+            android:textColor="#f8fafc"
+            android:hint="예: 영어, 수학 (공백 가능)"
+            android:textColorHint="#475569"
+            android:paddingHorizontal="14dp"
+            android:textSize="15sp"
+            android:singleLine="true"
+            android:layout_marginBottom="20dp" />
+
+        <!-- 학년/반 필터 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="학년/반 필터"
+            android:textColor="#2dd4bf"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/edit_grades"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#1e293b"
+            android:textColor="#f8fafc"
+            android:hint="예: 영어:1|2 (과목명:학년1|학년2)"
+            android:textColorHint="#475569"
+            android:paddingHorizontal="14dp"
+            android:textSize="15sp"
+            android:singleLine="true"
+            android:layout_marginBottom="20dp" />
+
+        <!-- 요일 필터 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="표시할 요일 (쉼표 구분)"
+            android:textColor="#2dd4bf"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/edit_days"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#1e293b"
+            android:textColor="#f8fafc"
+            android:hint="예: mon,tue,wed,thu,fri"
+            android:textColorHint="#475569"
+            android:paddingHorizontal="14dp"
+            android:textSize="15sp"
+            android:singleLine="true"
+            android:layout_marginBottom="36dp" />
+
+        <!-- 저장 버튼 -->
+        <Button
+            android:id="@+id/btn_save"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="#14b8a6"
+            android:text="설정 저장 및 위젯 갱신"
+            android:textColor="#0f172a"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginBottom="32dp" />
+
+        <TextView
+            android:id="@+id/txt_copyright"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="저작권 23기 하헌휘"
+            android:textColor="#475569"
+            android:textSize="12sp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="32dp" />
+
+    </LinearLayout>
+</ScrollView>
