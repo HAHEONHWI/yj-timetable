@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">용정시간표 설정</string>
-    <string name="widget_name">용정시간표 위젯</string>
+    <string name="app_name">용정시간표 모바일</string>
+    <string name="widget_name">용정시간표 모바일 위젯</string>
     <string name="copyright">저작권 23기 하헌휘</string>
 
     <string-array name="array_classes">

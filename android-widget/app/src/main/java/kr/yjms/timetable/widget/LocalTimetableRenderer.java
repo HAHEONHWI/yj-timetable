@@ -12,11 +12,33 @@ import org.json.JSONObject;
 
 public class LocalTimetableRenderer {
 
+    // 칩 가로폭에 맞게 글씨 크기를 자동 조절하여 칸 탈출(Overflow)을 원천 방지하는 헬퍼 메서드
+    private static void drawTextFitWidth(Canvas canvas, String text, float centerX, float centerY, Paint paint, float maxWidth) {
+        if (text == null || text.isEmpty()) return;
+        
+        float originalSize = paint.getTextSize();
+        float size = originalSize;
+        
+        // 텍스트 가로 폭이 maxWidth를 초과하는 경우, 1dp씩 점진적으로 크기 축소 (최대 원래 크기의 40% 수준까지 허용)
+        while (paint.measureText(text) > maxWidth && size > originalSize * 0.4f) {
+            size -= 1.0f;
+            paint.setTextSize(size);
+        }
+        
+        // 텍스트 중앙 세로 기준선 보정 적용
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        float offset = (fm.descent + fm.ascent) / 2f;
+        canvas.drawText(text, centerX, centerY - offset, paint);
+        
+        // 원본 크기로 원복하여 페인트 전역 상태 유지
+        paint.setTextSize(originalSize);
+    }
+
     public static Bitmap drawTimetable(Context context, String jsonString, int width, int height) {
         if (width < 300) width = 300;
         if (height < 300) height = 300;
 
-        // 위젯 테마 설정 로드 (SharedPreferences)
+        // 위젯 테마 설정 로드
         SharedPreferences prefs = context.getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         String theme = prefs.getString("widget_theme", "dark");
         boolean isLight = "light".equals(theme);
@@ -30,7 +52,7 @@ public class LocalTimetableRenderer {
         paint.setStyle(Paint.Style.FILL);
 
         // 3. 테마별 배경색 채우기
-        int bgMainColor = isLight ? 0xFFF8FAFC : 0xFF0F172A; // 라이트: 흰색계열, 다크: 남색계열
+        int bgMainColor = isLight ? 0xFFF8FAFC : 0xFF0F172A;
         paint.setColor(bgMainColor);
         canvas.drawRect(0, 0, width, height, paint);
 
@@ -52,7 +74,7 @@ public class LocalTimetableRenderer {
             float rowHeight = gridHeight / 9f;
 
             // 4. 테마별 격자선 도색
-            int gridLineColor = isLight ? 0xFFCBD5E1 : 0xFF1E293B; // 라이트: 연회색, 다크: 어두운남색
+            int gridLineColor = isLight ? 0xFFCBD5E1 : 0xFF1E293B;
             paint.setColor(gridLineColor);
             paint.setStrokeWidth(2f * fontScale);
             paint.setStyle(Paint.Style.STROKE);
@@ -74,7 +96,7 @@ public class LocalTimetableRenderer {
             paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
 
             // 요일 그리기
-            int headerTextColor = isLight ? 0xFF334155 : 0xFFF8FAFC; // 라이트: 진회색, 다크: 흰색
+            int headerTextColor = isLight ? 0xFF334155 : 0xFFF8FAFC;
             paint.setColor(headerTextColor);
             paint.setTextSize(28f * fontScale);
             String[] dayLabels = {"월", "화", "수", "목", "금"};
@@ -85,7 +107,7 @@ public class LocalTimetableRenderer {
             }
 
             // 교시 그리기
-            int labelTextColor = isLight ? 0xFF64748B : 0xFF94A3B8; // 라이트: 슬레이트 그레이, 다크: 연회색
+            int labelTextColor = isLight ? 0xFF64748B : 0xFF94A3B8;
             paint.setColor(labelTextColor);
             paint.setTextSize(26f * fontScale);
             for (int i = 0; i < 9; i++) {
@@ -140,27 +162,25 @@ public class LocalTimetableRenderer {
                     float bottom = topMargin + (p + spanRows) * rowHeight - gap;
                     RectF rect = new RectF(left, top, right, bottom);
 
-                    // 테마 모드별 칩 색상 스펙 할당 (머티리얼 파스텔톤 조합)
+                    // 테마별 색상 설정
                     int bgColor;
                     int textColor;
                     
                     if (isLight) {
-                        // ☀️ 라이트 모드 (화사한 파스텔톤 보더 테마)
                         if ("event".equals(type)) {
-                            bgColor = 0xFFCCFBF1; // 연민트
-                            textColor = 0xFF0F766E; // 진민트
+                            bgColor = 0xFFCCFBF1;
+                            textColor = 0xFF0F766E;
                         } else if ("change".equals(type)) {
-                            bgColor = 0xFFFEF3C7; // 연주황
-                            textColor = 0xFFB45309; // 진주황
+                            bgColor = 0xFFFEF3C7;
+                            textColor = 0xFFB45309;
                         } else if ("original".equals(type)) {
-                            bgColor = 0xFFF1F5F9; // 연회색
-                            textColor = 0xFF475569; // 진회색
+                            bgColor = 0xFFF1F5F9;
+                            textColor = 0xFF475569;
                         } else {
                             bgColor = 0xFFE2E8F0;
                             textColor = 0xFF0F172A;
                         }
                     } else {
-                        // 🌙 다크 모드 (미려한 오리지널 다크 테마)
                         if ("event".equals(type)) {
                             bgColor = 0xFF0A252B;
                             textColor = 0xFF2DD4BF;
@@ -183,7 +203,7 @@ public class LocalTimetableRenderer {
 
                     // 칩 테두리 드로잉
                     paint.setStyle(Paint.Style.STROKE);
-                    int strokeColor = isLight ? 0x22000000 : 0x44FFFFFF; // 테마에 따른 음영선
+                    int strokeColor = isLight ? 0x22000000 : 0x44FFFFFF;
                     paint.setColor(strokeColor);
                     paint.setStrokeWidth(1.5f * fontScale);
                     canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
@@ -195,41 +215,30 @@ public class LocalTimetableRenderer {
 
                     float centerX = rect.centerX();
                     float centerY = rect.centerY();
-
-                    Paint.FontMetrics fm;
+                    float maxTextWidth = rect.width() - (10f * fontScale); // 칩 테두리와의 여백 여유값 확보
 
                     if (spanRows > 1) {
                         // 세로 병합 칩
                         paint.setTextSize(42f * fontScale);
-                        fm = paint.getFontMetrics();
-                        float titleOffset = (fm.descent + fm.ascent) / 2f;
-                        canvas.drawText(title, centerX, centerY - (14f * scaleY) - titleOffset, paint);
+                        drawTextFitWidth(canvas, title, centerX, centerY - (14f * scaleY), paint, maxTextWidth);
                         
                         if (!note.isEmpty()) {
                             paint.setTextSize(26f * fontScale);
                             paint.setColor(textColor & 0xCCFFFFFF);
-                            fm = paint.getFontMetrics();
-                            float noteOffset = (fm.descent + fm.ascent) / 2f;
-                            canvas.drawText(note, centerX, centerY + (18f * scaleY) - noteOffset, paint);
+                            drawTextFitWidth(canvas, note, centerX, centerY + (18f * scaleY), paint, maxTextWidth);
                         }
                     } else {
                         // 단일 1칸짜리 칩
                         if (!note.isEmpty()) {
                             paint.setTextSize(34f * fontScale);
-                            fm = paint.getFontMetrics();
-                            float titleOffset = (fm.descent + fm.ascent) / 2f;
-                            canvas.drawText(title, centerX, centerY - (12f * scaleY) - titleOffset, paint);
+                            drawTextFitWidth(canvas, title, centerX, centerY - (12f * scaleY), paint, maxTextWidth);
 
                             paint.setTextSize(22f * fontScale);
                             paint.setColor(textColor & 0xCCFFFFFF);
-                            fm = paint.getFontMetrics();
-                            float noteOffset = (fm.descent + fm.ascent) / 2f;
-                            canvas.drawText(note, centerX, centerY + (16f * scaleY) - noteOffset, paint);
+                            drawTextFitWidth(canvas, note, centerX, centerY + (16f * scaleY), paint, maxTextWidth);
                         } else {
                             paint.setTextSize(36f * fontScale);
-                            fm = paint.getFontMetrics();
-                            float offset = (fm.descent + fm.ascent) / 2f;
-                            canvas.drawText(title, centerX, centerY - offset, paint);
+                            drawTextFitWidth(canvas, title, centerX, centerY, paint, maxTextWidth);
                         }
                     }
 
