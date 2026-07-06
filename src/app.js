@@ -36,6 +36,7 @@
   const LAST_SAVE_KEY = "timetable-last-save-at";
   const WALLPAPER_SUBJECTS_KEY = "wallpaper-subjects";
   const WALLPAPER_DAYS_KEY = "wallpaper-days";
+  const DEV_MODE_KEY = "timetable-dev-mode";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
 
   const $ = (selector) => document.querySelector(selector);
@@ -386,6 +387,30 @@
       privacy: "개인정보처리방침",
     };
     return `용정시간표 - ${labels[route] || "조회"}`;
+  }
+
+  function isDeveloperMode() {
+    const params = new URLSearchParams(location.search);
+    if (params.get("dev") === "1") {
+      localStorage.setItem(DEV_MODE_KEY, "true");
+      return true;
+    }
+    if (params.get("dev") === "0") {
+      localStorage.removeItem(DEV_MODE_KEY);
+      return false;
+    }
+    return (
+      localStorage.getItem(DEV_MODE_KEY) === "true" ||
+      location.protocol === "file:" ||
+      ["localhost", "127.0.0.1", "::1"].includes(location.hostname)
+    );
+  }
+
+  function applyDeveloperMode() {
+    const enabled = isDeveloperMode();
+    $$("[data-dev-only]").forEach((element) => {
+      element.hidden = !enabled;
+    });
   }
 
   async function enterFullscreen() {
@@ -2133,6 +2158,7 @@
   function init() {
     document.body.classList.toggle("board-mode", isBoardMode);
     currentRoute = isBoardMode ? "view" : routeFromPath();
+    applyDeveloperMode();
     initControls();
     applyBoardTheme();
     bindEvents();
