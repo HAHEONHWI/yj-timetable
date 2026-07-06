@@ -63,6 +63,7 @@
     wallpaperSubjects: $("#wallpaperSubjects"),
     wallpaperDays: $("#wallpaperDays"),
     wallpaperPreview: $("#wallpaperPreview"),
+    wallpaperAutomation: $("#wallpaperAutomation"),
     loginPanel: $("#loginPanel"),
     adminWorkspace: $("#adminWorkspace"),
     adminPassword: $("#adminPassword"),
@@ -883,6 +884,13 @@
     localStorage.setItem(WALLPAPER_DAYS_KEY, JSON.stringify(days));
   }
 
+  function wallpaperImageUrl(settings) {
+    const url = new URL("/wallpaper.svg", location.origin);
+    url.searchParams.set("subjects", settings.subjects.join(","));
+    url.searchParams.set("days", settings.days.join(","));
+    return url.toString();
+  }
+
   function wallpaperLesson(date, className, period, periodIndex) {
     const event = getEventsForDate(date).find((item) => {
       return item.classes.includes(className) && period >= item.start && period <= item.end;
@@ -927,9 +935,45 @@
       .join("");
   }
 
+  function renderWallpaperAutomation(settings) {
+    if (!settings.subjects.length) {
+      els.wallpaperAutomation.innerHTML = `<article class="wallpaper-automation-card">
+        <strong>단축어 자동화</strong>
+        <p>과목을 선택하면 iPhone 단축어에 넣을 이미지 URL과 자동화 순서가 생성됩니다.</p>
+      </article>`;
+      return;
+    }
+
+    const url = wallpaperImageUrl(settings);
+    const dayLabels = weekdays.filter((weekday) => settings.days.includes(weekday.key)).map((weekday) => weekday.label).join(", ");
+    els.wallpaperAutomation.innerHTML = `<article class="wallpaper-automation-card is-ready">
+      <div>
+        <strong>단축어 자동화 생성됨</strong>
+        <p>${escapeHtml(settings.subjects.join(", "))} · ${escapeHtml(dayLabels || "월, 화, 수, 목, 금")}</p>
+      </div>
+      <label class="wallpaper-url-field">
+        <span>이미지 URL</span>
+        <input value="${escapeHtml(url)}" readonly />
+      </label>
+      <div class="button-row">
+        <button class="primary-button" data-copy-wallpaper-url type="button">URL 복사</button>
+        <a class="ghost-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">이미지 열기</a>
+      </div>
+      <ol>
+        <li>단축어 앱에서 새 단축어를 만듭니다.</li>
+        <li>URL 액션에 위 이미지 URL을 넣습니다.</li>
+        <li>URL 콘텐츠 가져오기를 추가합니다.</li>
+        <li>필요하면 이미지 변환에서 JPEG 또는 PNG로 변환합니다.</li>
+        <li>배경화면 설정 액션을 추가합니다.</li>
+        <li>자동화 탭에서 매일 아침 실행되게 설정합니다.</li>
+      </ol>
+    </article>`;
+  }
+
   function renderWallpaper() {
     const settings = wallpaperSettings();
     renderWallpaperControls(settings);
+    renderWallpaperAutomation(settings);
     const selected = new Set(settings.subjects);
     const days = schoolDaysForCurrentWeek().filter((day) => settings.days.includes(day.weekday.key));
     const today = toISO(new Date());
@@ -1696,6 +1740,19 @@
     document.addEventListener("click", (event) => {
       if (!event.target.closest("[data-retry-save]")) return;
       retrySaveState();
+    });
+    document.addEventListener("click", async (event) => {
+      if (!event.target.closest("[data-copy-wallpaper-url]")) return;
+      const input = els.wallpaperAutomation.querySelector(".wallpaper-url-field input");
+      if (!input) return;
+      input.select();
+      try {
+        await navigator.clipboard.writeText(input.value);
+        showGlobalStatus("단축어 이미지 URL을 복사했습니다.", "success", { autoHide: true });
+      } catch {
+        document.execCommand("copy");
+        showGlobalStatus("단축어 이미지 URL을 복사했습니다.", "success", { autoHide: true });
+      }
     });
     document.addEventListener("keydown", (event) => {
       if (event.target && ["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(event.target.tagName)) return;
