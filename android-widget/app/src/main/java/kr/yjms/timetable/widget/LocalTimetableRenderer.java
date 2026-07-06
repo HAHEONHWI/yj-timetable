@@ -11,9 +11,13 @@ import org.json.JSONObject;
 
 public class LocalTimetableRenderer {
 
-    public static Bitmap drawTimetable(Context context, String jsonString) {
-        // 1. 고화질 드로잉 비트맵 생성 (위젯 가로세로 매칭 비율 1200 x 1000)
-        Bitmap bitmap = Bitmap.createBitmap(1200, 1000, Bitmap.Config.ARGB_8888);
+    public static Bitmap drawTimetable(Context context, String jsonString, int width, int height) {
+        // 안전 하한선 보정
+        if (width < 300) width = 300;
+        if (height < 300) height = 300;
+
+        // 1. 위젯 실제 해상도에 맞춘 동적 비트맵 생성
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
 
         // 2. 브러시 및 페인트 설정
@@ -22,61 +26,66 @@ public class LocalTimetableRenderer {
 
         // 3. 배경색 채우기 (#0f172a)
         paint.setColor(0xFF0F172A);
-        canvas.drawRect(0, 0, 1200, 1000, paint);
+        canvas.drawRect(0, 0, width, height, paint);
+
+        // 동적 척도 계산 (표준 가로세로 800 x 800 대비 배수)
+        float scaleX = width / 800f;
+        float scaleY = height / 800f;
+        float fontScale = Math.min(scaleX, scaleY); // 폰트 찌그러짐 방지용 최소 스케일
 
         try {
             JSONObject root = new JSONObject(jsonString);
             JSONArray gridArr = root.getJSONArray("grid");
 
-            // 격자 오프셋 산정
-            float leftMargin = 120f;
-            float topMargin = 100f;
-            float gridWidth = 1200f - leftMargin;
-            float gridHeight = 1000f - topMargin;
+            // 격자 오프셋 산정 (위젯 크기에 비례)
+            float leftMargin = 85f * scaleX;
+            float topMargin = 75f * scaleY;
+            float gridWidth = width - leftMargin;
+            float gridHeight = height - topMargin;
             float colWidth = gridWidth / 5f;
             float rowHeight = gridHeight / 9f;
 
             // 4. 격자선 도색 (#1e293b)
             paint.setColor(0xFF1E293B);
-            paint.setStrokeWidth(2f);
+            paint.setStrokeWidth(2f * fontScale);
             paint.setStyle(Paint.Style.STROKE);
             
             // 세로선 그리기
             for (int i = 0; i <= 5; i++) {
                 float x = leftMargin + i * colWidth;
-                canvas.drawLine(x, 0, x, 1000, paint);
+                canvas.drawLine(x, 0, x, height, paint);
             }
             // 가로선 그리기
             for (int i = 0; i <= 9; i++) {
                 float y = topMargin + i * rowHeight;
-                canvas.drawLine(0, y, 1200, y, paint);
+                canvas.drawLine(0, y, width, y, paint);
             }
 
-            // 5. 헤더 텍스트 드로잉 (요일 및 교시 라벨) - 글씨 크기 대폭 상향
+            // 5. 헤더 텍스트 드로잉 (요일 및 교시 라벨)
             paint.setStyle(Paint.Style.FILL);
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
 
             // 요일 그리기
             paint.setColor(0xFFF8FAFC); // 흰색
-            paint.setTextSize(40f); // 32f -> 40f
+            paint.setTextSize(28f * fontScale);
             String[] dayLabels = {"월", "화", "수", "목", "금"};
             for (int i = 0; i < 5; i++) {
                 float x = leftMargin + i * colWidth + (colWidth / 2f);
-                float y = topMargin / 2f + 14f; // 요일 세로 중앙 보정
+                float y = topMargin / 2f + (10f * scaleY);
                 canvas.drawText(dayLabels[i], x, y, paint);
             }
 
             // 교시 그리기
             paint.setColor(0xFF94A3B8); // 회색
-            paint.setTextSize(38f); // 30f -> 38f
+            paint.setTextSize(26f * fontScale);
             for (int i = 0; i < 9; i++) {
                 float x = leftMargin / 2f;
-                float y = topMargin + i * rowHeight + (rowHeight / 2f) + 12f;
+                float y = topMargin + i * rowHeight + (rowHeight / 2f) + (8f * scaleY);
                 canvas.drawText(String.valueOf(i + 1), x, y, paint);
             }
 
-            // 6. 2차원 시간표 셀 병합 렌더링 (디자인 100% 복제 구현)
+            // 6. 2차원 시간표 셀 병합 렌더링
             boolean[][] visited = new boolean[5][9];
 
             for (int d = 0; d < 5; d++) {
@@ -101,7 +110,6 @@ public class LocalTimetableRenderer {
                         if (nextMatches == null || nextMatches.length() == 0) break;
                         JSONObject nextMatch = nextMatches.getJSONObject(0);
                         
-                        // 과목명, 분류타입, 세부설명이 일치하면 병합 처리
                         if (title.equals(nextMatch.getString("title")) &&
                             type.equals(nextMatch.optString("type", "")) &&
                             note.equals(nextMatch.optString("note", ""))) {
@@ -111,14 +119,15 @@ public class LocalTimetableRenderer {
                         }
                     }
 
-                    // 칩 RectF 영역 계산
-                    float left = leftMargin + d * colWidth + 6f;
-                    float top = topMargin + p * rowHeight + 6f;
-                    float right = leftMargin + (d + 1) * colWidth - 6f;
-                    float bottom = topMargin + (p + spanRows) * rowHeight - 6f;
+                    // 칩 RectF 영역 계산 (간격 마진 보정)
+                    float gap = 5f * fontScale;
+                    float left = leftMargin + d * colWidth + gap;
+                    float top = topMargin + p * rowHeight + gap;
+                    float right = leftMargin + (d + 1) * colWidth - gap;
+                    float bottom = topMargin + (p + spanRows) * rowHeight - gap;
                     RectF rect = new RectF(left, top, right, bottom);
 
-                    // 타입별 둥글고 세련된 칩 배경색 칠하기 (Opacity 0.95 가미)
+                    // 타입별 칩 배경색 칠하기 (Opacity 0.95 가미)
                     int bgColor;
                     int textColor;
                     if ("event".equals(type)) {
@@ -135,16 +144,16 @@ public class LocalTimetableRenderer {
                         textColor = 0xFFF8FAFC; // 기본 흰색
                     }
 
-                    // 칩 드로잉
+                    // 칩 드로잉 (둥근 모서리도 위젯 크기에 비례 스케일링)
                     paint.setStyle(Paint.Style.FILL);
                     paint.setColor(bgColor);
-                    canvas.drawRoundRect(rect, 14f, 14f, paint);
+                    canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
 
-                    // 칩 테두리 드로잉 (더 또렷한 디자인)
+                    // 칩 테두리 드로잉
                     paint.setStyle(Paint.Style.STROKE);
-                    paint.setColor(0x44FFFFFF); // 연한 흰색 테두리
-                    paint.setStrokeWidth(2f);
-                    canvas.drawRoundRect(rect, 14f, 14f, paint);
+                    paint.setColor(0x44FFFFFF);
+                    paint.setStrokeWidth(1.5f * fontScale);
+                    canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
 
                     // 텍스트 기입 페인트 설정
                     paint.setStyle(Paint.Style.FILL);
@@ -154,40 +163,37 @@ public class LocalTimetableRenderer {
                     float centerX = rect.centerX();
                     float centerY = rect.centerY();
 
-                    // 텍스트 중앙 세로 정렬을 위한 폰트 메트릭스 공식 적용
                     Paint.FontMetrics fm;
 
                     if (spanRows > 1) {
-                        // 세로 병합 칩 - 글씨 크기 대폭 상향 (62f / 36f)
-                        paint.setTextSize(62f);
+                        // 세로 병합 칩 (글씨 크기 적응형 스케일)
+                        paint.setTextSize(42f * fontScale);
                         fm = paint.getFontMetrics();
                         float titleOffset = (fm.descent + fm.ascent) / 2f;
-                        canvas.drawText(title, centerX, centerY - 22f - titleOffset, paint);
+                        canvas.drawText(title, centerX, centerY - (14f * scaleY) - titleOffset, paint);
                         
                         if (!note.isEmpty()) {
-                            paint.setTextSize(36f);
-                            paint.setColor(textColor & 0xCCFFFFFF); // 80% 불투명도
+                            paint.setTextSize(26f * fontScale);
+                            paint.setColor(textColor & 0xCCFFFFFF);
                             fm = paint.getFontMetrics();
                             float noteOffset = (fm.descent + fm.ascent) / 2f;
-                            canvas.drawText(note, centerX, centerY + 28f - noteOffset, paint);
+                            canvas.drawText(note, centerX, centerY + (18f * scaleY) - noteOffset, paint);
                         }
                     } else {
                         // 단일 1칸짜리 칩
                         if (!note.isEmpty()) {
-                            // 과목명과 학급 정보 둘 다 표출 - 글씨 크기 대폭 상향 (50f / 34f)
-                            paint.setTextSize(50f);
+                            paint.setTextSize(34f * fontScale);
                             fm = paint.getFontMetrics();
                             float titleOffset = (fm.descent + fm.ascent) / 2f;
-                            canvas.drawText(title, centerX, centerY - 18f - titleOffset, paint);
+                            canvas.drawText(title, centerX, centerY - (12f * scaleY) - titleOffset, paint);
 
-                            paint.setTextSize(34f);
+                            paint.setTextSize(22f * fontScale);
                             paint.setColor(textColor & 0xCCFFFFFF);
                             fm = paint.getFontMetrics();
                             float noteOffset = (fm.descent + fm.ascent) / 2f;
-                            canvas.drawText(note, centerX, centerY + 24f - noteOffset, paint);
+                            canvas.drawText(note, centerX, centerY + (16f * scaleY) - noteOffset, paint);
                         } else {
-                            // 과목명만 단독 표출 - 글씨 크기 대폭 상향 (54f)
-                            paint.setTextSize(54f);
+                            paint.setTextSize(36f * fontScale);
                             fm = paint.getFontMetrics();
                             float offset = (fm.descent + fm.ascent) / 2f;
                             canvas.drawText(title, centerX, centerY - offset, paint);
