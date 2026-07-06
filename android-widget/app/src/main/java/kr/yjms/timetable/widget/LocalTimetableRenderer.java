@@ -174,8 +174,8 @@ public class LocalTimetableRenderer {
                             bgColor = 0xFFFEF3C7;
                             textColor = 0xFFB45309;
                         } else if ("original".equals(type)) {
-                            bgColor = 0xFFF1F5F9;
-                            textColor = 0xFF475569;
+                            bgColor = 0x22F1F5F9; // 반투명 연회색 (사라진 수업)
+                            textColor = 0x4D475569; // 30% 불투명 연회색
                         } else {
                             bgColor = 0xFFE2E8F0;
                             textColor = 0xFF0F172A;
@@ -188,8 +188,8 @@ public class LocalTimetableRenderer {
                             bgColor = 0xFF2B1B0A;
                             textColor = 0xFFF59E0B;
                         } else if ("original".equals(type)) {
-                            bgColor = 0xFF171D26;
-                            textColor = 0xFF94A3B8;
+                            bgColor = 0x22171D26; // 반투명 어두운회색 (사라진 수업)
+                            textColor = 0x4D94A3B8; // 30% 불투명 연회색
                         } else {
                             bgColor = 0xFF1E293B;
                             textColor = 0xFFF8FAFC;
@@ -204,14 +204,24 @@ public class LocalTimetableRenderer {
                     // 칩 테두리 드로잉
                     paint.setStyle(Paint.Style.STROKE);
                     int strokeColor = isLight ? 0x22000000 : 0x44FFFFFF;
+                    if ("original".equals(type)) {
+                        strokeColor = isLight ? 0x11000000 : 0x22FFFFFF;
+                        // 사라진 수업은 테두리를 점선(Dash)으로 표출
+                        paint.setPathEffect(new android.graphics.DashPathEffect(new float[]{6f * fontScale, 4f * fontScale}, 0));
+                    }
                     paint.setColor(strokeColor);
                     paint.setStrokeWidth(1.5f * fontScale);
                     canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
+                    paint.setPathEffect(null); // 원복
 
                     // 텍스트 기입 페인트 설정
                     paint.setStyle(Paint.Style.FILL);
                     paint.setColor(textColor);
                     paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
+                    if ("original".equals(type)) {
+                        // 사라진 과목 텍스트 위에는 취소선(StrikeThru) 긋기
+                        paint.setStrikeThruText(true);
+                    }
 
                     float centerX = rect.centerX();
                     float centerY = rect.centerY();
@@ -221,6 +231,7 @@ public class LocalTimetableRenderer {
                         // 세로 병합 칩
                         paint.setTextSize(42f * fontScale);
                         drawTextFitWidth(canvas, title, centerX, centerY - (14f * scaleY), paint, maxTextWidth);
+                        paint.setStrikeThruText(false); // 과목명 렌더링 완료 후 취소선 즉시 해제
                         
                         if (!note.isEmpty()) {
                             paint.setTextSize(26f * fontScale);
@@ -232,6 +243,7 @@ public class LocalTimetableRenderer {
                         if (!note.isEmpty()) {
                             paint.setTextSize(34f * fontScale);
                             drawTextFitWidth(canvas, title, centerX, centerY - (12f * scaleY), paint, maxTextWidth);
+                            paint.setStrikeThruText(false); // 과목명 렌더링 완료 후 취소선 즉시 해제
 
                             paint.setTextSize(22f * fontScale);
                             paint.setColor(textColor & 0xCCFFFFFF);
@@ -239,6 +251,7 @@ public class LocalTimetableRenderer {
                         } else {
                             paint.setTextSize(36f * fontScale);
                             drawTextFitWidth(canvas, title, centerX, centerY, paint, maxTextWidth);
+                            paint.setStrikeThruText(false); // 과목명 렌더링 완료 후 취소선 즉시 해제
                         }
                     }
 
