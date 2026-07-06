@@ -1,16 +1,260 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="#090d16"
-    android:padding="4dp">
+    android:padding="8dp">
 
-    <ImageView
-        android:id="@+id/widget_image"
+    <!-- 위젯 상단 헤더 -->
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="fitCenter"
-        android:contentDescription="용정중학교 시간표 위젯" />
-        
-</FrameLayout>
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="용정시간표"
+            android:textColor="#2dd4bf"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true" />
+
+        <TextView
+            android:id="@+id/widget_refresh_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" 🔄 새로고침 "
+            android:textColor="#94a3b8"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:background="#1e293b"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true" />
+            
+    </RelativeLayout>
+
+    <!-- 시간표 텍스트 바둑판 격자 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="#334155"
+        android:padding="1dp">
+
+        <!-- 요일 헤더 (Row 0) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.8"
+            android:orientation="horizontal">
+            
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.8"
+                android:text="교시"
+                android:textColor="#94a3b8"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="#0f172a"
+                android:layout_margin="0.5dp" />
+            <TextView
+                android:id="@+id/header_day_0"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="월"
+                android:textColor="#f8fafc"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="#0f172a"
+                android:layout_margin="0.5dp" />
+            <TextView
+                android:id="@+id/header_day_1"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="화"
+                android:textColor="#f8fafc"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="#0f172a"
+                android:layout_margin="0.5dp" />
+            <TextView
+                android:id="@+id/header_day_2"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="수"
+                android:textColor="#f8fafc"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="#0f172a"
+                android:layout_margin="0.5dp" />
+            <TextView
+                android:id="@+id/header_day_3"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="목"
+                android:textColor="#f8fafc"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="#0f172a"
+                android:layout_margin="0.5dp" />
+            <TextView
+                android:id="@+id/header_day_4"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="금"
+                android:textColor="#f8fafc"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="#0f172a"
+                android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 1~9교시 생성기 -->
+        <!-- 1교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="1" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 2교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="2" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 3교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="3" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 4교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="4" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 5교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="5" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 6교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="6" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 7교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="7" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 8교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="8" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+
+        <!-- 9교시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="9" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_0_8" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_1_8" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_2_8" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_3_8" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+            <TextView android:id="@+id/cell_4_8" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="9sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

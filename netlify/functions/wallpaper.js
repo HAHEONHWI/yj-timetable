@@ -351,6 +351,24 @@ function renderWallpaperSvg(state, query) {
     }
   }
 
+  if (query.format === "json" || query.f === "json") {
+    const jsonResult = {
+      days: days.map(d => ({ iso: d.iso, label: d.weekday.label })),
+      periods: periods,
+      grid: grid.map(dayRow =>
+        dayRow.map(cell =>
+          cell.map(match => ({
+            title: match.title,
+            type: match.type,
+            note: match.note || "",
+            className: match.className || ""
+          }))
+        )
+      )
+    };
+    return JSON.stringify(jsonResult);
+  }
+
   const headerCells = days
     .map((day, index) => {
       const x = tableX + periodWidth + index * dayWidth;
@@ -531,7 +549,21 @@ exports.handler = async (event) => {
     };
   }
 
-  const svg = renderWallpaperSvg(state, query);
+  const svgOrJson = renderWallpaperSvg(state, query);
+
+  if (query.format === "json" || query.f === "json") {
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: svgOrJson,
+    };
+  }
+
+  const svg = svgOrJson;
 
   const isPng = (event.path && event.path.endsWith(".png")) || query.format === "png";
   if (isPng) {
