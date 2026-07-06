@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 
 let fontBuffer = null;
+let activeFontPath = null;
 const fontPaths = [
   path.join(__dirname, "fonts", "NanumGothic-Bold.ttf"),
   path.join(__dirname, "netlify", "functions", "fonts", "NanumGothic-Bold.ttf"),
@@ -13,6 +14,7 @@ for (const fp of fontPaths) {
   try {
     if (fs.existsSync(fp)) {
       fontBuffer = fs.readFileSync(fp);
+      activeFontPath = fp;
       break;
     }
   } catch (err) {
@@ -246,7 +248,7 @@ function renderText(text, x, y, options = {}) {
   const weight = options.weight || 800;
   const fill = options.fill || "#f8fafc";
   const anchor = options.anchor ? ` text-anchor="${options.anchor}"` : "";
-  return `<text x="${x}" y="${y}" font-family="NanumGothic, NanumGothic-Bold, Pretendard, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}"${anchor}>${escapeXml(text)}</text>`;
+  return `<text x="${x}" y="${y}" font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}"${anchor}>${escapeXml(text)}</text>`;
 }
 
 function chipColors(type) {
@@ -379,7 +381,7 @@ function renderWallpaperSvg(state, query) {
   <circle cx="1000" cy="950" r="280" fill="#8b5cf6" opacity="0.18" filter="url(#glow)" />
   <circle cx="1000" cy="2100" r="350" fill="#ec4899" opacity="0.15" filter="url(#glow)" />
   <circle cx="150" cy="2000" r="320" fill="#14b8a6" opacity="0.18" filter="url(#glow)" />
-  <g font-family="NanumGothic, NanumGothic-Bold, Pretendard, sans-serif">
+  <g font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif">
     ${renderText("용정 시간표", 64, 670, { size: 28, fill: "#64748b", weight: 900 })}
     ${renderText(titleLabel, 64, 725, { size: titleSize, fill: "#f8fafc", weight: 900 })}
     ${renderText(subjectLabel, 64, 775, { size: 28, fill: "#2dd4bf", weight: 900 })}
@@ -445,7 +447,7 @@ exports.handler = async (event) => {
         fitTo: { mode: "width", value: 1170 },
         font: {
           fontBuffers: fontBuffer ? [fontBuffer] : [],
-          defaultFontFamily: "NanumGothic",
+          defaultFontFamily: "NanumGothicBold",
         },
       });
       const pngData = resvg.render();
