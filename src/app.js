@@ -416,6 +416,29 @@
     $$("[data-dev-only]").forEach((element) => {
       element.hidden = !enabled;
     });
+
+    // iOS 자동화 가이드 모달 이벤트 바인딩
+    const iosModal = $("#iosGuideModal");
+    const btnOpenModal = $("#btnOpenIosModal");
+    const btnCloseModal = $("#btnCloseIosModal");
+
+    if (btnOpenModal && iosModal) {
+      btnOpenModal.onclick = () => {
+        iosModal.classList.remove("is-hidden");
+      };
+    }
+    if (btnCloseModal && iosModal) {
+      btnCloseModal.onclick = () => {
+        iosModal.classList.add("is-hidden");
+      };
+    }
+    if (iosModal) {
+      iosModal.onclick = (e) => {
+        if (e.target === iosModal) {
+          iosModal.classList.add("is-hidden");
+        }
+      };
+    }
   }
 
   async function enterFullscreen() {
@@ -954,20 +977,19 @@
       wallpaperImageUrl(settings),
       "",
       "단축어 액션 순서:",
-      "1. URL",
-      "2. URL 콘텐츠 가져오기",
-      "3. 이미지 변환: JPEG 또는 PNG",
-      "4. 배경화면 설정",
+      "1. URL (위 이미지 URL 입력)",
+      "2. URL 콘텐츠 가져오기 (Get contents of URL)",
+      "3. 가져온 콘텐츠의 이름을 'today-wallpaper.png' 로 이름 변경 (Set name to today-wallpaper.png)",
+      "4. 변경된 이름의 항목을 배경화면으로 설정 (Set wallpaper to Renamed Item)",
       "",
       "자동화 설정:",
-      "1. 단축어 앱 > 자동화",
-      "2. 시간",
-      "3. 매일",
-      "4. 원하는 시간 선택",
-      "5. 위 단축어 실행",
-      "6. 가능하면 실행 전에 묻기 끄기",
+      "1. 단축어 앱 ➔ 자동화 ➔ 우측 상단 [+] ➔ 개인용 자동화 생성",
+      "2. [하루 중 특정 시간] ➔ 일출 시각, 08:40, 14:00 등의 골든타임 기입",
+      "3. 실행 옵션을 [확인 없이 실행]으로 스위칭",
+      "4. 동작으로 위의 단축어 실행 연동",
+      "5. (알림 끄기 팁) 자동화 내부에서 [실행 시 알림]을 끄면 화면 방해 없이 조용히 갱신됩니다.",
       "",
-      "참고: iOS 정책상 웹사이트가 자동화를 직접 설치할 수는 없습니다.",
+      "참고: iOS 정책상 웹사이트가 아이폰의 자동화를 직접 원격 강제 설치할 수는 없으므로, 위 가이드를 따라 1회만 단축어를 등록해 주시면 평생 자동으로 동기화됩니다.",
     ].join("\n");
   }
 
@@ -1120,11 +1142,10 @@
       </figure>
       <ol>
         <li>단축어 앱에서 새 단축어를 만듭니다.</li>
-        <li>URL 액션에 위 이미지 URL을 넣습니다.</li>
-        <li>URL 콘텐츠 가져오기를 추가합니다.</li>
-        <li>필요하면 이미지 변환에서 JPEG 또는 PNG로 변환합니다.</li>
-        <li>배경화면 설정 액션을 추가합니다.</li>
-        <li>자동화 탭에서 매일 아침 실행되게 설정합니다.</li>
+        <li>URL 액션에 위 이미지 URL을 기입합니다.</li>
+        <li>URL 콘텐츠 가져오기 (Get contents of URL) 동작을 추가합니다.</li>
+        <li>가져온 콘텐츠 이름을 'today-wallpaper.png' 로 이름 변경 (Set name of Contents of URL to today-wallpaper.png) 동작을 추가합니다.</li>
+        <li>배경화면 설정 (Set wallpaper to Renamed Item) 동작을 추가하여 이름을 바꾼 파일을 입혀줍니다.</li>
       </ol>
     </article>`;
   }

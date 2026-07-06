@@ -103,11 +103,61 @@
               <div id="wallpaperGrades" class="wallpaper-grade-settings"></div>
             </div>
             <div id="wallpaperAutomation" class="wallpaper-automation"></div>
+            <!-- iOS 자동화 가이드 팝업 열기 버튼 -->
+            <div style="margin-top: 12px;">
+              <button id="btnOpenIosModal" class="guide-trigger-btn" type="button">
+                💡 iOS 자동화 설정 가이드
+              </button>
+            </div>
           </div>
           <div class="wallpaper-preview-wrap">
             <div id="wallpaperPreview" class="wallpaper-preview-phone"></div>
           </div>
         </div>
+      </div>
+
+      <!-- iOS 자동화 가이드 모달 팝업 -->
+      <div id="iosGuideModal" class="modal-overlay is-hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>🌅 iOS 배경화면 자동화 설정 가이드</h3>
+            <button id="btnCloseIosModal" class="close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="guide-intro">추천 골든타임 3회(일출 시각, 08:40, 14:00)에 맞춰 잠금화면 시간표가 자동으로 갱신되도록 자동화 일정을 등록하는 상세 단계입니다.</p>
+            
+            <div class="guide-step">
+              <h4>1단계: 📲 단축어 사전 다운로드</h4>
+              <p>배경화면 탭 하단에 나타나는 <strong>[iPhone 단축어 등록]</strong>을 터치해 시간표 단축어를 아이폰 단축어 앱에 먼저 등록해 둡니다.</p>
+            </div>
+            
+            <div class="guide-step">
+              <h4>2단계: ⚙️ 개인용 자동화 3종 추가 (단축어 앱 실행)</h4>
+              <p>아이폰 <strong>[단축어 앱] ➔ 하단 [자동화] 탭 ➔ 우측 상단 [+]</strong> 버튼을 차례로 누르고 아래의 3가지 시간대를 각각 등록해 줍니다.</p>
+              
+              <ul style="padding-left: 20px; margin-top: 8px;">
+                <li style="margin-bottom: 12px;">
+                  <strong>🌅 일출 시간 (아침 등교 전 최초 갱신)</strong>
+                  <br /><span style="font-size: 13px; color: #94a3b8;">[하루 중 특정 시간] 선택 ➔ [일출] 체크 ➔ 실행 옵션을 [확인 없이 실행]으로 스위칭 ➔ [용정시간표 배경화면] 단축어 실행으로 동작 등록</span>
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>⏰ 오전 08:40 (조회 및 1교시 시작 전 갱신)</strong>
+                  <br /><span style="font-size: 13px; color: #94a3b8;">[하루 중 특정 시간] 선택 ➔ 시간을 [08:40]으로 기입 ➔ 실행 옵션을 [확인 없이 실행]으로 선택 ➔ 동일 단축어 실행 등록</span>
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>🕒 오후 14:00 (오후 수업 교체 실시간 갱신)</strong>
+                  <br /><span style="font-size: 13px; color: #94a3b8;">[하루 중 특정 시간] 선택 ➔ 시간을 [14:00]으로 기입 ➔ 실행 옵션을 [확인 없이 실행]으로 선택 ➔ 동일 단축어 실행 등록</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="guide-step important-tip">
+              <h4>💡 실행 시 배너 알림 안 뜨게 하는 꿀팁</h4>
+              <p>각각 등록한 자동화 설정 화면 내부로 진입하여 <strong>[실행 시 알림]</strong> 스위치를 <strong>비활성화(끔)</strong>로 두시면, 매 실행 시 화면 상단 배너 알림 없이 아주 부드럽고 조용하게 배경화면이 자동으로 교체됩니다!</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="downloadPage" class="page download-page is-hidden">
