@@ -1,4 +1,13 @@
 const { Resvg } = require("@resvg/resvg-js");
+const path = require("path");
+const fs = require("fs");
+
+let fontBuffer = null;
+try {
+  fontBuffer = fs.readFileSync(path.join(__dirname, "fonts", "NanumGothic-Regular.ttf"));
+} catch (err) {
+  console.error("Failed to load font buffer:", err);
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://jzcectvzwbfvbgiszjkt.supabase.co";
 const SUPABASE_ANON_KEY =
@@ -386,6 +395,10 @@ exports.handler = async (event) => {
     try {
       const resvg = new Resvg(svg, {
         fitTo: { mode: "width", value: 1170 },
+        font: {
+          fontBuffers: fontBuffer ? [fontBuffer] : [],
+          defaultFontFamily: "NanumGothic",
+        },
       });
       const pngData = resvg.render();
       const pngBuffer = pngData.asPng();
