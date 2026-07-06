@@ -272,27 +272,54 @@ public class LocalTimetableRenderer {
                     float centerY = rect.centerY();
                     float maxTextWidth = rect.width() - (10f * fontScale); // 칩 테두리와의 여백 여유값 확보
 
+                    // 행사제목/과목명이 2줄로 쪼개지는 대상인지 사전 측정
+                    boolean isTitleMultiLine = paint.measureText(title) > maxTextWidth;
+
                     if (spanRows > 1) {
-                        // 세로 병합 칩
+                        // 세로 병합 칩 (행사 등)
                         paint.setTextSize(42f * fontScale);
-                        drawTextFitWidth(canvas, title, centerX, centerY - (14f * scaleY), paint, maxTextWidth);
+                        
+                        float titleY;
+                        float noteY;
+                        if (isTitleMultiLine) {
+                            // 2줄로 쪼개질 때는 위쪽으로 title을 더 밀고, 학급명(note)은 맨 아래쪽으로 유도하여 겹침 방지
+                            titleY = centerY - (26f * scaleY);
+                            noteY = centerY + (48f * scaleY);
+                        } else {
+                            titleY = centerY - (14f * scaleY);
+                            noteY = centerY + (18f * scaleY);
+                        }
+
+                        drawTextFitWidth(canvas, title, centerX, titleY, paint, maxTextWidth);
                         paint.setStrikeThruText(false); // 과목명 렌더링 완료 후 취소선 즉시 해제
                         
                         if (!note.isEmpty()) {
                             paint.setTextSize(26f * fontScale);
                             paint.setColor(textColor & 0xCCFFFFFF);
-                            drawTextFitWidth(canvas, note, centerX, centerY + (18f * scaleY), paint, maxTextWidth);
+                            drawTextFitWidth(canvas, note, centerX, noteY, paint, maxTextWidth);
                         }
                     } else {
                         // 단일 1칸짜리 칩
                         if (!note.isEmpty()) {
                             paint.setTextSize(34f * fontScale);
-                            drawTextFitWidth(canvas, title, centerX, centerY - (12f * scaleY), paint, maxTextWidth);
+                            
+                            float titleY;
+                            float noteY;
+                            if (isTitleMultiLine) {
+                                // 1칸짜리 협소 공간에서 2줄 쪼개기 시 Y폭 최대 이격 보정
+                                titleY = centerY - (18f * scaleY);
+                                noteY = centerY + (26f * scaleY);
+                            } else {
+                                titleY = centerY - (12f * scaleY);
+                                noteY = centerY + (16f * scaleY);
+                            }
+
+                            drawTextFitWidth(canvas, title, centerX, titleY, paint, maxTextWidth);
                             paint.setStrikeThruText(false); // 과목명 렌더링 완료 후 취소선 즉시 해제
 
                             paint.setTextSize(22f * fontScale);
                             paint.setColor(textColor & 0xCCFFFFFF);
-                            drawTextFitWidth(canvas, note, centerX, centerY + (16f * scaleY), paint, maxTextWidth);
+                            drawTextFitWidth(canvas, note, centerX, noteY, paint, maxTextWidth);
                         } else {
                             paint.setTextSize(36f * fontScale);
                             drawTextFitWidth(canvas, title, centerX, centerY, paint, maxTextWidth);
