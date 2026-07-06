@@ -34,6 +34,8 @@
   let analyticsRouteTrackingReady = false;
   const gaMeasurementId = "G-TTWC1RKWGL";
   const LAST_SAVE_KEY = "timetable-last-save-at";
+  const WALLPAPER_SUBJECTS_KEY = "wallpaper-subjects";
+  const WALLPAPER_DAYS_KEY = "wallpaper-days";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
 
   const $ = (selector) => document.querySelector(selector);
@@ -42,6 +44,7 @@
   const els = {
     viewPage: $("#viewPage"),
     slideshowPage: $("#slideshowPage"),
+    wallpaperPage: $("#wallpaperPage"),
     downloadPage: $("#downloadPage"),
     privacyPage: $("#privacyPage"),
     adminPage: $("#adminPage"),
@@ -56,6 +59,9 @@
     slideshowMeta: $("#slideshowMeta"),
     slideshowStage: $("#slideshowStage"),
     exitSlideshowButton: $("#exitSlideshowButton"),
+    wallpaperSubjects: $("#wallpaperSubjects"),
+    wallpaperDays: $("#wallpaperDays"),
+    wallpaperPreview: $("#wallpaperPreview"),
     loginPanel: $("#loginPanel"),
     adminWorkspace: $("#adminWorkspace"),
     adminPassword: $("#adminPassword"),
@@ -355,6 +361,7 @@
     const path = location.pathname.replace(/\/+$/, "") || "/";
     if (path === "/admin") return "admin";
     if (path === "/slide" || path === "/slideshow") return "slideshow";
+    if (path === "/wallpaper") return "wallpaper";
     if (path === "/download" || path === "/downloads") return "download";
     if (path === "/privacy") return "privacy";
     return "view";
@@ -363,6 +370,7 @@
   function pathForRoute(route) {
     if (route === "admin") return "/admin";
     if (route === "slideshow") return "/slide";
+    if (route === "wallpaper") return "/wallpaper";
     if (route === "download") return "/download";
     if (route === "privacy") return "/privacy";
     return "/";
@@ -372,6 +380,7 @@
     const labels = {
       view: "조회",
       slideshow: "슬라이드쇼",
+      wallpaper: "배경화면",
       download: "다운로드",
       admin: "관리자",
       privacy: "개인정보처리방침",
@@ -426,6 +435,7 @@
     document.title = titleForRoute(route);
     els.viewPage.classList.toggle("is-hidden", route !== "view");
     els.slideshowPage.classList.toggle("is-hidden", route !== "slideshow");
+    els.wallpaperPage.classList.toggle("is-hidden", route !== "wallpaper");
     els.downloadPage.classList.toggle("is-hidden", route !== "download");
     els.privacyPage.classList.toggle("is-hidden", route !== "privacy");
     els.adminPage.classList.toggle("is-hidden", route !== "admin");
@@ -440,6 +450,10 @@
     } else {
       stopSlideshow();
       exitFullscreen();
+    }
+
+    if (route === "wallpaper") {
+      renderWallpaper();
     }
 
     const nextPath = pathForRoute(route);
@@ -795,6 +809,156 @@
       els.boardThemeButton.setAttribute("aria-label", light ? "라이트 모드 사용 중, 다크 모드로 전환" : "다크 모드 사용 중, 라이트 모드로 전환");
       els.boardThemeButton.title = light ? "라이트 모드" : "다크 모드";
     }
+  }
+
+  function normalizedSubject(value) {
+    return String(value || "").trim();
+  }
+
+  function collectWallpaperSubjects() {
+    const subjects = [];
+    classes.forEach((className) => {
+      weekdays.forEach((weekday) => {
+        const classSubjects = state.base[className] && state.base[className][weekday.key];
+        if (Array.isArray(classSubjects)) subjects.push(...classSubjects);
+      });
+    });
+    state.baseMerges.forEach((merge) => {
+      if (merge && merge.title) subjects.push(merge.title);
+    });
+    return [...new Set(subjects.map(normalizedSubject).filter((subject) => subject && subject !== "-"))].sort((a, b) =>
+      a.localeCompare(b, "ko")
+    );
+  }
+
+  function parseStoredArray(key, fallback) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "null");
+      return Array.isArray(value) ? value.map(String) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function wallpaperSettings() {
+    const validSubjects = new Set(collectWallpaperSubjects());
+    const subjects = parseStoredArray(WALLPAPER_SUBJECTS_KEY, []).filter((subject) => validSubjects.has(subject));
+    const validDays = new Set(weekdays.map((weekday) => weekday.key));
+    const days = parseStoredArray(WALLPAPER_DAYS_KEY, weekdays.map((weekday) => weekday.key)).filter((day) =>
+      validDays.has(day)
+    );
+    return {
+      subjects,
+      days: days.length ? days : weekdays.map((weekday) => weekday.key),
+    };
+  }
+
+  function saveWallpaperSettings(subjects, days) {
+    localStorage.setItem(WALLPAPER_SUBJECTS_KEY, JSON.stringify(subjects));
+    localStorage.setItem(WALLPAPER_DAYS_KEY, JSON.stringify(days));
+  }
+
+  function wallpaperLesson(date, className, period, periodIndex) {
+    const event = getEventsForDate(date).find((item) => {
+      return item.classes.includes(className) && period >= item.start && period <= item.end;
+    });
+    if (event) return { title: event.title, type: "event" };
+
+    const change = getChange(date, className, period);
+    if (change) return { title: change.subject, type: "change" };
+
+    const baseMerge = getBaseMergesForDate(date).find((merge) => {
+      return merge.classes.includes(className) && period >= merge.start && period <= merge.end;
+    });
+    if (baseMerge) return { title: baseMerge.title, type: "merge" };
+
+    return { title: getSubjectsForDate(date, className)[periodIndex] || "-", type: "base" };
+  }
+
+  function renderWallpaperControls(settings) {
+    const subjects = collectWallpaperSubjects();
+    const selectedSubjects = new Set(settings.subjects);
+    els.wallpaperSubjects.innerHTML = subjects.length
+      ? subjects
+          .map((subject) => {
+            const checked = selectedSubjects.has(subject) ? " checked" : "";
+            return `<label class="wallpaper-option">
+              <input type="checkbox" value="${escapeHtml(subject)}" data-wallpaper-subject${checked} />
+              <span>${escapeHtml(subject)}</span>
+            </label>`;
+          })
+          .join("")
+      : `<p class="empty">기본 시간표 과목이 없습니다.</p>`;
+
+    const selectedDays = new Set(settings.days);
+    els.wallpaperDays.innerHTML = weekdays
+      .map((weekday) => {
+        const checked = selectedDays.has(weekday.key) ? " checked" : "";
+        return `<label class="wallpaper-option">
+          <input type="checkbox" value="${weekday.key}" data-wallpaper-day${checked} />
+          <span>${weekday.label}</span>
+        </label>`;
+      })
+      .join("");
+  }
+
+  function renderWallpaper() {
+    const settings = wallpaperSettings();
+    renderWallpaperControls(settings);
+    const selected = new Set(settings.subjects);
+    const days = schoolDaysForCurrentWeek().filter((day) => settings.days.includes(day.weekday.key));
+    const today = toISO(new Date());
+
+    if (!selected.size) {
+      els.wallpaperPreview.innerHTML = `<article class="wallpaper-empty">
+        <p class="eyebrow">과목 선택 필요</p>
+        <h3>강조할 과목을 선택하세요.</h3>
+        <span>선택한 과목이 들어있는 수업만 요일별로 표시됩니다.</span>
+      </article>`;
+      return;
+    }
+
+    const subjectLabel = settings.subjects.join(", ");
+    const dayCards = days
+      .map((day) => {
+        const rows = periods
+          .map((period, periodIndex) => {
+            const matches = classes
+              .map((className) => {
+                const lesson = wallpaperLesson(day.iso, className, period, periodIndex);
+                if (!selected.has(normalizedSubject(lesson.title))) return "";
+                return `<span class="wallpaper-class-chip ${lesson.type === "change" ? "is-change" : ""}">
+                  <strong>${escapeHtml(className)}</strong>${escapeHtml(lesson.title)}
+                </span>`;
+              })
+              .filter(Boolean);
+            if (!matches.length) return "";
+            return `<div class="wallpaper-period">
+              <b>${period}교시</b>
+              <div>${matches.join("")}</div>
+            </div>`;
+          })
+          .filter(Boolean)
+          .join("");
+        const todayClass = day.iso === today ? " is-today" : "";
+        return `<article class="wallpaper-day${todayClass}">
+          <header>
+            <strong>${day.weekday.label}요일</strong>
+            <span>${formatDate(day.iso)}${day.iso === today ? " · 오늘" : ""}</span>
+          </header>
+          ${rows || `<p class="wallpaper-no-class">선택 과목 수업 없음</p>`}
+        </article>`;
+      })
+      .join("");
+
+    els.wallpaperPreview.innerHTML = `<div class="wallpaper-phone-content">
+      <header class="wallpaper-phone-head">
+        <p>용정 시간표</p>
+        <h3>내 과목 주간표</h3>
+        <span>${escapeHtml(subjectLabel)}</span>
+      </header>
+      <div class="wallpaper-day-list">${dayCards}</div>
+    </div>`;
   }
 
   function renderView() {
@@ -1304,6 +1468,9 @@
     }
     const cleanedExpiredData = canPersistAdminCleanup() && cleanupExpiredScheduleData();
     renderView();
+    if (currentRoute === "wallpaper") {
+      renderWallpaper();
+    }
     renderAdmin();
     if (currentRoute === "slideshow") {
       const slideshowTimingChanged =
@@ -1406,6 +1573,9 @@
     updateLastSaveStatus("saving");
     const resultPromise = write(state);
     renderView();
+    if (currentRoute === "wallpaper") {
+      renderWallpaper();
+    }
     renderAdmin();
     updateLastSaveStatus("saving");
     if (currentRoute === "slideshow") {
@@ -1591,6 +1761,18 @@
     }
     els.exitSlideshowButton.addEventListener("click", () => {
       routeTo("view");
+    });
+    els.wallpaperSubjects.addEventListener("change", () => {
+      const subjects = $$("input[data-wallpaper-subject]:checked").map((input) => input.value);
+      const days = $$("input[data-wallpaper-day]:checked").map((input) => input.value);
+      saveWallpaperSettings(subjects, days);
+      renderWallpaper();
+    });
+    els.wallpaperDays.addEventListener("change", () => {
+      const subjects = $$("input[data-wallpaper-subject]:checked").map((input) => input.value);
+      const days = $$("input[data-wallpaper-day]:checked").map((input) => input.value);
+      saveWallpaperSettings(subjects, days);
+      renderWallpaper();
     });
     els.baseWeekday.addEventListener("change", renderBaseEditor);
     els.specialDate.addEventListener("change", () => {

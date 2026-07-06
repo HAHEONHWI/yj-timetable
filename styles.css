@@ -1447,6 +1447,234 @@ textarea {
   color: var(--muted);
 }
 
+.wallpaper-page {
+  background:
+    linear-gradient(145deg, rgba(20, 184, 166, 0.08), transparent 34%),
+    var(--panel);
+}
+
+.wallpaper-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+  gap: clamp(20px, 4vw, 42px);
+  align-items: start;
+}
+
+.wallpaper-tools {
+  display: grid;
+  gap: 18px;
+}
+
+.wallpaper-tools h2 {
+  margin: 4px 0 8px;
+  font-size: clamp(26px, 4vw, 42px);
+}
+
+.wallpaper-tool-group {
+  display: grid;
+  gap: 10px;
+}
+
+.wallpaper-tool-group > strong {
+  color: #dbeafe;
+  font-size: 15px;
+}
+
+.wallpaper-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wallpaper-options.compact {
+  max-width: 360px;
+}
+
+.wallpaper-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 13px;
+  background: #101826;
+  color: #dbeafe;
+  font-weight: 800;
+}
+
+.wallpaper-option input {
+  width: 16px;
+  min-height: 16px;
+}
+
+.wallpaper-option:has(input:checked) {
+  border-color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.16);
+  color: #f8fafc;
+}
+
+.wallpaper-preview-wrap {
+  display: grid;
+  justify-items: center;
+}
+
+.wallpaper-preview-phone {
+  width: min(100%, 390px);
+  aspect-ratio: 9 / 19.5;
+  border: 10px solid #050816;
+  border-radius: 36px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(45, 212, 191, 0.28), transparent 32%),
+    linear-gradient(180deg, #0f172a 0%, #07111d 100%);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.wallpaper-phone-content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  height: 100%;
+}
+
+.wallpaper-phone-head {
+  display: grid;
+  gap: 3px;
+  padding: 6px 2px 0;
+}
+
+.wallpaper-phone-head p,
+.wallpaper-phone-head h3,
+.wallpaper-phone-head span {
+  margin: 0;
+}
+
+.wallpaper-phone-head p {
+  color: #5eead4;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wallpaper-phone-head h3 {
+  color: #f8fafc;
+  font-size: 34px;
+  line-height: 1.08;
+}
+
+.wallpaper-phone-head span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wallpaper-day-list {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.wallpaper-day {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.wallpaper-day.is-today {
+  border-color: rgba(45, 212, 191, 0.7);
+  background: rgba(20, 83, 75, 0.44);
+}
+
+.wallpaper-day header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.wallpaper-day header strong {
+  color: #f8fafc;
+  font-size: 17px;
+}
+
+.wallpaper-day header span,
+.wallpaper-no-class {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wallpaper-period {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 6px;
+  align-items: start;
+}
+
+.wallpaper-period b {
+  color: #bfdbfe;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.wallpaper-period div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.wallpaper-class-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(45, 212, 191, 0.45);
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: rgba(45, 212, 191, 0.12);
+  color: #ecfeff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.wallpaper-class-chip.is-change {
+  border-color: rgba(253, 230, 138, 0.65);
+  background: rgba(253, 230, 138, 0.16);
+  color: #fef9c3;
+}
+
+.wallpaper-class-chip strong {
+  color: #5eead4;
+}
+
+.wallpaper-empty {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  height: 100%;
+  text-align: center;
+}
+
+.wallpaper-empty h3,
+.wallpaper-empty span {
+  margin: 0;
+}
+
+.wallpaper-empty h3 {
+  color: #f8fafc;
+  font-size: 30px;
+}
+
+.wallpaper-empty span {
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
 @media (max-width: 760px) {
   .topbar,
   .view-tools,
@@ -1472,6 +1700,14 @@ textarea {
 
   .download-grid {
     grid-template-columns: 1fr;
+  }
+
+  .wallpaper-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wallpaper-preview-phone {
+    width: min(100%, 380px);
   }
 
   .nav {
