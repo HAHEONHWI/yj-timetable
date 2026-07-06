@@ -1,6 +1,7 @@
 package kr.yjms.timetable.widget;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -12,9 +13,13 @@ import org.json.JSONObject;
 public class LocalTimetableRenderer {
 
     public static Bitmap drawTimetable(Context context, String jsonString, int width, int height) {
-        // 안전 하한선 보정
         if (width < 300) width = 300;
         if (height < 300) height = 300;
+
+        // 위젯 테마 설정 로드 (SharedPreferences)
+        SharedPreferences prefs = context.getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+        String theme = prefs.getString("widget_theme", "dark");
+        boolean isLight = "light".equals(theme);
 
         // 1. 위젯 실제 해상도에 맞춘 동적 비트맵 생성
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
@@ -24,20 +29,21 @@ public class LocalTimetableRenderer {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setStyle(Paint.Style.FILL);
 
-        // 3. 배경색 채우기 (#0f172a)
-        paint.setColor(0xFF0F172A);
+        // 3. 테마별 배경색 채우기
+        int bgMainColor = isLight ? 0xFFF8FAFC : 0xFF0F172A; // 라이트: 흰색계열, 다크: 남색계열
+        paint.setColor(bgMainColor);
         canvas.drawRect(0, 0, width, height, paint);
 
-        // 동적 척도 계산 (표준 가로세로 800 x 800 대비 배수)
+        // 동적 척도 계산
         float scaleX = width / 800f;
         float scaleY = height / 800f;
-        float fontScale = Math.min(scaleX, scaleY); // 폰트 찌그러짐 방지용 최소 스케일
+        float fontScale = Math.min(scaleX, scaleY);
 
         try {
             JSONObject root = new JSONObject(jsonString);
             JSONArray gridArr = root.getJSONArray("grid");
 
-            // 격자 오프셋 산정 (위젯 크기에 비례)
+            // 격자 오프셋 산정
             float leftMargin = 85f * scaleX;
             float topMargin = 75f * scaleY;
             float gridWidth = width - leftMargin;
@@ -45,8 +51,9 @@ public class LocalTimetableRenderer {
             float colWidth = gridWidth / 5f;
             float rowHeight = gridHeight / 9f;
 
-            // 4. 격자선 도색 (#1e293b)
-            paint.setColor(0xFF1E293B);
+            // 4. 테마별 격자선 도색
+            int gridLineColor = isLight ? 0xFFCBD5E1 : 0xFF1E293B; // 라이트: 연회색, 다크: 어두운남색
+            paint.setColor(gridLineColor);
             paint.setStrokeWidth(2f * fontScale);
             paint.setStyle(Paint.Style.STROKE);
             
@@ -67,7 +74,8 @@ public class LocalTimetableRenderer {
             paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
 
             // 요일 그리기
-            paint.setColor(0xFFF8FAFC); // 흰색
+            int headerTextColor = isLight ? 0xFF334155 : 0xFFF8FAFC; // 라이트: 진회색, 다크: 흰색
+            paint.setColor(headerTextColor);
             paint.setTextSize(28f * fontScale);
             String[] dayLabels = {"월", "화", "수", "목", "금"};
             for (int i = 0; i < 5; i++) {
@@ -77,7 +85,8 @@ public class LocalTimetableRenderer {
             }
 
             // 교시 그리기
-            paint.setColor(0xFF94A3B8); // 회색
+            int labelTextColor = isLight ? 0xFF64748B : 0xFF94A3B8; // 라이트: 슬레이트 그레이, 다크: 연회색
+            paint.setColor(labelTextColor);
             paint.setTextSize(26f * fontScale);
             for (int i = 0; i < 9; i++) {
                 float x = leftMargin / 2f;
@@ -119,7 +128,7 @@ public class LocalTimetableRenderer {
                         }
                     }
 
-                    // 칩 RectF 영역 계산 (간격 마진 보정)
+                    // 칩 RectF 영역 계산
                     float gap = 5f * fontScale;
                     float left = leftMargin + d * colWidth + gap;
                     float top = topMargin + p * rowHeight + gap;
@@ -127,31 +136,51 @@ public class LocalTimetableRenderer {
                     float bottom = topMargin + (p + spanRows) * rowHeight - gap;
                     RectF rect = new RectF(left, top, right, bottom);
 
-                    // 타입별 칩 배경색 칠하기 (Opacity 0.95 가미)
+                    // 테마 모드별 칩 색상 스펙 할당 (머티리얼 파스텔톤 조합)
                     int bgColor;
                     int textColor;
-                    if ("event".equals(type)) {
-                        bgColor = 0xFF0A252B; // 민트 어두움
-                        textColor = 0xFF2DD4BF; // 민트 텍스트
-                    } else if ("change".equals(type)) {
-                        bgColor = 0xFF2B1B0A; // 오렌지 어두움
-                        textColor = 0xFFF59E0B; // 오렌지 텍스트
-                    } else if ("original".equals(type)) {
-                        bgColor = 0xFF171D26; // 회색 어두움
-                        textColor = 0xFF94A3B8; // 회색 텍스트
+                    
+                    if (isLight) {
+                        // ☀️ 라이트 모드 (화사한 파스텔톤 보더 테마)
+                        if ("event".equals(type)) {
+                            bgColor = 0xFFCCFBF1; // 연민트
+                            textColor = 0xFF0F766E; // 진민트
+                        } else if ("change".equals(type)) {
+                            bgColor = 0xFFFEF3C7; // 연주황
+                            textColor = 0xFFB45309; // 진주황
+                        } else if ("original".equals(type)) {
+                            bgColor = 0xFFF1F5F9; // 연회색
+                            textColor = 0xFF475569; // 진회색
+                        } else {
+                            bgColor = 0xFFE2E8F0;
+                            textColor = 0xFF0F172A;
+                        }
                     } else {
-                        bgColor = 0xFF1E293B; // 기본 남색
-                        textColor = 0xFFF8FAFC; // 기본 흰색
+                        // 🌙 다크 모드 (미려한 오리지널 다크 테마)
+                        if ("event".equals(type)) {
+                            bgColor = 0xFF0A252B;
+                            textColor = 0xFF2DD4BF;
+                        } else if ("change".equals(type)) {
+                            bgColor = 0xFF2B1B0A;
+                            textColor = 0xFFF59E0B;
+                        } else if ("original".equals(type)) {
+                            bgColor = 0xFF171D26;
+                            textColor = 0xFF94A3B8;
+                        } else {
+                            bgColor = 0xFF1E293B;
+                            textColor = 0xFFF8FAFC;
+                        }
                     }
 
-                    // 칩 드로잉 (둥근 모서리도 위젯 크기에 비례 스케일링)
+                    // 칩 드로잉
                     paint.setStyle(Paint.Style.FILL);
                     paint.setColor(bgColor);
                     canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
 
                     // 칩 테두리 드로잉
                     paint.setStyle(Paint.Style.STROKE);
-                    paint.setColor(0x44FFFFFF);
+                    int strokeColor = isLight ? 0x22000000 : 0x44FFFFFF; // 테마에 따른 음영선
+                    paint.setColor(strokeColor);
                     paint.setStrokeWidth(1.5f * fontScale);
                     canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
 
@@ -166,7 +195,7 @@ public class LocalTimetableRenderer {
                     Paint.FontMetrics fm;
 
                     if (spanRows > 1) {
-                        // 세로 병합 칩 (글씨 크기 적응형 스케일)
+                        // 세로 병합 칩
                         paint.setTextSize(42f * fontScale);
                         fm = paint.getFontMetrics();
                         float titleOffset = (fm.descent + fm.ascent) / 2f;

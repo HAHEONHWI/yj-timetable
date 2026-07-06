@@ -13,9 +13,12 @@ import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,6 +43,11 @@ public class MainActivity extends Activity {
     private CheckBox chkMon, chkTue, chkWed, chkThu, chkFri;
     private CheckBox chkGrade1, chkGrade2, chkGrade3;
     private CheckBox chkSubEng, chkSubMath, chkSubKor, chkSubSci, chkSubSoc, chkSubHis, chkSubPe, chkSubMus;
+    
+    // 테마 설정 추가
+    private RadioGroup rgTheme;
+    private RadioButton rbThemeDark, rbThemeLight;
+    
     private Button btnSave;
 
     // 관리자 관련 컴포넌트
@@ -58,8 +66,16 @@ public class MainActivity extends Activity {
 
     // 학교 행사 등록 컴포넌트
     private EditText editEventDate;
+    private Spinner spnEventStart;
+    private Spinner spnEventEnd;
     private EditText editEventTitle;
     private EditText editEventDesc;
+    
+    // 행사 대상 학급 체크박스
+    private CheckBox chkEvClassAll;
+    private CheckBox[] chkEvClasses = new CheckBox[6];
+    private final String[] classNames = {"1-1", "1-2", "2-1", "2-2", "3-1", "3-2"};
+    
     private Button btnAddEvent;
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -98,6 +114,11 @@ public class MainActivity extends Activity {
         chkSubPe = (CheckBox) findViewById(R.id.chk_sub_pe);
         chkSubMus = (CheckBox) findViewById(R.id.chk_sub_mus);
 
+        // 테마 라디오 매핑
+        rgTheme = (RadioGroup) findViewById(R.id.rg_theme);
+        rbThemeDark = (RadioButton) findViewById(R.id.rb_theme_dark);
+        rbThemeLight = (RadioButton) findViewById(R.id.rb_theme_light);
+
         btnSave = (Button) findViewById(R.id.btn_save_native);
 
         // 관리자 UI 매핑
@@ -116,9 +137,31 @@ public class MainActivity extends Activity {
 
         // 학교 행사 UI 매핑
         editEventDate = (EditText) findViewById(R.id.edit_event_date);
+        spnEventStart = (Spinner) findViewById(R.id.spn_event_start);
+        spnEventEnd = (Spinner) findViewById(R.id.spn_event_end);
         editEventTitle = (EditText) findViewById(R.id.edit_event_title);
         editEventDesc = (EditText) findViewById(R.id.edit_event_desc);
+        
+        // 행사 적용 대상 체크박스 매핑
+        chkEvClassAll = (CheckBox) findViewById(R.id.chk_ev_class_all);
+        chkEvClasses[0] = (CheckBox) findViewById(R.id.chk_ev_class_1_1);
+        chkEvClasses[1] = (CheckBox) findViewById(R.id.chk_ev_class_1_2);
+        chkEvClasses[2] = (CheckBox) findViewById(R.id.chk_ev_class_2_1);
+        chkEvClasses[3] = (CheckBox) findViewById(R.id.chk_ev_class_2_2);
+        chkEvClasses[4] = (CheckBox) findViewById(R.id.chk_ev_class_3_1);
+        chkEvClasses[5] = (CheckBox) findViewById(R.id.chk_ev_class_3_2);
+
         btnAddEvent = (Button) findViewById(R.id.btn_add_event);
+
+        // 전체 학급 토글 체크 이벤트 연동
+        chkEvClassAll.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                for (CheckBox chk : chkEvClasses) {
+                    if (chk != null) chk.setChecked(isChecked);
+                }
+            }
+        });
 
         // 기존 설정값 로드 및 UI 체크 셋팅
         loadSavedSettings();
@@ -207,6 +250,14 @@ public class MainActivity extends Activity {
         chkSubHis.setChecked(subjects.contains("역사"));
         chkSubPe.setChecked(subjects.contains("체육"));
         chkSubMus.setChecked(subjects.contains("음악"));
+
+        // 테마 로드
+        String theme = prefs.getString("widget_theme", "dark");
+        if ("light".equals(theme)) {
+            rbThemeLight.setChecked(true);
+        } else {
+            rbThemeDark.setChecked(true);
+        }
     }
 
     private void saveSettings() {
@@ -250,6 +301,9 @@ public class MainActivity extends Activity {
         }
         String gradesStr = gradesBuilder.toString();
 
+        // 테마 확인
+        String themeStr = rbThemeLight.isChecked() ? "light" : "dark";
+
         // SharedPreferences 저장
         SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -257,6 +311,7 @@ public class MainActivity extends Activity {
         editor.putString("days", daysStr);
         editor.putString("subjects", subsStr);
         editor.putString("grades", gradesStr);
+        editor.putString("widget_theme", themeStr);
         editor.apply();
 
         Toast.makeText(this, "설정이 저장되어 위젯에 자동 동기화되었습니다.", Toast.LENGTH_SHORT).show();
@@ -402,7 +457,6 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 try {
-                    // 1단계: Supabase app_state 로딩
                     URL getUrl = new URL(SUPABASE_URL + "/rest/v1/app_state?id=eq.main&select=data");
                     HttpURLConnection getConn = (HttpURLConnection) getUrl.openConnection();
                     getConn.setRequestMethod("GET");
@@ -429,7 +483,6 @@ public class MainActivity extends Activity {
                                 rootState.put("changes", changes);
                             }
 
-                            // 2단계: changes 노드 추가
                             String key = date + "__" + className + "__" + period;
                             JSONObject changeNode = new JSONObject();
                             changeNode.put("date", date);
@@ -438,7 +491,6 @@ public class MainActivity extends Activity {
                             changeNode.put("subject", subject);
                             changes.put(key, changeNode);
 
-                            // 3단계: save-state 호출 저장
                             URL postUrl = new URL(SUPABASE_URL + "/functions/v1/save-state");
                             HttpURLConnection postConn = (HttpURLConnection) postUrl.openConnection();
                             postConn.setRequestMethod("POST");
@@ -488,11 +540,33 @@ public class MainActivity extends Activity {
 
     private void submitSchoolEvent() {
         final String date = editEventDate.getText().toString().trim();
+        final int startPeriod = spnEventStart.getSelectedItemPosition() + 1;
+        final int endPeriod = spnEventEnd.getSelectedItemPosition() + 1;
         final String title = editEventTitle.getText().toString().trim();
         final String desc = editEventDesc.getText().toString().trim();
 
+        // 선택된 적용 학급 추출
+        List<String> eventClasses = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            if (chkEvClasses[i] != null && chkEvClasses[i].isChecked()) {
+                eventClasses.add(classNames[i]);
+            }
+        }
+
+        // 아무것도 선택하지 않았으면 기본적으로 전체 학급 선택 처리
+        if (eventClasses.isEmpty()) {
+            for (String cn : classNames) {
+                eventClasses.add(cn);
+            }
+        }
+
         if (date.isEmpty() || title.isEmpty()) {
             Toast.makeText(this, "날짜와 행사 제목을 입력하세요.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (startPeriod > endPeriod) {
+            Toast.makeText(this, "시작 교시가 종료 교시보다 클 수 없습니다.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -509,7 +583,6 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 try {
-                    // 1단계: Supabase app_state 로드
                     URL getUrl = new URL(SUPABASE_URL + "/rest/v1/app_state?id=eq.main&select=data");
                     HttpURLConnection getConn = (HttpURLConnection) getUrl.openConnection();
                     getConn.setRequestMethod("GET");
@@ -536,12 +609,21 @@ public class MainActivity extends Activity {
                                 rootState.put("events", events);
                             }
 
-                            // 2단계: events 리스트에 새로운 행사 객체 주입 (UUID 자동 생성)
+                            // 2단계: events 리스트에 시작/종료교시 및 적용 대상 학급 배열 포함하여 주입
                             JSONObject eventObj = new JSONObject();
                             eventObj.put("id", UUID.randomUUID().toString());
                             eventObj.put("date", date);
+                            eventObj.put("start", startPeriod);
+                            eventObj.put("end", endPeriod);
                             eventObj.put("title", title);
                             eventObj.put("description", desc);
+                            
+                            // 적용 학급명 배열 주입
+                            JSONArray classesArr = new JSONArray();
+                            for (String clsName : eventClasses) {
+                                classesArr.put(clsName);
+                            }
+                            eventObj.put("classes", classesArr);
                             events.put(eventObj);
 
                             // 3단계: save-state API 전송
@@ -569,6 +651,13 @@ public class MainActivity extends Activity {
                                         Toast.makeText(MainActivity.this, "학교 행사가 등록되었습니다!", Toast.LENGTH_LONG).show();
                                         editEventTitle.setText("");
                                         editEventDesc.setText("");
+                                        
+                                        // 체크박스 초기화
+                                        chkEvClassAll.setChecked(false);
+                                        for (CheckBox chk : chkEvClasses) {
+                                            if (chk != null) chk.setChecked(false);
+                                        }
+
                                         loadTimetableGrid();
                                         saveSettings();
                                     } else {

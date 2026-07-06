@@ -38,11 +38,11 @@
     <!-- 실시간 조회 대시보드 (앱 내부 5x9 네이티브 시간표 텍스트 격자판) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="220dp"
+        android:layout_height="210dp"
         android:orientation="vertical"
         android:background="#334155"
         android:padding="1dp"
-        android:layout_margin="10dp">
+        android:layout_margin="8dp">
 
         <!-- 요일 헤더 -->
         <LinearLayout
@@ -58,7 +58,7 @@
             <TextView android:id="@+id/app_header_day_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="금" android:textColor="#f8fafc" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
         </LinearLayout>
 
-        <!-- 1~9교시 (ID: app_cell_d_p) -->
+        <!-- 1~9교시 -->
         <!-- 1교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="1" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
@@ -253,7 +253,7 @@
                 android:orientation="vertical"
                 android:background="#1e293b"
                 android:padding="12dp"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -286,6 +286,49 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- 5. 위젯 테마 모드 선택 카드 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1e293b"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="위젯 테마 설정 (다크/라이트)"
+                    android:textColor="#2dd4bf"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <RadioGroup
+                    android:id="@+id/rg_theme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <RadioButton
+                        android:id="@+id/rb_theme_dark"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="다크 모드"
+                        android:textColor="#f8fafc"
+                        android:textSize="13sp"
+                        android:checked="true" />
+                    <RadioButton
+                        android:id="@+id/rb_theme_light"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="라이트 모드"
+                        android:textColor="#f8fafc"
+                        android:textSize="13sp" />
+                </RadioGroup>
+            </LinearLayout>
+
             <!-- 실시간 동기화 저장 버튼 -->
             <Button
                 android:id="@+id/btn_save_native"
@@ -298,7 +341,7 @@
                 android:textSize="14sp"
                 android:layout_marginBottom="24dp" />
 
-            <!-- 5. 관리자 로그인 카드 -->
+            <!-- 6. 관리자 로그인 카드 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -358,7 +401,7 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- 6. 수업 변경 등록 카드 (로그인 성공 시 visible) -->
+            <!-- 7. 수업 변경 등록 카드 (로그인 성공 시 visible) -->
             <LinearLayout
                 android:id="@+id/card_admin_change"
                 android:layout_width="match_parent"
@@ -485,7 +528,7 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
-            <!-- 7. 학교 행사 등록 카드 (로그인 성공 시 visible) -->
+            <!-- 8. 학교 행사 등록 카드 (로그인 성공 시 visible) -->
             <LinearLayout
                 android:id="@+id/card_admin_event"
                 android:layout_width="match_parent"
@@ -527,6 +570,56 @@
                     android:focusable="false"
                     android:clickable="true"
                     android:layout_marginBottom="10dp" />
+
+                <!-- 행사 교시 선택 (시작/끝) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginRight="6dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="시작 교시"
+                            android:textColor="#94a3b8"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="4dp" />
+                        <Spinner
+                            android:id="@+id/spn_event_start"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:background="#0f172a"
+                            android:entries="@array/array_periods" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginLeft="6dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="종료 교시"
+                            android:textColor="#94a3b8"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="4dp" />
+                        <Spinner
+                            android:id="@+id/spn_event_end"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:background="#0f172a"
+                            android:entries="@array/array_periods" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <!-- 행사 제목 -->
                 <TextView
@@ -570,7 +663,45 @@
                     android:paddingHorizontal="10dp"
                     android:textSize="13sp"
                     android:singleLine="true"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="10dp" />
+
+                <!-- 행사 적용 대상 학급 다중 선택 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="행사 적용 학급"
+                    android:textColor="#94a3b8"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp" />
+
+                <CheckBox
+                    android:id="@+id/chk_ev_class_all"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="전체 학급 적용 (공통)"
+                    android:textColor="#2dd4bf"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="4dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="4dp">
+                    <CheckBox android:id="@+id/chk_ev_class_1_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="1-1" android:textColor="#f8fafc" android:textSize="12sp"/>
+                    <CheckBox android:id="@+id/chk_ev_class_1_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="1-2" android:textColor="#f8fafc" android:textSize="12sp"/>
+                    <CheckBox android:id="@+id/chk_ev_class_2_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="2-1" android:textColor="#f8fafc" android:textSize="12sp"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
+                    <CheckBox android:id="@+id/chk_ev_class_2_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="2-2" android:textColor="#f8fafc" android:textSize="12sp"/>
+                    <CheckBox android:id="@+id/chk_ev_class_3_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="3-1" android:textColor="#f8fafc" android:textSize="12sp"/>
+                    <CheckBox android:id="@+id/chk_ev_class_3_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="3-2" android:textColor="#f8fafc" android:textSize="12sp"/>
+                </LinearLayout>
 
                 <!-- 행사 등록 버튼 -->
                 <Button
