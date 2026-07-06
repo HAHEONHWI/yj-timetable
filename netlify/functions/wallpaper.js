@@ -241,6 +241,9 @@ function renderChip(match, x, y, width, height) {
 }
 
 function renderWallpaperSvg(state, query) {
+  const name = query.name || query.n || "";
+  const titleLabel = name ? `${name} 선생님의 이번 주 시간표` : "내 과목 주간표";
+  const titleSize = name ? (name.length > 5 ? 44 : 52) : 62;
   const subjects = splitParam(query.subjects || query.subject || query.s);
   const gradesBySubject = parseGradesParam(query.grades || query.grade || query.g, subjects);
   const selectedDays = splitParam(query.days || query.day || query.d);
@@ -326,7 +329,7 @@ function renderWallpaperSvg(state, query) {
   <circle cx="150" cy="2000" r="320" fill="#14b8a6" opacity="0.18" filter="url(#glow)" />
   <g font-family="Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
     ${renderText("용정 시간표", 64, 530, { size: 28, fill: "#64748b", weight: 900 })}
-    ${renderText("내 과목 주간표", 64, 594, { size: 62, fill: "#f8fafc", weight: 900 })}
+    ${renderText(titleLabel, 64, 594, { size: titleSize, fill: "#f8fafc", weight: 900 })}
     ${renderText(subjectLabel, 64, 640, { size: 28, fill: "#2dd4bf", weight: 900 })}
     ${renderText(gradeLabel, 64, 674, { size: 20, fill: "#64748b", weight: 800 })}
     <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
