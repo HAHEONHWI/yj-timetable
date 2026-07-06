@@ -31,6 +31,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,9 +43,10 @@ public class MainActivity extends Activity {
     private EditText editName;
     private CheckBox chkMon, chkTue, chkWed, chkThu, chkFri;
     private CheckBox chkGrade1, chkGrade2, chkGrade3;
-    private CheckBox chkSubEng, chkSubMath, chkSubKor, chkSubSci, chkSubSoc, chkSubHis, chkSubPe, chkSubMus;
     
-    // 테마 설정 추가
+    // 동적 과목 체크박스들을 얹어줄 컨테이너
+    private LinearLayout layoutSubjectsContainer;
+    
     private RadioGroup rgTheme;
     private RadioButton rbThemeDark, rbThemeLight;
     
@@ -71,7 +73,7 @@ public class MainActivity extends Activity {
     private EditText editEventTitle;
     private EditText editEventDesc;
     
-    // 행사 대상 학급 체크박스
+    // 행사 적용 대상 체크박스
     private CheckBox chkEvClassAll;
     private CheckBox[] chkEvClasses = new CheckBox[6];
     private final String[] classNames = {"1-1", "1-2", "2-1", "2-2", "3-1", "3-2"};
@@ -104,15 +106,8 @@ public class MainActivity extends Activity {
         chkGrade2 = (CheckBox) findViewById(R.id.chk_grade_2);
         chkGrade3 = (CheckBox) findViewById(R.id.chk_grade_3);
 
-        // 과목 체크박스 매핑
-        chkSubEng = (CheckBox) findViewById(R.id.chk_sub_eng);
-        chkSubMath = (CheckBox) findViewById(R.id.chk_sub_math);
-        chkSubKor = (CheckBox) findViewById(R.id.chk_sub_kor);
-        chkSubSci = (CheckBox) findViewById(R.id.chk_sub_sci);
-        chkSubSoc = (CheckBox) findViewById(R.id.chk_sub_soc);
-        chkSubHis = (CheckBox) findViewById(R.id.chk_sub_his);
-        chkSubPe = (CheckBox) findViewById(R.id.chk_sub_pe);
-        chkSubMus = (CheckBox) findViewById(R.id.chk_sub_mus);
+        // 동적 과목 컨테이너 매핑
+        layoutSubjectsContainer = (LinearLayout) findViewById(R.id.layout_subjects_container);
 
         // 테마 라디오 매핑
         rgTheme = (RadioGroup) findViewById(R.id.rg_theme);
@@ -153,7 +148,7 @@ public class MainActivity extends Activity {
 
         btnAddEvent = (Button) findViewById(R.id.btn_add_event);
 
-        // 스피너 커스텀 어댑터 바인딩 (다크/라이트 테마에 따른 스피너 텍스트 안보임 현상 해결)
+        // 스피너 커스텀 어댑터 바인딩
         android.widget.ArrayAdapter<CharSequence> classAdapter = android.widget.ArrayAdapter.createFromResource(
             this, R.array.array_classes, R.layout.spinner_item
         );
@@ -180,6 +175,13 @@ public class MainActivity extends Activity {
 
         // 기존 설정값 로드 및 UI 체크 셋팅
         loadSavedSettings();
+
+        // 캐시된 시간표가 있다면 미리 동적 과목 체크박스 그리기
+        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+        String cachedJson = prefs.getString("last_timetable_json", "");
+        if (!cachedJson.isEmpty()) {
+            buildDynamicSubjectCheckboxes(cachedJson);
+        }
 
         // 앱 내부 시간표 조회 대시보드 갱신
         loadTimetableGrid();
@@ -255,23 +257,64 @@ public class MainActivity extends Activity {
         chkGrade2.setChecked(grades.contains("2"));
         chkGrade3.setChecked(grades.contains("3"));
 
-        // 과목 체크 셋팅
-        String subjects = prefs.getString("subjects", "");
-        chkSubEng.setChecked(subjects.contains("영어"));
-        chkSubMath.setChecked(subjects.contains("수학"));
-        chkSubKor.setChecked(subjects.contains("국어"));
-        chkSubSci.setChecked(subjects.contains("과학"));
-        chkSubSoc.setChecked(subjects.contains("사회"));
-        chkSubHis.setChecked(subjects.contains("역사"));
-        chkSubPe.setChecked(subjects.contains("체육"));
-        chkSubMus.setChecked(subjects.contains("음악"));
-
         // 테마 로드
         String theme = prefs.getString("widget_theme", "dark");
         if ("light".equals(theme)) {
             rbThemeLight.setChecked(true);
         } else {
             rbThemeDark.setChecked(true);
+        }
+    }
+
+    // 기본시간표 데이터 캐시로부터 고유 개설 과목 목록을 추출하여 동적 체크박스로 구성하는 핵심 엔진
+    private void buildDynamicSubjectCheckboxes(String jsonString) {
+        if (jsonString == null || jsonString.isEmpty()) return;
+        try {
+            JSONObject root = new JSONObject(jsonString);
+            JSONArray gridArr = root.getJSONArray("grid");
+            
+            // 중복 배제 가나다 오름차순 정렬용 TreeSet
+            TreeSet<String> uniqueSubjects = new TreeSet<>();
+            for (int d = 0; d < gridArr.length(); d++) {
+                JSONArray dayRow = gridArr.optJSONArray(d);
+                if (dayRow == null) continue;
+                for (int p = 0; p < dayRow.length(); p++) {
+                    JSONArray cellMatches = dayRow.optJSONArray(p);
+                    if (cellMatches == null) continue;
+                    for (int m = 0; m < cellMatches.length(); m++) {
+                        JSONObject match = cellMatches.getJSONObject(m);
+                        String title = match.getString("title");
+                        if (title != null && !title.isEmpty() && !"-".equals(title)) {
+                            uniqueSubjects.add(title);
+                        }
+                    }
+                }
+            }
+
+            // 기존 체크박스 삭제 클리어
+            layoutSubjectsContainer.removeAllViews();
+            
+            // 기존에 선택 및 저장되어 있었던 과목 목록 로드
+            SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+            String savedSubjects = prefs.getString("subjects", "");
+            
+            // 과목 리스트 루프 돌며 동적 체크박스 생성
+            for (final String subject : uniqueSubjects) {
+                CheckBox chk = new CheckBox(this);
+                chk.setText(subject);
+                chk.setTextColor(0xFFF8FAFC);
+                chk.setTextSize(13.5f);
+                chk.setPadding(6, 10, 6, 10);
+                
+                // 콤마 구분값 내 존재 여부에 따라 자동 체크 상태 복원
+                if (savedSubjects.contains(subject)) {
+                    chk.setChecked(true);
+                }
+                
+                layoutSubjectsContainer.addView(chk);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -288,40 +331,16 @@ public class MainActivity extends Activity {
         if (chkFri.isChecked()) selectedDays.add("fri");
         String daysStr = joinList(selectedDays, ",");
 
-        // 과목 빌드
+        // 동적으로 띄워진 체크박스들로부터 선택 과목명들을 정밀 수집
         List<String> selectedSubs = new ArrayList<>();
-        if (chkSubEng.isChecked()) selectedSubs.add("영어");
-        if (chkSubMath.isChecked()) selectedSubs.add("수학");
-        if (chkSubKor.isChecked()) selectedSubs.add("국어");
-        if (chkSubSci.isChecked()) selectedSubs.add("과학");
-        if (chkSubSoc.isChecked()) selectedSubs.add("사회");
-        if (chkSubHis.isChecked()) selectedSubs.add("역사");
-        if (chkSubPe.isChecked()) selectedSubs.add("체육");
-        if (chkSubMus.isChecked()) selectedSubs.add("음악");
-        // 선생님 이름이 과목명에 일부 포함된 모든 과목들을 기본 시간표 캐시에서 자동 스캔하여 추가
-        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
-        String jsonCache = prefs.getString("last_timetable_json", "");
-        if (!jsonCache.isEmpty() && !name.isEmpty()) {
-            try {
-                JSONObject root = new JSONObject(jsonCache);
-                JSONArray gridArr = root.getJSONArray("grid");
-                for (int d = 0; d < gridArr.length(); d++) {
-                    JSONArray dayRow = gridArr.optJSONArray(d);
-                    if (dayRow == null) continue;
-                    for (int p = 0; p < dayRow.length(); p++) {
-                        JSONArray cellMatches = dayRow.optJSONArray(p);
-                        if (cellMatches == null) continue;
-                        for (int m = 0; m < cellMatches.length(); m++) {
-                            JSONObject match = cellMatches.getJSONObject(m);
-                            String title = match.getString("title");
-                            if (title.contains(name) && !selectedSubs.contains(title)) {
-                                selectedSubs.add(title);
-                            }
-                        }
-                    }
+        int childCount = layoutSubjectsContainer.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            View child = layoutSubjectsContainer.getChildAt(i);
+            if (child instanceof CheckBox) {
+                CheckBox chk = (CheckBox) child;
+                if (chk.isChecked()) {
+                    selectedSubs.add(chk.getText().toString());
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
         String subsStr = joinList(selectedSubs, ",");
@@ -346,6 +365,7 @@ public class MainActivity extends Activity {
         String themeStr = rbThemeLight.isChecked() ? "light" : "dark";
 
         // SharedPreferences 저장
+        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("name", name);
         editor.putString("days", daysStr);
@@ -585,7 +605,6 @@ public class MainActivity extends Activity {
         final String title = editEventTitle.getText().toString().trim();
         final String desc = editEventDesc.getText().toString().trim();
 
-        // 선택된 적용 학급 추출
         List<String> eventClasses = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
             if (chkEvClasses[i] != null && chkEvClasses[i].isChecked()) {
@@ -593,7 +612,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        // 아무것도 선택하지 않았으면 기본적으로 전체 학급 선택 처리
         if (eventClasses.isEmpty()) {
             for (String cn : classNames) {
                 eventClasses.add(cn);
@@ -649,7 +667,6 @@ public class MainActivity extends Activity {
                                 rootState.put("events", events);
                             }
 
-                            // 2단계: events 리스트에 시작/종료교시 및 적용 대상 학급 배열 포함하여 주입
                             JSONObject eventObj = new JSONObject();
                             eventObj.put("id", UUID.randomUUID().toString());
                             eventObj.put("date", date);
@@ -658,7 +675,6 @@ public class MainActivity extends Activity {
                             eventObj.put("title", title);
                             eventObj.put("description", desc);
                             
-                            // 적용 학급명 배열 주입
                             JSONArray classesArr = new JSONArray();
                             for (String clsName : eventClasses) {
                                 classesArr.put(clsName);
@@ -666,7 +682,6 @@ public class MainActivity extends Activity {
                             eventObj.put("classes", classesArr);
                             events.put(eventObj);
 
-                            // 3단계: save-state API 전송
                             URL postUrl = new URL(SUPABASE_URL + "/functions/v1/save-state");
                             HttpURLConnection postConn = (HttpURLConnection) postUrl.openConnection();
                             postConn.setRequestMethod("POST");
@@ -692,7 +707,6 @@ public class MainActivity extends Activity {
                                         editEventTitle.setText("");
                                         editEventDesc.setText("");
                                         
-                                        // 체크박스 초기화
                                         chkEvClassAll.setChecked(false);
                                         for (CheckBox chk : chkEvClasses) {
                                             if (chk != null) chk.setChecked(false);
@@ -727,7 +741,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 try {
-                    SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+                    final SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
                     String name = prefs.getString("name", "최세영");
                     String subjects = prefs.getString("subjects", "");
                     String grades = prefs.getString("grades", "");
@@ -765,6 +779,9 @@ public class MainActivity extends Activity {
                                 SharedPreferences.Editor editor = prefs.edit();
                                 editor.putString("last_timetable_json", jsonString);
                                 editor.apply();
+
+                                // 동적 과목 체크박스 뷰들 새로 채우기
+                                buildDynamicSubjectCheckboxes(jsonString);
 
                                 updateAppGrid(jsonString);
                             }
@@ -808,17 +825,17 @@ public class MainActivity extends Activity {
                         
                         // 타입별 다크 테마 배경 및 텍스트 도색
                         if ("event".equals(type)) {
-                            cellView.setBackgroundColor(0xFF0A252B); // 민트 어두움
-                            cellView.setTextColor(0xFF2DD4BF); // 민트 텍스트
+                            cellView.setBackgroundColor(0xFF0A252B);
+                            cellView.setTextColor(0xFF2DD4BF);
                         } else if ("change".equals(type)) {
-                            cellView.setBackgroundColor(0xFF2B1B0A); // 오렌지 어두움
-                            cellView.setTextColor(0xFFF59E0B); // 오렌지 텍스트
+                            cellView.setBackgroundColor(0xFF2B1B0A);
+                            cellView.setTextColor(0xFFF59E0B);
                         } else if ("original".equals(type)) {
-                            cellView.setBackgroundColor(0xFF171D26); // 회색 어두움
-                            cellView.setTextColor(0xFF94A3B8); // 회색 텍스트
+                            cellView.setBackgroundColor(0xFF171D26);
+                            cellView.setTextColor(0xFF94A3B8);
                         } else {
-                            cellView.setBackgroundColor(0xFF1E293B); // 기본 남색
-                            cellView.setTextColor(0xFFF8FAFC); // 기본 흰색
+                            cellView.setBackgroundColor(0xFF1E293B);
+                            cellView.setTextColor(0xFFF8FAFC);
                         }
                     } else {
                         cellView.setText("");

@@ -16,7 +16,7 @@
             android:id="@+id/app_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="용정시간표 조회 및 설정"
+            android:text="용정시간표 모바일"
             android:textColor="#2dd4bf"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -59,7 +59,6 @@
         </LinearLayout>
 
         <!-- 1~9교시 -->
-        <!-- 1교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="1" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -68,7 +67,6 @@
             <TextView android:id="@+id/app_cell_3_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_4_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
         </LinearLayout>
-        <!-- 2교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="2" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -77,7 +75,6 @@
             <TextView android:id="@+id/app_cell_3_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_4_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
         </LinearLayout>
-        <!-- 3교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="3" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -86,7 +83,6 @@
             <TextView android:id="@+id/app_cell_3_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_4_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
         </LinearLayout>
-        <!-- 4교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="4" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -95,7 +91,6 @@
             <TextView android:id="@+id/app_cell_3_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_4_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
         </LinearLayout>
-        <!-- 5교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="5" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -104,7 +99,6 @@
             <TextView android:id="@+id/app_cell_3_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_4_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
         </LinearLayout>
-        <!-- 6교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="6" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -113,7 +107,6 @@
             <TextView android:id="@+id/app_cell_3_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_4_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
         </LinearLayout>
-        <!-- 7교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="7" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -122,7 +115,6 @@
             <TextView android:id="@+id/app_cell_3_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_4_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
         </LinearLayout>
-        <!-- 8교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="8" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -131,7 +123,6 @@
             <TextView android:id="@+id/app_cell_3_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_4_7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
         </LinearLayout>
-        <!-- 9교시 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
             <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:text="9" android:textColor="#94a3b8" android:textSize="10sp" android:textStyle="bold" android:gravity="center" android:background="#0f172a" android:layout_margin="0.5dp" />
             <TextView android:id="@+id/app_cell_0_8" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:textColor="#f8fafc" android:textSize="8sp" android:gravity="center" android:background="#1e293b" android:layout_margin="0.5dp" />
@@ -246,7 +237,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 4. 강조 과목 다중 선택 카드 -->
+            <!-- 4. [동적] 담당 과목 다중 선택 카드 (하드코딩 제거, 컨테이너 뷰 도입) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -264,26 +255,12 @@
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
 
+                <!-- 동적으로 개설된 모든 과목 체크박스들이 얹어질 공간 -->
                 <LinearLayout
+                    android:id="@+id/layout_subjects_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="4dp">
-                    <CheckBox android:id="@+id/chk_sub_eng" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="영어" android:textColor="#f8fafc" android:textSize="12sp"/>
-                    <CheckBox android:id="@+id/chk_sub_math" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="수학" android:textColor="#f8fafc" android:textSize="12sp"/>
-                    <CheckBox android:id="@+id/chk_sub_kor" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="국어" android:textColor="#f8fafc" android:textSize="12sp"/>
-                    <CheckBox android:id="@+id/chk_sub_sci" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="과학" android:textColor="#f8fafc" android:textSize="12sp"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <CheckBox android:id="@+id/chk_sub_soc" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="사회" android:textColor="#f8fafc" android:textSize="12sp"/>
-                    <CheckBox android:id="@+id/chk_sub_his" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="역사" android:textColor="#f8fafc" android:textSize="12sp"/>
-                    <CheckBox android:id="@+id/chk_sub_pe" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="체육" android:textColor="#f8fafc" android:textSize="12sp"/>
-                    <CheckBox android:id="@+id/chk_sub_mus" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="음악" android:textColor="#f8fafc" android:textSize="12sp"/>
-                </LinearLayout>
+                    android:orientation="vertical" />
             </LinearLayout>
 
             <!-- 5. 위젯 테마 모드 선택 카드 -->
@@ -401,7 +378,7 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- 7. 수업 변경 등록 카드 (로그인 성공 시 visible) -->
+            <!-- 7. 수업 변경 등록 카드 -->
             <LinearLayout
                 android:id="@+id/card_admin_change"
                 android:layout_width="match_parent"
@@ -444,7 +421,7 @@
                     android:clickable="true"
                     android:layout_marginBottom="10dp" />
 
-                <!-- 학급 및 교시 선택 (가로 정렬) -->
+                <!-- 학급 및 교시 선택 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -528,7 +505,7 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
-            <!-- 8. 학교 행사 등록 카드 (로그인 성공 시 visible) -->
+            <!-- 8. 학교 행사 등록 카드 -->
             <LinearLayout
                 android:id="@+id/card_admin_event"
                 android:layout_width="match_parent"
@@ -571,7 +548,7 @@
                     android:clickable="true"
                     android:layout_marginBottom="10dp" />
 
-                <!-- 행사 교시 선택 (시작/끝) -->
+                <!-- 행사 교시 선택 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
