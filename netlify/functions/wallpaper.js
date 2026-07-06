@@ -224,10 +224,10 @@ function renderText(text, x, y, options = {}) {
 }
 
 function chipColors(type) {
-  if (type === "change") return { bg: "#fef3c7", line: "#f59e0b", fg: "#451a03", note: "#92400e" };
-  if (type === "original") return { bg: "#f1f5f9", line: "#94a3b8", fg: "#334155", note: "#64748b" };
-  if (type === "event" || type === "merge") return { bg: "#ccfbf1", line: "#14b8a6", fg: "#134e4a", note: "#0f766e" };
-  return { bg: "#ffffff", line: "#0f172a", fg: "#0f172a", note: "#475569" };
+  if (type === "change") return { bg: "rgba(245, 158, 11, 0.18)", line: "#f59e0b", fg: "#fef3c7", note: "#fbbf24" };
+  if (type === "original") return { bg: "rgba(148, 163, 184, 0.18)", line: "#94a3b8", fg: "#cbd5e1", note: "#94a3b8" };
+  if (type === "event" || type === "merge") return { bg: "rgba(20, 184, 166, 0.18)", line: "#14b8a6", fg: "#ccfbf1", note: "#2dd4bf" };
+  return { bg: "rgba(30, 41, 59, 0.6)", line: "#475569", fg: "#e2e8f0", note: "#94a3b8" };
 }
 
 function renderChip(match, x, y, width, height) {
@@ -263,9 +263,9 @@ function renderWallpaperSvg(state, query) {
       const x = tableX + periodWidth + index * dayWidth;
       const isToday = day.iso === today;
       return `
-        <rect x="${x}" y="${tableY}" width="${dayWidth}" height="${headerHeight}" fill="${isToday ? "#134e4a" : "#0b0f18"}" stroke="#f8fafc" stroke-width="3" />
+        <rect x="${x}" y="${tableY}" width="${dayWidth}" height="${headerHeight}" fill="${isToday ? "#1e293b" : "#0f172a"}" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
         ${renderText(day.weekday.label, x + dayWidth / 2, tableY + 34, { size: 28, anchor: "middle", weight: 900 })}
-        ${renderText(formatDate(day.iso), x + dayWidth / 2, tableY + 62, { size: 18, fill: "#cbd5e1", anchor: "middle", weight: 800 })}
+        ${renderText(formatDate(day.iso), x + dayWidth / 2, tableY + 62, { size: 18, fill: isToday ? "#2dd4bf" : "#64748b", anchor: "middle", weight: 800 })}
       `;
     })
     .join("");
@@ -274,9 +274,9 @@ function renderWallpaperSvg(state, query) {
     .map((period, periodIndex) => {
       const y = tableY + headerHeight + periodIndex * rowHeight;
       const periodCell = `
-        <rect x="${tableX}" y="${y}" width="${periodWidth}" height="${rowHeight}" fill="#0b0f18" stroke="#f8fafc" stroke-width="3" />
+        <rect x="${tableX}" y="${y}" width="${periodWidth}" height="${rowHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
         ${renderText(`P${period}`, tableX + periodWidth / 2, y + 66, { size: 28, anchor: "middle", weight: 900 })}
-        ${renderText(`${period}교시`, tableX + periodWidth / 2, y + 96, { size: 15, fill: "#cbd5e1", anchor: "middle", weight: 800 })}
+        ${renderText(`${period}교시`, tableX + periodWidth / 2, y + 96, { size: 15, fill: "#64748b", anchor: "middle", weight: 800 })}
       `;
       const dayCells = days
         .map((day, dayIndex) => {
@@ -298,46 +298,48 @@ function renderWallpaperSvg(state, query) {
             matches.length > 4
               ? renderText(`+${matches.length - 4}`, x + dayWidth - 22, y + rowHeight - 14, {
                   size: 18,
-                  fill: "#64748b",
+                  fill: "#94a3b8",
                   anchor: "end",
                 })
               : "";
-          return `<rect x="${x}" y="${y}" width="${dayWidth}" height="${rowHeight}" fill="#ffffff" stroke="#0f172a" stroke-width="3" />${chips}${overflow}`;
+          return `<rect x="${x}" y="${y}" width="${dayWidth}" height="${rowHeight}" fill="#1e293b" fill-opacity="0.4" stroke="#334155" stroke-width="2" />${chips}${overflow}`;
         })
         .join("");
       return periodCell + dayCells;
     })
     .join("");
 
-  const subjectLabel = subjects.length ? subjects.join(", ") : "subjects 파라미터 필요";
+  const subjectLabel = subjects.length ? subjects.join(", ") : "선택된 과목이 없습니다.";
   const gradeLabel = subjects
     .map((subject) => `${subject} ${normalizedGrades(gradesBySubject[subject]).join("")}학년`)
     .join(" · ");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1170" height="2532" viewBox="0 0 1170 2532">
-  <rect width="1170" height="2532" fill="#f8fafc" />
-  <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
-    <path d="M 34 0 L 0 0 0 34" fill="none" stroke="#e2e8f0" stroke-width="2"/>
-  </pattern>
-  <rect width="1170" height="2532" fill="url(#grid)" />
-  <circle cx="76" cy="356" r="240" fill="#fde68a" opacity="0.72" />
-  <circle cx="1048" cy="390" r="210" fill="#fca5a5" opacity="0.55" />
-  <circle cx="1080" cy="2260" r="310" fill="#fde68a" opacity="0.75" />
-  <circle cx="120" cy="2220" r="260" fill="#5eead4" opacity="0.7" />
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="90" />
+    </filter>
+  </defs>
+  <rect width="1170" height="2532" fill="#090d16" />
+  <circle cx="120" cy="350" r="300" fill="#3b82f6" opacity="0.22" filter="url(#glow)" />
+  <circle cx="1000" cy="450" r="280" fill="#8b5cf6" opacity="0.18" filter="url(#glow)" />
+  <circle cx="1000" cy="2100" r="350" fill="#ec4899" opacity="0.15" filter="url(#glow)" />
+  <circle cx="150" cy="2000" r="320" fill="#14b8a6" opacity="0.18" filter="url(#glow)" />
   <g font-family="Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
-    ${renderText("용정 시간표", 64, 78, { size: 28, fill: "#475569", weight: 900 })}
-    ${renderText("내 과목 주간표", 64, 142, { size: 62, fill: "#0f172a", weight: 900 })}
-    ${renderText(subjectLabel, 64, 184, { size: 28, fill: "#0f766e", weight: 900 })}
+    ${renderText("용정 시간표", 64, 78, { size: 28, fill: "#64748b", weight: 900 })}
+    ${renderText("내 과목 주간표", 64, 142, { size: 62, fill: "#f8fafc", weight: 900 })}
+    ${renderText(subjectLabel, 64, 184, { size: 28, fill: "#2dd4bf", weight: 900 })}
     ${renderText(gradeLabel, 64, 218, { size: 20, fill: "#64748b", weight: 800 })}
-    <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0b0f18" stroke="#f8fafc" stroke-width="3" />
-    ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, anchor: "middle", weight: 900 })}
+    <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
+    ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f8fafc", anchor: "middle", weight: 900 })}
     ${headerCells}
     ${rows}
-    <rect x="0" y="1824" width="1170" height="78" fill="#0b0f18" />
-    ${renderText("변경: 노란색 · 원래 있던 수업이 변경된 경우: 회색", 585, 1874, {
-      size: 24,
+    <rect x="46" y="1814" width="1078" height="78" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="2" rx="12" />
+    ${renderText("수업 변경: 주황색 · 취소된 원래 수업: 회색 · 행사: 민트색", 585, 1860, {
+      size: 20,
+      fill: "#94a3b8",
       anchor: "middle",
-      weight: 900,
+      weight: 800,
     })}
     ${renderText(`업데이트 ${today}`, 585, 2470, { size: 24, fill: "#475569", anchor: "middle" })}
   </g>
