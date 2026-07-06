@@ -28,6 +28,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.json.JSONArray;
@@ -46,6 +47,7 @@ public class MainActivity extends Activity {
     private Button btnAdminLogin;
     private TextView txtAdminStatus;
     private LinearLayout cardAdminChange;
+    private LinearLayout cardAdminEvent;
 
     // 수업 변경 등록 컴포넌트
     private EditText editChangeDate;
@@ -54,12 +56,17 @@ public class MainActivity extends Activity {
     private EditText editChangeSubject;
     private Button btnAddChange;
 
+    // 학교 행사 등록 컴포넌트
+    private EditText editEventDate;
+    private EditText editEventTitle;
+    private EditText editEventDesc;
+    private Button btnAddEvent;
+
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private static final String SUPABASE_URL = "https://jzcectvzwbfvbgiszjkt.supabase.co";
     private static final String SUPABASE_KEY = "sb_publishable_JgPxLeD5pJjk46GnS-n3ZQ_gzZmIIuq";
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +105,7 @@ public class MainActivity extends Activity {
         btnAdminLogin = (Button) findViewById(R.id.btn_admin_login);
         txtAdminStatus = (TextView) findViewById(R.id.txt_admin_status);
         cardAdminChange = (LinearLayout) findViewById(R.id.card_admin_change);
+        cardAdminEvent = (LinearLayout) findViewById(R.id.card_admin_event);
 
         // 수업 변경 UI 매핑
         editChangeDate = (EditText) findViewById(R.id.edit_change_date);
@@ -105,6 +113,12 @@ public class MainActivity extends Activity {
         spnChangePeriod = (Spinner) findViewById(R.id.spn_change_period);
         editChangeSubject = (EditText) findViewById(R.id.edit_change_subject);
         btnAddChange = (Button) findViewById(R.id.btn_add_change);
+
+        // 학교 행사 UI 매핑
+        editEventDate = (EditText) findViewById(R.id.edit_event_date);
+        editEventTitle = (EditText) findViewById(R.id.edit_event_title);
+        editEventDesc = (EditText) findViewById(R.id.edit_event_desc);
+        btnAddEvent = (Button) findViewById(R.id.btn_add_event);
 
         // 기존 설정값 로드 및 UI 체크 셋팅
         loadSavedSettings();
@@ -132,7 +146,14 @@ public class MainActivity extends Activity {
         editChangeDate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showDatePicker();
+                showDatePicker(editChangeDate);
+            }
+        });
+
+        editEventDate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showDatePicker(editEventDate);
             }
         });
 
@@ -141,6 +162,14 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 submitClassChange();
+            }
+        });
+
+        // 학교 행사 등록 버튼 이벤트
+        btnAddEvent.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                submitSchoolEvent();
             }
         });
 
@@ -250,9 +279,10 @@ public class MainActivity extends Activity {
         SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         String savedPw = prefs.getString("admin_pw", "");
         if (!savedPw.isEmpty()) {
-            txtAdminStatus.setText("관리자 권한 획득 성공 (수업 변경 가능)");
+            txtAdminStatus.setText("관리자 권한 획득 성공 (수업 변경 및 행사 관리 가능)");
             txtAdminStatus.setTextColor(0xFF2DD4BF);
             cardAdminChange.setVisibility(View.VISIBLE);
+            cardAdminEvent.setVisibility(View.VISIBLE);
         }
     }
 
@@ -304,15 +334,17 @@ public class MainActivity extends Activity {
                                     SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
                                     prefs.edit().putString("admin_pw", pw).apply();
 
-                                    txtAdminStatus.setText("관리자 권한 획득 성공 (수업 변경 가능)");
+                                    txtAdminStatus.setText("관리자 권한 획득 성공 (수업 변경 및 행사 관리 가능)");
                                     txtAdminStatus.setTextColor(0xFF2DD4BF);
                                     cardAdminChange.setVisibility(View.VISIBLE);
+                                    cardAdminEvent.setVisibility(View.VISIBLE);
                                     editAdminPw.setText("");
                                     Toast.makeText(MainActivity.this, "관리자 로그인 성공!", Toast.LENGTH_SHORT).show();
                                 } else {
                                     txtAdminStatus.setText("비밀번호 불일치 (권한 없음)");
                                     txtAdminStatus.setTextColor(0xFFEF4444);
                                     cardAdminChange.setVisibility(View.GONE);
+                                    cardAdminEvent.setVisibility(View.GONE);
                                     Toast.makeText(MainActivity.this, "비밀번호가 올바르지 않습니다.", Toast.LENGTH_SHORT).show();
                                 }
                             }
@@ -334,13 +366,13 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void showDatePicker() {
+    private void showDatePicker(final EditText target) {
         Calendar cal = Calendar.getInstance();
         DatePickerDialog dialog = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
             @Override
             public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
                 String formatted = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth);
-                editChangeDate.setText(formatted);
+                target.setText(formatted);
             }
         }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH));
         dialog.show();
@@ -370,7 +402,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 try {
-                    // 1단계: Supabase app_state에서 id=eq.main 레코드의 data 데이터 로드 (GET)
+                    // 1단계: Supabase app_state 로딩
                     URL getUrl = new URL(SUPABASE_URL + "/rest/v1/app_state?id=eq.main&select=data");
                     HttpURLConnection getConn = (HttpURLConnection) getUrl.openConnection();
                     getConn.setRequestMethod("GET");
@@ -397,7 +429,7 @@ public class MainActivity extends Activity {
                                 rootState.put("changes", changes);
                             }
 
-                            // 2단계: changes 객체에 수업 변경 노드 갱신
+                            // 2단계: changes 노드 추가
                             String key = date + "__" + className + "__" + period;
                             JSONObject changeNode = new JSONObject();
                             changeNode.put("date", date);
@@ -406,7 +438,7 @@ public class MainActivity extends Activity {
                             changeNode.put("subject", subject);
                             changes.put(key, changeNode);
 
-                            // 3단계: save-state Edge Function을 호출하여 state 통째 갱신 (POST)
+                            // 3단계: save-state 호출 저장
                             URL postUrl = new URL(SUPABASE_URL + "/functions/v1/save-state");
                             HttpURLConnection postConn = (HttpURLConnection) postUrl.openConnection();
                             postConn.setRequestMethod("POST");
@@ -430,12 +462,117 @@ public class MainActivity extends Activity {
                                     if (postCode == HttpURLConnection.HTTP_OK) {
                                         Toast.makeText(MainActivity.this, "수업 변경 등록이 완료되었습니다!", Toast.LENGTH_LONG).show();
                                         editChangeSubject.setText("");
-                                        
-                                        // 앱 및 바탕화면 위젯 연쇄 최신화 기동
                                         loadTimetableGrid();
                                         saveSettings();
                                     } else {
-                                        Toast.makeText(MainActivity.this, "DB 저장 실패 (암호 권한 에러)", Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(MainActivity.this, "DB 저장 실패 (권한 에러)", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            });
+                            postConn.disconnect();
+                        }
+                    }
+                    getConn.disconnect();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "DB 통신 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void submitSchoolEvent() {
+        final String date = editEventDate.getText().toString().trim();
+        final String title = editEventTitle.getText().toString().trim();
+        final String desc = editEventDesc.getText().toString().trim();
+
+        if (date.isEmpty() || title.isEmpty()) {
+            Toast.makeText(this, "날짜와 행사 제목을 입력하세요.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+        final String password = prefs.getString("admin_pw", "");
+        if (password.isEmpty()) {
+            Toast.makeText(this, "관리자 권한이 만료되었습니다. 다시 로그인하세요.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this, "학교 행사 데이터베이스 반영 중...", Toast.LENGTH_SHORT).show();
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // 1단계: Supabase app_state 로드
+                    URL getUrl = new URL(SUPABASE_URL + "/rest/v1/app_state?id=eq.main&select=data");
+                    HttpURLConnection getConn = (HttpURLConnection) getUrl.openConnection();
+                    getConn.setRequestMethod("GET");
+                    getConn.setRequestProperty("apikey", SUPABASE_KEY);
+                    getConn.setRequestProperty("Authorization", "Bearer " + SUPABASE_KEY);
+                    getConn.connect();
+
+                    if (getConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                        InputStream in = getConn.getInputStream();
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, length);
+                        }
+                        in.close();
+
+                        JSONArray rows = new JSONArray(out.toString("UTF-8"));
+                        if (rows.length() > 0) {
+                            JSONObject rootState = rows.getJSONObject(0).getJSONObject("data");
+                            JSONArray events = rootState.optJSONArray("events");
+                            if (events == null) {
+                                events = new JSONArray();
+                                rootState.put("events", events);
+                            }
+
+                            // 2단계: events 리스트에 새로운 행사 객체 주입 (UUID 자동 생성)
+                            JSONObject eventObj = new JSONObject();
+                            eventObj.put("id", UUID.randomUUID().toString());
+                            eventObj.put("date", date);
+                            eventObj.put("title", title);
+                            eventObj.put("description", desc);
+                            events.put(eventObj);
+
+                            // 3단계: save-state API 전송
+                            URL postUrl = new URL(SUPABASE_URL + "/functions/v1/save-state");
+                            HttpURLConnection postConn = (HttpURLConnection) postUrl.openConnection();
+                            postConn.setRequestMethod("POST");
+                            postConn.setRequestProperty("apikey", SUPABASE_KEY);
+                            postConn.setRequestProperty("Authorization", "Bearer " + SUPABASE_KEY);
+                            postConn.setRequestProperty("Content-Type", "application/json");
+                            postConn.setDoOutput(true);
+
+                            JSONObject postBody = new JSONObject();
+                            postBody.put("password", password);
+                            postBody.put("state", rootState);
+
+                            OutputStream os = postConn.getOutputStream();
+                            os.write(postBody.toString().getBytes("UTF-8"));
+                            os.close();
+
+                            final int postCode = postConn.getResponseCode();
+                            mainHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (postCode == HttpURLConnection.HTTP_OK) {
+                                        Toast.makeText(MainActivity.this, "학교 행사가 등록되었습니다!", Toast.LENGTH_LONG).show();
+                                        editEventTitle.setText("");
+                                        editEventDesc.setText("");
+                                        loadTimetableGrid();
+                                        saveSettings();
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "행사 등록 실패 (암호 불일치)", Toast.LENGTH_SHORT).show();
                                     }
                                 }
                             });

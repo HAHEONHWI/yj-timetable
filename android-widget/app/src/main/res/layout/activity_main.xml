@@ -353,7 +353,7 @@
                     android:id="@+id/txt_admin_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="비로그인 상태 (수업 변경 불가)"
+                    android:text="비로그인 상태 (변경 불가)"
                     android:textColor="#94a3b8"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -367,7 +367,7 @@
                 android:background="#1e293b"
                 android:padding="12dp"
                 android:visibility="gone"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -480,6 +480,105 @@
                     android:layout_height="44dp"
                     android:background="#f59e0b"
                     android:text="수업 변경사항 DB 등록"
+                    android:textColor="#0f172a"
+                    android:textStyle="bold"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <!-- 7. 학교 행사 등록 카드 (로그인 성공 시 visible) -->
+            <LinearLayout
+                android:id="@+id/card_admin_event"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1e293b"
+                android:padding="12dp"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="학교 행사 등록 (관리자)"
+                    android:textColor="#2dd4bf"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- 행사 날짜 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="행사 날짜"
+                    android:textColor="#94a3b8"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_event_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="#0f172a"
+                    android:textColor="#f8fafc"
+                    android:hint="터치하여 날짜 선택 (YYYY-MM-DD)"
+                    android:textColorHint="#475569"
+                    android:paddingHorizontal="10dp"
+                    android:textSize="13sp"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- 행사 제목 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="행사 제목"
+                    android:textColor="#94a3b8"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_event_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="#0f172a"
+                    android:textColor="#f8fafc"
+                    android:hint="예: 중간고사"
+                    android:textColorHint="#475569"
+                    android:paddingHorizontal="10dp"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- 행사 설명 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="행사 상세 설명"
+                    android:textColor="#94a3b8"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_event_desc"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="#0f172a"
+                    android:textColor="#f8fafc"
+                    android:hint="예: 1~3학년 전체 대상"
+                    android:textColorHint="#475569"
+                    android:paddingHorizontal="10dp"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- 행사 등록 버튼 -->
+                <Button
+                    android:id="@+id/btn_add_event"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:background="#2dd4bf"
+                    android:text="학교 행사 DB 등록"
                     android:textColor="#0f172a"
                     android:textStyle="bold"
                     android:textSize="13sp" />
