@@ -52,27 +52,27 @@ public class LocalTimetableRenderer {
                 canvas.drawLine(0, y, 1200, y, paint);
             }
 
-            // 5. 헤더 텍스트 드로잉 (요일 및 교시 라벨)
+            // 5. 헤더 텍스트 드로잉 (요일 및 교시 라벨) - 글씨 크기 대폭 상향
             paint.setStyle(Paint.Style.FILL);
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
 
             // 요일 그리기
             paint.setColor(0xFFF8FAFC); // 흰색
-            paint.setTextSize(32f);
+            paint.setTextSize(40f); // 32f -> 40f
             String[] dayLabels = {"월", "화", "수", "목", "금"};
             for (int i = 0; i < 5; i++) {
                 float x = leftMargin + i * colWidth + (colWidth / 2f);
-                float y = topMargin / 2f + 12f; // 요일 세로 중앙
+                float y = topMargin / 2f + 14f; // 요일 세로 중앙 보정
                 canvas.drawText(dayLabels[i], x, y, paint);
             }
 
             // 교시 그리기
             paint.setColor(0xFF94A3B8); // 회색
-            paint.setTextSize(30f);
+            paint.setTextSize(38f); // 30f -> 38f
             for (int i = 0; i < 9; i++) {
                 float x = leftMargin / 2f;
-                float y = topMargin + i * rowHeight + (rowHeight / 2f) + 10f; // 교시 세로 중앙
+                float y = topMargin + i * rowHeight + (rowHeight / 2f) + 12f;
                 canvas.drawText(String.valueOf(i + 1), x, y, paint);
             }
 
@@ -142,11 +142,11 @@ public class LocalTimetableRenderer {
 
                     // 칩 테두리 드로잉 (더 또렷한 디자인)
                     paint.setStyle(Paint.Style.STROKE);
-                    paint.setColor(0x33FFFFFF); // 연한 흰색 테두리
-                    paint.setStrokeWidth(1.5f);
+                    paint.setColor(0x44FFFFFF); // 연한 흰색 테두리
+                    paint.setStrokeWidth(2f);
                     canvas.drawRoundRect(rect, 14f, 14f, paint);
 
-                    // 텍스트 기입
+                    // 텍스트 기입 페인트 설정
                     paint.setStyle(Paint.Style.FILL);
                     paint.setColor(textColor);
                     paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
@@ -154,27 +154,43 @@ public class LocalTimetableRenderer {
                     float centerX = rect.centerX();
                     float centerY = rect.centerY();
 
+                    // 텍스트 중앙 세로 정렬을 위한 폰트 메트릭스 공식 적용
+                    Paint.FontMetrics fm;
+
                     if (spanRows > 1) {
-                        // 세로 병합 칩 (과목명을 더 크게 쓰고 상하 배치)
-                        paint.setTextSize(34f);
-                        canvas.drawText(title, centerX, centerY - 10f, paint);
+                        // 세로 병합 칩 - 글씨 크기 대폭 상향 (62f / 36f)
+                        paint.setTextSize(62f);
+                        fm = paint.getFontMetrics();
+                        float titleOffset = (fm.descent + fm.ascent) / 2f;
+                        canvas.drawText(title, centerX, centerY - 22f - titleOffset, paint);
                         
                         if (!note.isEmpty()) {
-                            paint.setTextSize(24f);
-                            paint.setColor(textColor & 0xAAFFFFFF); // 투명도 살짝 적용
-                            canvas.drawText(note, centerX, centerY + 30f, paint);
+                            paint.setTextSize(36f);
+                            paint.setColor(textColor & 0xCCFFFFFF); // 80% 불투명도
+                            fm = paint.getFontMetrics();
+                            float noteOffset = (fm.descent + fm.ascent) / 2f;
+                            canvas.drawText(note, centerX, centerY + 28f - noteOffset, paint);
                         }
                     } else {
                         // 단일 1칸짜리 칩
                         if (!note.isEmpty()) {
-                            paint.setTextSize(28f);
-                            canvas.drawText(title, centerX, centerY - 6f, paint);
-                            paint.setTextSize(20f);
-                            paint.setColor(textColor & 0xAAFFFFFF);
-                            canvas.drawText(note, centerX, centerY + 24f, paint);
+                            // 과목명과 학급 정보 둘 다 표출 - 글씨 크기 대폭 상향 (50f / 34f)
+                            paint.setTextSize(50f);
+                            fm = paint.getFontMetrics();
+                            float titleOffset = (fm.descent + fm.ascent) / 2f;
+                            canvas.drawText(title, centerX, centerY - 18f - titleOffset, paint);
+
+                            paint.setTextSize(34f);
+                            paint.setColor(textColor & 0xCCFFFFFF);
+                            fm = paint.getFontMetrics();
+                            float noteOffset = (fm.descent + fm.ascent) / 2f;
+                            canvas.drawText(note, centerX, centerY + 24f - noteOffset, paint);
                         } else {
-                            paint.setTextSize(30f);
-                            canvas.drawText(title, centerX, centerY + 10f, paint);
+                            // 과목명만 단독 표출 - 글씨 크기 대폭 상향 (54f)
+                            paint.setTextSize(54f);
+                            fm = paint.getFontMetrics();
+                            float offset = (fm.descent + fm.ascent) / 2f;
+                            canvas.drawText(title, centerX, centerY - offset, paint);
                         }
                     }
 

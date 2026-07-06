@@ -103,7 +103,8 @@ public final class R {
     public static final int txt_status=0x7f030054;
     public static final int widget_header=0x7f030055;
     public static final int widget_image=0x7f030056;
-    public static final int widget_refresh_button=0x7f030057;
+    public static final int widget_last_update=0x7f030057;
+    public static final int widget_refresh_button=0x7f030058;
   }
   public static final class layout {
     public static final int activity_main=0x7f040000;

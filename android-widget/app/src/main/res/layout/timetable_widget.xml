@@ -23,6 +23,18 @@
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true" />
 
+        <!-- 최종 새로고침 시각 표시 텍스트뷰 -->
+        <TextView
+            android:id="@+id/widget_last_update"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="갱신: -"
+            android:textColor="#64748b"
+            android:textSize="10sp"
+            android:layout_toLeftOf="@id/widget_refresh_button"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="8dp" />
+
         <Button
             android:id="@+id/widget_refresh_button"
             android:layout_width="48dp"

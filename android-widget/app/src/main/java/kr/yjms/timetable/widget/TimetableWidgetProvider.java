@@ -58,15 +58,8 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
         );
         views.setOnClickPendingIntent(R.id.widget_refresh_button, refreshPending);
 
-        // 위젯 바디 터치 시 설정 앱 열기 펜딩 인텐트
-        Intent configIntent = new Intent(context, MainActivity.class);
-        PendingIntent configPending = PendingIntent.getActivity(
-            context, 
-            appWidgetId, 
-            configIntent, 
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-        views.setOnClickPendingIntent(R.id.widget_image, configPending);
+        // 2. 위젯 바디 터치 시에도 새로고침 작동
+        views.setOnClickPendingIntent(R.id.widget_image, refreshPending);
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
@@ -116,9 +109,13 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
                             mainHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
+                                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.KOREA);
+                                    final String updateText = "갱신: " + sdf.format(new java.util.Date());
+
                                     for (int appWidgetId : appWidgetIds) {
                                         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.timetable_widget);
                                         views.setImageViewBitmap(R.id.widget_image, localBitmap);
+                                        views.setTextViewText(R.id.widget_last_update, updateText);
                                         appWidgetManager.partiallyUpdateAppWidget(appWidgetId, views);
                                     }
                                     android.widget.Toast.makeText(context, "시간표 새로고침 완료", android.widget.Toast.LENGTH_SHORT).show();
