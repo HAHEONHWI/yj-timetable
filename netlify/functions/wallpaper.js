@@ -2,7 +2,7 @@ const { Resvg } = require("@resvg/resvg-js");
 const path = require("path");
 const fs = require("fs");
 
-let fontBuffer = null;
+let activeFontDir = null;
 let activeFontPath = null;
 const fontPaths = [
   path.join(__dirname, "fonts", "NanumGothic-Bold.ttf"),
@@ -13,7 +13,7 @@ const fontPaths = [
 for (const fp of fontPaths) {
   try {
     if (fs.existsSync(fp)) {
-      fontBuffer = fs.readFileSync(fp);
+      activeFontDir = path.dirname(fp);
       activeFontPath = fp;
       break;
     }
@@ -22,8 +22,8 @@ for (const fp of fontPaths) {
   }
 }
 
-if (!fontBuffer) {
-  console.error("Critical: NanumGothic-Bold font buffer could not be loaded:", fontPaths);
+if (!activeFontDir) {
+  console.error("Critical: Fonts directory could not be resolved from paths:", fontPaths);
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://jzcectvzwbfvbgiszjkt.supabase.co";
@@ -446,7 +446,8 @@ exports.handler = async (event) => {
       const resvg = new Resvg(svg, {
         fitTo: { mode: "width", value: 1170 },
         font: {
-          fontBuffers: fontBuffer ? [fontBuffer] : [],
+          fontDirs: activeFontDir ? [activeFontDir] : [],
+          loadSystemFonts: false,
           defaultFontFamily: "NanumGothicBold",
         },
       });
