@@ -230,13 +230,21 @@ function chipColors(type) {
   return { bg: "rgba(30, 41, 59, 0.6)", line: "#475569", fg: "#e2e8f0", note: "#94a3b8" };
 }
 
-function renderChip(match, x, y, width, height) {
+function renderChip(match, x, y, width, height, isFullSize = false) {
   const colors = chipColors(match.type);
+  const classSize = isFullSize ? 28 : 23;
+  const titleSize = isFullSize ? 36 : 19;
+  const noteSize = isFullSize ? 18 : 13;
+
+  const classY = isFullSize ? y + 42 : y + 22;
+  const titleY = isFullSize ? y + 84 : y + 45;
+  const noteY = isFullSize ? y + 118 : y + 64;
+
   return `
-    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="8" fill="${colors.bg}" stroke="${colors.line}" stroke-width="2" />
-    ${renderText(match.className, x + width / 2, y + 22, { size: 23, fill: colors.fg, anchor: "middle", weight: 900 })}
-    ${renderText(match.title, x + width / 2, y + 45, { size: 19, fill: colors.fg, anchor: "middle", weight: 900 })}
-    ${match.note ? renderText(match.note, x + width / 2, y + 64, { size: 13, fill: colors.note, anchor: "middle", weight: 800 }) : ""}
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="${colors.bg}" stroke="${colors.line}" stroke-width="2" />
+    ${renderText(match.className, x + width / 2, classY, { size: classSize, fill: colors.fg, anchor: "middle", weight: 900 })}
+    ${renderText(match.title, x + width / 2, titleY, { size: titleSize, fill: colors.fg, anchor: "middle", weight: 900 })}
+    ${match.note ? renderText(match.note, x + width / 2, noteY, { size: noteSize, fill: colors.note, anchor: "middle", weight: 800 }) : ""}
   `;
 }
 
@@ -286,16 +294,34 @@ function renderWallpaperSvg(state, query) {
           const matches = classes.flatMap((className) =>
             matchesForCell(state, day.iso, className, period, periodIndex, subjects, gradesBySubject)
           );
-          const chipWidth = Math.max(92, dayWidth / 2 - 10);
-          const chipHeight = 70;
-          const chips = matches
-            .slice(0, 4)
-            .map((match, matchIndex) => {
-              const chipX = x + 8 + (matchIndex % 2) * (chipWidth + 8);
-              const chipY = y + 10 + Math.floor(matchIndex / 2) * (chipHeight + 8);
-              return renderChip(match, chipX, chipY, chipWidth, chipHeight);
-            })
-            .join("");
+
+          let chips = "";
+          if (matches.length === 1) {
+            const chipWidth = dayWidth - 16;
+            const chipHeight = rowHeight - 20;
+            chips = renderChip(matches[0], x + 8, y + 10, chipWidth, chipHeight, true);
+          } else if (matches.length === 2) {
+            const chipWidth = dayWidth / 2 - 12;
+            const chipHeight = rowHeight - 20;
+            chips = matches
+              .map((match, matchIndex) => {
+                const chipX = x + 8 + matchIndex * (chipWidth + 8);
+                return renderChip(match, chipX, y + 10, chipWidth, chipHeight, false);
+              })
+              .join("");
+          } else {
+            const chipWidth = Math.max(92, dayWidth / 2 - 10);
+            const chipHeight = 70;
+            chips = matches
+              .slice(0, 4)
+              .map((match, matchIndex) => {
+                const chipX = x + 8 + (matchIndex % 2) * (chipWidth + 8);
+                const chipY = y + 10 + Math.floor(matchIndex / 2) * (chipHeight + 8);
+                return renderChip(match, chipX, chipY, chipWidth, chipHeight, false);
+              })
+              .join("");
+          }
+
           const overflow =
             matches.length > 4
               ? renderText(`+${matches.length - 4}`, x + dayWidth - 22, y + rowHeight - 14, {
