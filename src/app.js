@@ -34,6 +34,7 @@
   let analyticsRouteTrackingReady = false;
   const gaMeasurementId = "G-TTWC1RKWGL";
   const LAST_SAVE_KEY = "timetable-last-save-at";
+  const WALLPAPER_NAME_KEY = "wallpaper-name";
   const WALLPAPER_SUBJECTS_KEY = "wallpaper-subjects";
   const WALLPAPER_DAYS_KEY = "wallpaper-days";
   const WALLPAPER_GRADES_KEY = "wallpaper-grades";
@@ -61,6 +62,7 @@
     slideshowMeta: $("#slideshowMeta"),
     slideshowStage: $("#slideshowStage"),
     exitSlideshowButton: $("#exitSlideshowButton"),
+    wallpaperName: $("#wallpaperName"),
     wallpaperSubjects: $("#wallpaperSubjects"),
     wallpaperDays: $("#wallpaperDays"),
     wallpaperGrades: $("#wallpaperGrades"),
@@ -884,6 +886,7 @@
   }
 
   function wallpaperSettings() {
+    const name = localStorage.getItem(WALLPAPER_NAME_KEY) || "";
     const validSubjects = new Set(collectWallpaperSubjects());
     const subjects = parseStoredArray(WALLPAPER_SUBJECTS_KEY, []).filter((subject) => validSubjects.has(subject));
     const validDays = new Set(weekdays.map((weekday) => weekday.key));
@@ -893,19 +896,21 @@
     const storedGrades = parseStoredObject(WALLPAPER_GRADES_KEY);
     const grades = Object.fromEntries(subjects.map((subject) => [subject, normalizedGrades(storedGrades[subject])]));
     return {
+      name,
       subjects,
       days: days.length ? days : weekdays.map((weekday) => weekday.key),
       grades,
     };
   }
 
-  function saveWallpaperSettings(subjects, days, grades = {}) {
+  function saveWallpaperSettings(subjects, days, grades = {}, name = "") {
     localStorage.setItem(WALLPAPER_SUBJECTS_KEY, JSON.stringify(subjects));
     localStorage.setItem(WALLPAPER_DAYS_KEY, JSON.stringify(days));
     localStorage.setItem(
       WALLPAPER_GRADES_KEY,
       JSON.stringify(Object.fromEntries(subjects.map((subject) => [subject, normalizedGrades(grades[subject])])))
     );
+    localStorage.setItem(WALLPAPER_NAME_KEY, name);
   }
 
   function wallpaperImageUrl(settings) {
@@ -916,6 +921,9 @@
       "grades",
       settings.subjects.map((subject) => `${subject}:${normalizedGrades(settings.grades[subject]).join("|")}`).join(";")
     );
+    if (settings.name) {
+      url.searchParams.set("name", settings.name);
+    }
     return url.toString();
   }
 
@@ -925,6 +933,7 @@
     return [
       "용정시간표 iPhone 배경화면 자동화 설정",
       "",
+      `선생님 이름: ${settings.name || "설정 안 됨"}`,
       `과목: ${settings.subjects.join(", ") || "선택 안 됨"}`,
       `요일: ${dayLabels || "월, 화, 수, 목, 금"}`,
       `학년: ${gradeLines.join(" / ") || "전체"}`,
@@ -1110,6 +1119,9 @@
 
   function renderWallpaper() {
     const settings = wallpaperSettings();
+    if (els.wallpaperName && document.activeElement !== els.wallpaperName) {
+      els.wallpaperName.value = settings.name || "";
+    }
     renderWallpaperControls(settings);
     renderWallpaperAutomation(settings);
     const selected = new Set(settings.subjects);
@@ -1812,6 +1824,7 @@
   }
 
   function readWallpaperControls() {
+    const name = els.wallpaperName ? els.wallpaperName.value.trim() : "";
     const subjects = $$("input[data-wallpaper-subject]:checked").map((input) => input.value);
     const days = $$("input[data-wallpaper-day]:checked").map((input) => input.value);
     const previous = wallpaperSettings();
@@ -1821,7 +1834,7 @@
         return [subject, checkedGrades.length ? checkedGrades : normalizedGrades(previous.grades[subject])];
       })
     );
-    return { subjects, days, grades };
+    return { name, subjects, days, grades };
   }
 
   function initControls() {
@@ -2004,19 +2017,26 @@
     els.exitSlideshowButton.addEventListener("click", () => {
       routeTo("view");
     });
+    if (els.wallpaperName) {
+      els.wallpaperName.addEventListener("input", () => {
+        const settings = readWallpaperControls();
+        saveWallpaperSettings(settings.subjects, settings.days, settings.grades, settings.name);
+        renderWallpaper();
+      });
+    }
     els.wallpaperSubjects.addEventListener("change", () => {
       const settings = readWallpaperControls();
-      saveWallpaperSettings(settings.subjects, settings.days, settings.grades);
+      saveWallpaperSettings(settings.subjects, settings.days, settings.grades, settings.name);
       renderWallpaper();
     });
     els.wallpaperDays.addEventListener("change", () => {
       const settings = readWallpaperControls();
-      saveWallpaperSettings(settings.subjects, settings.days, settings.grades);
+      saveWallpaperSettings(settings.subjects, settings.days, settings.grades, settings.name);
       renderWallpaper();
     });
     els.wallpaperGrades.addEventListener("change", () => {
       const settings = readWallpaperControls();
-      saveWallpaperSettings(settings.subjects, settings.days, settings.grades);
+      saveWallpaperSettings(settings.subjects, settings.days, settings.grades, settings.name);
       renderWallpaper();
     });
     els.baseWeekday.addEventListener("change", renderBaseEditor);
