@@ -1145,8 +1145,9 @@
       </figure>
       <ol style="margin-top: 14px;">
         <li>위의 <strong>[iPhone 단축어 등록]</strong> 버튼을 누르면 이미지 URL이 클립보드에 자동 복사되며 단축어 추가 화면이 열립니다.</li>
-        <li>단축어를 추가한 후, <strong>[iOS 자동화 설정 가이드]</strong> 버튼을 눌러 일출, 08:40, 14:00 시간에 자동 갱신되도록 예약하면 끝납니다!</li>
-        <li style="color: #94a3b8; font-size: 13px;">(최초 1회 실행 시 배경화면 접근 권한을 '항상 허용'해 주시면 됩니다.)</li>
+        <li style="color: #f59e0b; font-weight: 800; margin-top: 4px; margin-bottom: 4px;">⚠️ 매우 중요: 단축어를 추가한 후, 단축어 앱 내 편집 화면으로 진입하여 1번째 줄의 <code>\${YourLink}</code> 라고 써진 부분에 복사된 실제 URL을 꼭 [붙여넣기] 해주세요!</li>
+        <li>등록을 마친 후, 아래 <strong>[iOS 자동화 설정 가이드]</strong> 버튼을 눌러 일출, 08:40, 14:00 시간에 자동 갱신되도록 예약하면 세팅이 끝납니다!</li>
+        <li style="color: #94a3b8; font-size: 13px; margin-top: 4px;">(최초 1회 실행 시 배경화면 접근 권한을 '항상 허용'해 주시면 됩니다.)</li>
       </ol>
     </article>`;
   }
