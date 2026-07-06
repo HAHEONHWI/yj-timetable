@@ -1455,8 +1455,8 @@ textarea {
 
 .wallpaper-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
-  gap: clamp(20px, 4vw, 42px);
+  grid-template-columns: 460px 1fr;
+  gap: 32px;
   align-items: start;
 }
 
@@ -1884,7 +1884,7 @@ textarea {
   line-height: 1.5;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1024px) {
   .topbar,
   .view-tools,
   .admin-head,
