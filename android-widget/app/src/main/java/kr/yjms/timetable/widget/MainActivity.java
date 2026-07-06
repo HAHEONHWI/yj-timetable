@@ -153,6 +153,21 @@ public class MainActivity extends Activity {
 
         btnAddEvent = (Button) findViewById(R.id.btn_add_event);
 
+        // 스피너 커스텀 어댑터 바인딩 (다크/라이트 테마에 따른 스피너 텍스트 안보임 현상 해결)
+        android.widget.ArrayAdapter<CharSequence> classAdapter = android.widget.ArrayAdapter.createFromResource(
+            this, R.array.array_classes, R.layout.spinner_item
+        );
+        classAdapter.setDropDownViewResource(R.layout.spinner_item);
+        spnChangeClass.setAdapter(classAdapter);
+
+        android.widget.ArrayAdapter<CharSequence> periodAdapter = android.widget.ArrayAdapter.createFromResource(
+            this, R.array.array_periods, R.layout.spinner_item
+        );
+        periodAdapter.setDropDownViewResource(R.layout.spinner_item);
+        spnChangePeriod.setAdapter(periodAdapter);
+        spnEventStart.setAdapter(periodAdapter);
+        spnEventEnd.setAdapter(periodAdapter);
+
         // 전체 학급 토글 체크 이벤트 연동
         chkEvClassAll.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
