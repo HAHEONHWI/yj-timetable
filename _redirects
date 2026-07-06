@@ -4,6 +4,7 @@
 /slideshow  /index.html  200
 /wallpaper  /index.html  200
 /wallpaper.svg  /.netlify/functions/wallpaper  200
+/wallpaper.png  /.netlify/functions/wallpaper  200
 /download  /index.html  200
 /downloads  /index.html  200
 /privacy  /index.html  200

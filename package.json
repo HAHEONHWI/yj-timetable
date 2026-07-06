@@ -36,6 +36,10 @@
       "shortcutName": "용정시간표-Widget"
     }
   },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@resvg/resvg-js-linux-x64-gnu": "^2.6.2"
+  },
   "devDependencies": {
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3"

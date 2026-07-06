@@ -1,3 +1,5 @@
+const { Resvg } = require("@resvg/resvg-js");
+
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://jzcectvzwbfvbgiszjkt.supabase.co";
 const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY || "sb_publishable_JgPxLeD5pJjk46GnS-n3ZQ_gzZmIIuq";
@@ -376,7 +378,32 @@ function renderWallpaperSvg(state, query) {
 
 exports.handler = async (event) => {
   const state = await readState();
-  const svg = renderWallpaperSvg(state, event.queryStringParameters || {});
+  const query = event.queryStringParameters || {};
+  const svg = renderWallpaperSvg(state, query);
+
+  const isPng = (event.path && event.path.endsWith(".png")) || query.format === "png";
+  if (isPng) {
+    try {
+      const resvg = new Resvg(svg, {
+        fitTo: { mode: "width", value: 1170 },
+      });
+      const pngData = resvg.render();
+      const pngBuffer = pngData.asPng();
+      return {
+        statusCode: 200,
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "no-store",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: pngBuffer.toString("base64"),
+        isBase64Encoded: true,
+      };
+    } catch (err) {
+      console.error("PNG conversion failed:", err);
+    }
+  }
+
   return {
     statusCode: 200,
     headers: {

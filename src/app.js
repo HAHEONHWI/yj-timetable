@@ -914,7 +914,7 @@
   }
 
   function wallpaperImageUrl(settings) {
-    const url = new URL("/wallpaper.svg", location.origin);
+    const url = new URL("/wallpaper.png", location.origin);
     url.searchParams.set("subjects", settings.subjects.join(","));
     url.searchParams.set("days", settings.days.join(","));
     url.searchParams.set(
