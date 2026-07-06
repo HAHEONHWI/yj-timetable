@@ -31,7 +31,6 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,7 +43,7 @@ public class MainActivity extends Activity {
     private CheckBox chkMon, chkTue, chkWed, chkThu, chkFri;
     private CheckBox chkGrade1, chkGrade2, chkGrade3;
     
-    // 동적 과목 체크박스들을 얹어줄 컨테이너
+    // 프리셋 과목 체크박스들이 얹어질 컨테이너
     private LinearLayout layoutSubjectsContainer;
     
     private RadioGroup rgTheme;
@@ -79,6 +78,18 @@ public class MainActivity extends Activity {
     private final String[] classNames = {"1-1", "1-2", "2-1", "2-2", "3-1", "3-2"};
     
     private Button btnAddEvent;
+
+    // 사용자가 제공한 교사용 이미지 내 강조 과목 30종 프리셋 상수 리스트
+    private final String[] presetSubjects = {
+        "(자유)진로", "(주제)국어", "(주제)보건",
+        "(주제)사회", "(주제)수학", "과학", "국선도",
+        "국어", "귀가", "기가", "다도", "도덕",
+        "동아리", "목공예", "미술", "사회",
+        "수학", "스포츠클럽", "역사", "영어",
+        "음악", "인공지능", "자율 활동", "진직",
+        "창체", "철학", "체육", "토론",
+        "특기적성", "한문"
+    };
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -173,15 +184,11 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 기존 설정값 로드 및 UI 체크 셋팅
-        loadSavedSettings();
+        // 1. 프리셋 30종 과목 체크박스들을 화면에 즉각 드로잉 빌드
+        buildPresetSubjectCheckboxes();
 
-        // 캐시된 시간표가 있다면 미리 동적 과목 체크박스 그리기
-        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
-        String cachedJson = prefs.getString("last_timetable_json", "");
-        if (!cachedJson.isEmpty()) {
-            buildDynamicSubjectCheckboxes(cachedJson);
-        }
+        // 2. 기존 설정값 로드 및 UI 체크 복원
+        loadSavedSettings();
 
         // 앱 내부 시간표 조회 대시보드 갱신
         loadTimetableGrid();
@@ -237,6 +244,18 @@ public class MainActivity extends Activity {
         checkAdminLoginState();
     }
 
+    private void buildPresetSubjectCheckboxes() {
+        layoutSubjectsContainer.removeAllViews();
+        for (String subject : presetSubjects) {
+            CheckBox chk = new CheckBox(this);
+            chk.setText(subject);
+            chk.setTextColor(0xFFF8FAFC);
+            chk.setTextSize(13.5f);
+            chk.setPadding(6, 10, 6, 10);
+            layoutSubjectsContainer.addView(chk);
+        }
+    }
+
     private void loadSavedSettings() {
         SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         
@@ -257,64 +276,28 @@ public class MainActivity extends Activity {
         chkGrade2.setChecked(grades.contains("2"));
         chkGrade3.setChecked(grades.contains("3"));
 
+        // 동적 체크박스들에 대한 선택 복원
+        String savedSubjects = prefs.getString("subjects", "");
+        int childCount = layoutSubjectsContainer.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            View child = layoutSubjectsContainer.getChildAt(i);
+            if (child instanceof CheckBox) {
+                CheckBox chk = (CheckBox) child;
+                String text = chk.getText().toString();
+                if (savedSubjects.contains(text)) {
+                    chk.setChecked(true);
+                } else {
+                    chk.setChecked(false);
+                }
+            }
+        }
+
         // 테마 로드
         String theme = prefs.getString("widget_theme", "dark");
         if ("light".equals(theme)) {
             rbThemeLight.setChecked(true);
         } else {
             rbThemeDark.setChecked(true);
-        }
-    }
-
-    // 기본시간표 데이터 캐시로부터 고유 개설 과목 목록을 추출하여 동적 체크박스로 구성하는 핵심 엔진
-    private void buildDynamicSubjectCheckboxes(String jsonString) {
-        if (jsonString == null || jsonString.isEmpty()) return;
-        try {
-            JSONObject root = new JSONObject(jsonString);
-            JSONArray gridArr = root.getJSONArray("grid");
-            
-            // 중복 배제 가나다 오름차순 정렬용 TreeSet
-            TreeSet<String> uniqueSubjects = new TreeSet<>();
-            for (int d = 0; d < gridArr.length(); d++) {
-                JSONArray dayRow = gridArr.optJSONArray(d);
-                if (dayRow == null) continue;
-                for (int p = 0; p < dayRow.length(); p++) {
-                    JSONArray cellMatches = dayRow.optJSONArray(p);
-                    if (cellMatches == null) continue;
-                    for (int m = 0; m < cellMatches.length(); m++) {
-                        JSONObject match = cellMatches.getJSONObject(m);
-                        String title = match.getString("title");
-                        if (title != null && !title.isEmpty() && !"-".equals(title)) {
-                            uniqueSubjects.add(title);
-                        }
-                    }
-                }
-            }
-
-            // 기존 체크박스 삭제 클리어
-            layoutSubjectsContainer.removeAllViews();
-            
-            // 기존에 선택 및 저장되어 있었던 과목 목록 로드
-            SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
-            String savedSubjects = prefs.getString("subjects", "");
-            
-            // 과목 리스트 루프 돌며 동적 체크박스 생성
-            for (final String subject : uniqueSubjects) {
-                CheckBox chk = new CheckBox(this);
-                chk.setText(subject);
-                chk.setTextColor(0xFFF8FAFC);
-                chk.setTextSize(13.5f);
-                chk.setPadding(6, 10, 6, 10);
-                
-                // 콤마 구분값 내 존재 여부에 따라 자동 체크 상태 복원
-                if (savedSubjects.contains(subject)) {
-                    chk.setChecked(true);
-                }
-                
-                layoutSubjectsContainer.addView(chk);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -331,7 +314,7 @@ public class MainActivity extends Activity {
         if (chkFri.isChecked()) selectedDays.add("fri");
         String daysStr = joinList(selectedDays, ",");
 
-        // 동적으로 띄워진 체크박스들로부터 선택 과목명들을 정밀 수집
+        // 30종 프리셋 체크박스로부터 수동 체크 수집
         List<String> selectedSubs = new ArrayList<>();
         int childCount = layoutSubjectsContainer.getChildCount();
         for (int i = 0; i < childCount; i++) {
@@ -779,9 +762,6 @@ public class MainActivity extends Activity {
                                 SharedPreferences.Editor editor = prefs.edit();
                                 editor.putString("last_timetable_json", jsonString);
                                 editor.apply();
-
-                                // 동적 과목 체크박스 뷰들 새로 채우기
-                                buildDynamicSubjectCheckboxes(jsonString);
 
                                 updateAppGrid(jsonString);
                             }
