@@ -164,6 +164,57 @@ function splitParam(value) {
     .filter(Boolean);
 }
 
+function normalizedGrades(value) {
+  const grades = Array.isArray(value) ? value.map(String) : [];
+  const filtered = grades.filter((grade) => ["1", "2", "3"].includes(grade));
+  return filtered.length ? [...new Set(filtered)] : ["1", "2", "3"];
+}
+
+function parseGradesParam(value, subjects) {
+  const result = Object.fromEntries(subjects.map((subject) => [subject, ["1", "2", "3"]]));
+  String(value || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((entry) => {
+      const [subject, grades] = entry.split(":");
+      if (!subject) return;
+      result[subject.trim()] = normalizedGrades(String(grades || "").split("|"));
+    });
+  return result;
+}
+
+function gradeForClass(className) {
+  return String(className || "").split("-")[0];
+}
+
+function isSubjectAllowed(gradesBySubject, subject, className) {
+  return normalizedGrades(gradesBySubject[subject]).includes(gradeForClass(className));
+}
+
+function matchesForCell(state, date, className, period, periodIndex, subjects, gradesBySubject) {
+  const subjectSet = new Set(subjects);
+  const matches = [];
+  const original = getSubjectsForDate(state, date, className)[periodIndex] || "-";
+  const change = state.changes[changeKey(date, className, period)];
+
+  if (change) {
+    if (subjectSet.has(change.subject) && isSubjectAllowed(gradesBySubject, change.subject, className)) {
+      matches.push({ className, title: change.subject, note: `${original}에서 변경`, type: "change" });
+    }
+    if (subjectSet.has(original) && isSubjectAllowed(gradesBySubject, original, className)) {
+      matches.push({ className, title: original, note: `${change.subject}로 변경됨`, type: "original" });
+    }
+    return matches;
+  }
+
+  const lesson = lessonFor(state, date, className, period, periodIndex);
+  if (subjectSet.has(lesson.title) && isSubjectAllowed(gradesBySubject, lesson.title, className)) {
+    matches.push({ className, title: lesson.title, note: "", type: lesson.type });
+  }
+  return matches;
+}
+
 function renderText(text, x, y, options = {}) {
   const size = options.size || 34;
   const weight = options.weight || 800;
@@ -172,90 +223,123 @@ function renderText(text, x, y, options = {}) {
   return `<text x="${x}" y="${y}" font-size="${size}" font-weight="${weight}" fill="${fill}"${anchor}>${escapeXml(text)}</text>`;
 }
 
-function renderPill(text, x, y, color = "teal") {
-  const width = Math.max(112, text.length * 28 + 58);
-  const bg = color === "change" ? "#3b3320" : "#123c3f";
-  const line = color === "change" ? "#fde68a" : "#2dd4bf";
-  const fg = color === "change" ? "#fef3c7" : "#ecfeff";
+function chipColors(type) {
+  if (type === "change") return { bg: "#fef3c7", line: "#f59e0b", fg: "#451a03", note: "#92400e" };
+  if (type === "original") return { bg: "#f1f5f9", line: "#94a3b8", fg: "#334155", note: "#64748b" };
+  if (type === "event" || type === "merge") return { bg: "#ccfbf1", line: "#14b8a6", fg: "#134e4a", note: "#0f766e" };
+  return { bg: "#ffffff", line: "#0f172a", fg: "#0f172a", note: "#475569" };
+}
+
+function renderChip(match, x, y, width, height) {
+  const colors = chipColors(match.type);
   return `
-    <rect x="${x}" y="${y}" width="${width}" height="46" rx="23" fill="${bg}" stroke="${line}" stroke-width="2" />
-    ${renderText(text, x + width / 2, y + 31, { size: 24, fill: fg, anchor: "middle", weight: 900 })}
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="8" fill="${colors.bg}" stroke="${colors.line}" stroke-width="2" />
+    ${renderText(match.className, x + width / 2, y + 22, { size: 23, fill: colors.fg, anchor: "middle", weight: 900 })}
+    ${renderText(match.title, x + width / 2, y + 45, { size: 19, fill: colors.fg, anchor: "middle", weight: 900 })}
+    ${match.note ? renderText(match.note, x + width / 2, y + 64, { size: 13, fill: colors.note, anchor: "middle", weight: 800 }) : ""}
   `;
 }
 
 function renderWallpaperSvg(state, query) {
   const subjects = splitParam(query.subjects || query.subject || query.s);
-  const subjectSet = new Set(subjects);
+  const gradesBySubject = parseGradesParam(query.grades || query.grade || query.g, subjects);
   const selectedDays = splitParam(query.days || query.day || query.d);
   const allowedDaySet = new Set(selectedDays.length ? selectedDays : weekdays.map((day) => day.key));
   const now = kstNow();
   const today = toISO(now);
   const days = schoolDaysForCurrentWeek(now).filter((day) => allowedDaySet.has(day.weekday.key));
 
-  let y = 190;
-  const dayBlocks = days
-    .map((day) => {
-      const rows = [];
-      periods.forEach((period, periodIndex) => {
-        const matches = classes
-          .map((className) => {
-            const lesson = lessonFor(state, day.iso, className, period, periodIndex);
-            if (!subjectSet.has(lesson.title)) return null;
-            return { className, ...lesson };
-          })
-          .filter(Boolean);
-        if (matches.length) rows.push({ period, matches });
-      });
+  const tableX = 46;
+  const tableY = 238;
+  const tableWidth = 1078;
+  const periodWidth = 92;
+  const dayWidth = (tableWidth - periodWidth) / Math.max(days.length, 1);
+  const headerHeight = 76;
+  const rowHeight = 160;
+  const tableHeight = headerHeight + periods.length * rowHeight;
 
-      const blockHeight = Math.max(124, 88 + rows.length * 58);
+  const headerCells = days
+    .map((day, index) => {
+      const x = tableX + periodWidth + index * dayWidth;
       const isToday = day.iso === today;
-      const block = `
-        <rect x="58" y="${y}" width="1054" height="${blockHeight}" rx="34" fill="${isToday ? "#12433f" : "#101826"}" stroke="${
-        isToday ? "#2dd4bf" : "#334155"
-      }" stroke-width="3" />
-        ${renderText(`${day.weekday.label}요일`, 96, y + 58, { size: 34 })}
-        ${renderText(`${formatDate(day.iso)}${isToday ? " · 오늘" : ""}`, 1018, y + 58, {
-          size: 24,
-          fill: "#cbd5e1",
-          anchor: "end",
-        })}
-        ${
-          rows.length
-            ? rows
-                .map((row, rowIndex) => {
-                  const rowY = y + 94 + rowIndex * 58;
-                  let pillX = 212;
-                  const pills = row.matches
-                    .map((match) => {
-                      const label = `${match.className} ${match.title}`;
-                      const pill = renderPill(label, pillX, rowY - 34, match.type === "change" ? "change" : "teal");
-                      pillX += Math.max(112, label.length * 28 + 58) + 12;
-                      return pill;
-                    })
-                    .join("");
-                  return `${renderText(`${row.period}교시`, 96, rowY, { size: 24, fill: "#bfdbfe" })}${pills}`;
-                })
-                .join("")
-            : renderText("선택 과목 수업 없음", 96, y + 105, { size: 25, fill: "#94a3b8" })
-        }
+      return `
+        <rect x="${x}" y="${tableY}" width="${dayWidth}" height="${headerHeight}" fill="${isToday ? "#134e4a" : "#0b0f18"}" stroke="#f8fafc" stroke-width="3" />
+        ${renderText(day.weekday.label, x + dayWidth / 2, tableY + 34, { size: 28, anchor: "middle", weight: 900 })}
+        ${renderText(formatDate(day.iso), x + dayWidth / 2, tableY + 62, { size: 18, fill: "#cbd5e1", anchor: "middle", weight: 800 })}
       `;
-      y += blockHeight + 24;
-      return block;
+    })
+    .join("");
+
+  const rows = periods
+    .map((period, periodIndex) => {
+      const y = tableY + headerHeight + periodIndex * rowHeight;
+      const periodCell = `
+        <rect x="${tableX}" y="${y}" width="${periodWidth}" height="${rowHeight}" fill="#0b0f18" stroke="#f8fafc" stroke-width="3" />
+        ${renderText(`P${period}`, tableX + periodWidth / 2, y + 66, { size: 28, anchor: "middle", weight: 900 })}
+        ${renderText(`${period}교시`, tableX + periodWidth / 2, y + 96, { size: 15, fill: "#cbd5e1", anchor: "middle", weight: 800 })}
+      `;
+      const dayCells = days
+        .map((day, dayIndex) => {
+          const x = tableX + periodWidth + dayIndex * dayWidth;
+          const matches = classes.flatMap((className) =>
+            matchesForCell(state, day.iso, className, period, periodIndex, subjects, gradesBySubject)
+          );
+          const chipWidth = Math.max(92, dayWidth / 2 - 10);
+          const chipHeight = 70;
+          const chips = matches
+            .slice(0, 4)
+            .map((match, matchIndex) => {
+              const chipX = x + 8 + (matchIndex % 2) * (chipWidth + 8);
+              const chipY = y + 10 + Math.floor(matchIndex / 2) * (chipHeight + 8);
+              return renderChip(match, chipX, chipY, chipWidth, chipHeight);
+            })
+            .join("");
+          const overflow =
+            matches.length > 4
+              ? renderText(`+${matches.length - 4}`, x + dayWidth - 22, y + rowHeight - 14, {
+                  size: 18,
+                  fill: "#64748b",
+                  anchor: "end",
+                })
+              : "";
+          return `<rect x="${x}" y="${y}" width="${dayWidth}" height="${rowHeight}" fill="#ffffff" stroke="#0f172a" stroke-width="3" />${chips}${overflow}`;
+        })
+        .join("");
+      return periodCell + dayCells;
     })
     .join("");
 
   const subjectLabel = subjects.length ? subjects.join(", ") : "subjects 파라미터 필요";
+  const gradeLabel = subjects
+    .map((subject) => `${subject} ${normalizedGrades(gradesBySubject[subject]).join("")}학년`)
+    .join(" · ");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1170" height="2532" viewBox="0 0 1170 2532">
-  <rect width="1170" height="2532" fill="#07111d" />
-  <circle cx="104" cy="44" r="260" fill="#2dd4bf" opacity="0.18" />
-  <circle cx="1130" cy="2480" r="360" fill="#3b82f6" opacity="0.12" />
+  <rect width="1170" height="2532" fill="#f8fafc" />
+  <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
+    <path d="M 34 0 L 0 0 0 34" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+  </pattern>
+  <rect width="1170" height="2532" fill="url(#grid)" />
+  <circle cx="76" cy="356" r="240" fill="#fde68a" opacity="0.72" />
+  <circle cx="1048" cy="390" r="210" fill="#fca5a5" opacity="0.55" />
+  <circle cx="1080" cy="2260" r="310" fill="#fde68a" opacity="0.75" />
+  <circle cx="120" cy="2220" r="260" fill="#5eead4" opacity="0.7" />
   <g font-family="Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
-    ${renderText("용정 시간표", 64, 82, { size: 26, fill: "#5eead4", weight: 900 })}
-    ${renderText("내 과목 주간표", 64, 138, { size: 54, weight: 900 })}
-    ${renderText(subjectLabel, 64, 176, { size: 25, fill: "#cbd5e1", weight: 800 })}
-    ${dayBlocks}
-    ${renderText(`업데이트 ${today}`, 585, 2470, { size: 24, fill: "#64748b", anchor: "middle" })}
+    ${renderText("용정 시간표", 64, 78, { size: 28, fill: "#475569", weight: 900 })}
+    ${renderText("내 과목 주간표", 64, 142, { size: 62, fill: "#0f172a", weight: 900 })}
+    ${renderText(subjectLabel, 64, 184, { size: 28, fill: "#0f766e", weight: 900 })}
+    ${renderText(gradeLabel, 64, 218, { size: 20, fill: "#64748b", weight: 800 })}
+    <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0b0f18" stroke="#f8fafc" stroke-width="3" />
+    ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, anchor: "middle", weight: 900 })}
+    ${headerCells}
+    ${rows}
+    <rect x="0" y="1824" width="1170" height="78" fill="#0b0f18" />
+    ${renderText("변경: 노란색 · 원래 있던 수업이 변경된 경우: 회색", 585, 1874, {
+      size: 24,
+      anchor: "middle",
+      weight: 900,
+    })}
+    ${renderText(`업데이트 ${today}`, 585, 2470, { size: 24, fill: "#475569", anchor: "middle" })}
   </g>
 </svg>`;
 }

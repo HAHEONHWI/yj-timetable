@@ -1514,6 +1514,50 @@ textarea {
   color: #f8fafc;
 }
 
+.wallpaper-grade-settings {
+  display: grid;
+  gap: 8px;
+}
+
+.wallpaper-grade-row {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #101826;
+}
+
+.wallpaper-grade-row strong {
+  color: #f8fafc;
+  font-size: 14px;
+}
+
+.wallpaper-grade-row > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wallpaper-grade-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wallpaper-grade-option:has(input:checked) {
+  border-color: #2dd4bf;
+  color: #ecfeff;
+  background: rgba(45, 212, 191, 0.12);
+}
+
 .wallpaper-automation {
   display: grid;
 }
@@ -1657,6 +1701,66 @@ textarea {
   overflow: hidden;
 }
 
+.wallpaper-table {
+  display: grid;
+  grid-template-columns: 38px repeat(var(--wallpaper-day-count), minmax(0, 1fr));
+  grid-auto-rows: minmax(34px, auto);
+  min-height: 0;
+  border: 2px solid #f8fafc;
+  background: #f8fafc;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.wallpaper-table-corner,
+.wallpaper-table-head,
+.wallpaper-table-period,
+.wallpaper-table-cell {
+  display: grid;
+  min-width: 0;
+  background: #0b0f18;
+}
+
+.wallpaper-table-corner,
+.wallpaper-table-head,
+.wallpaper-table-period {
+  place-items: center;
+  color: #f8fafc;
+  text-align: center;
+}
+
+.wallpaper-table-head {
+  gap: 0;
+  padding: 4px 2px;
+}
+
+.wallpaper-table-head.is-today {
+  background: #134e4a;
+}
+
+.wallpaper-table-head strong {
+  font-size: 13px;
+}
+
+.wallpaper-table-head span {
+  color: #cbd5e1;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.wallpaper-table-period strong {
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.wallpaper-table-cell {
+  align-content: start;
+  gap: 3px;
+  min-height: 42px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
 .wallpaper-day {
   display: grid;
   gap: 6px;
@@ -1711,26 +1815,50 @@ textarea {
 }
 
 .wallpaper-class-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 1px solid rgba(45, 212, 191, 0.45);
-  border-radius: 999px;
-  padding: 3px 7px;
-  background: rgba(45, 212, 191, 0.12);
-  color: #ecfeff;
-  font-size: 11px;
+  display: grid;
+  gap: 1px;
+  border: 1px solid #0f172a;
+  border-radius: 5px;
+  padding: 3px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 9px;
   font-weight: 900;
+  line-height: 1.1;
 }
 
 .wallpaper-class-chip.is-change {
-  border-color: rgba(253, 230, 138, 0.65);
-  background: rgba(253, 230, 138, 0.16);
-  color: #fef9c3;
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #451a03;
+}
+
+.wallpaper-class-chip.is-original {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.wallpaper-class-chip.is-event,
+.wallpaper-class-chip.is-merge {
+  border-color: #14b8a6;
+  background: #ccfbf1;
+  color: #134e4a;
 }
 
 .wallpaper-class-chip strong {
-  color: #5eead4;
+  color: inherit;
+  font-size: 12px;
+}
+
+.wallpaper-class-chip em {
+  font-style: normal;
+}
+
+.wallpaper-class-chip small {
+  color: inherit;
+  font-size: 7px;
+  opacity: 0.78;
 }
 
 .wallpaper-empty {

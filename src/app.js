@@ -36,6 +36,7 @@
   const LAST_SAVE_KEY = "timetable-last-save-at";
   const WALLPAPER_SUBJECTS_KEY = "wallpaper-subjects";
   const WALLPAPER_DAYS_KEY = "wallpaper-days";
+  const WALLPAPER_GRADES_KEY = "wallpaper-grades";
   const DEV_MODE_KEY = "timetable-dev-mode";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
 
@@ -62,6 +63,7 @@
     exitSlideshowButton: $("#exitSlideshowButton"),
     wallpaperSubjects: $("#wallpaperSubjects"),
     wallpaperDays: $("#wallpaperDays"),
+    wallpaperGrades: $("#wallpaperGrades"),
     wallpaperPreview: $("#wallpaperPreview"),
     wallpaperAutomation: $("#wallpaperAutomation"),
     loginPanel: $("#loginPanel"),
@@ -866,6 +868,21 @@
     }
   }
 
+  function parseStoredObject(key, fallback = {}) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "null");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function normalizedGrades(value) {
+    const grades = Array.isArray(value) ? value.map(String) : [];
+    const filtered = grades.filter((grade) => ["1", "2", "3"].includes(grade));
+    return filtered.length ? [...new Set(filtered)] : ["1", "2", "3"];
+  }
+
   function wallpaperSettings() {
     const validSubjects = new Set(collectWallpaperSubjects());
     const subjects = parseStoredArray(WALLPAPER_SUBJECTS_KEY, []).filter((subject) => validSubjects.has(subject));
@@ -873,31 +890,44 @@
     const days = parseStoredArray(WALLPAPER_DAYS_KEY, weekdays.map((weekday) => weekday.key)).filter((day) =>
       validDays.has(day)
     );
+    const storedGrades = parseStoredObject(WALLPAPER_GRADES_KEY);
+    const grades = Object.fromEntries(subjects.map((subject) => [subject, normalizedGrades(storedGrades[subject])]));
     return {
       subjects,
       days: days.length ? days : weekdays.map((weekday) => weekday.key),
+      grades,
     };
   }
 
-  function saveWallpaperSettings(subjects, days) {
+  function saveWallpaperSettings(subjects, days, grades = {}) {
     localStorage.setItem(WALLPAPER_SUBJECTS_KEY, JSON.stringify(subjects));
     localStorage.setItem(WALLPAPER_DAYS_KEY, JSON.stringify(days));
+    localStorage.setItem(
+      WALLPAPER_GRADES_KEY,
+      JSON.stringify(Object.fromEntries(subjects.map((subject) => [subject, normalizedGrades(grades[subject])])))
+    );
   }
 
   function wallpaperImageUrl(settings) {
     const url = new URL("/wallpaper.svg", location.origin);
     url.searchParams.set("subjects", settings.subjects.join(","));
     url.searchParams.set("days", settings.days.join(","));
+    url.searchParams.set(
+      "grades",
+      settings.subjects.map((subject) => `${subject}:${normalizedGrades(settings.grades[subject]).join("|")}`).join(";")
+    );
     return url.toString();
   }
 
   function wallpaperAutomationText(settings) {
     const dayLabels = weekdays.filter((weekday) => settings.days.includes(weekday.key)).map((weekday) => weekday.label).join(", ");
+    const gradeLines = settings.subjects.map((subject) => `${subject}: ${normalizedGrades(settings.grades[subject]).join(", ")}학년`);
     return [
       "용정시간표 iPhone 배경화면 자동화 설정",
       "",
       `과목: ${settings.subjects.join(", ") || "선택 안 됨"}`,
       `요일: ${dayLabels || "월, 화, 수, 목, 금"}`,
+      `학년: ${gradeLines.join(" / ") || "전체"}`,
       "",
       "이미지 URL:",
       wallpaperImageUrl(settings),
@@ -929,6 +959,47 @@
     link.click();
     link.remove();
     URL.revokeObjectURL(link.href);
+  }
+
+  function gradeForClass(className) {
+    return String(className || "").split("-")[0];
+  }
+
+  function isWallpaperSubjectAllowed(settings, subject, className) {
+    return normalizedGrades(settings.grades[subject]).includes(gradeForClass(className));
+  }
+
+  function wallpaperMatchesForCell(date, className, period, periodIndex, settings) {
+    const selected = new Set(settings.subjects);
+    const matches = [];
+    const original = getSubjectsForDate(date, className)[periodIndex] || "-";
+    const change = getChange(date, className, period);
+
+    if (change) {
+      if (selected.has(normalizedSubject(change.subject)) && isWallpaperSubjectAllowed(settings, change.subject, className)) {
+        matches.push({
+          className,
+          title: change.subject,
+          note: `${original}에서 변경`,
+          type: "change",
+        });
+      }
+      if (selected.has(normalizedSubject(original)) && isWallpaperSubjectAllowed(settings, original, className)) {
+        matches.push({
+          className,
+          title: original,
+          note: `${change.subject}로 변경됨`,
+          type: "original",
+        });
+      }
+      return matches;
+    }
+
+    const lesson = wallpaperLesson(date, className, period, periodIndex);
+    if (selected.has(normalizedSubject(lesson.title)) && isWallpaperSubjectAllowed(settings, lesson.title, className)) {
+      matches.push({ className, title: lesson.title, note: "", type: lesson.type });
+    }
+    return matches;
   }
 
   function wallpaperLesson(date, className, period, periodIndex) {
@@ -973,6 +1044,28 @@
         </label>`;
       })
       .join("");
+
+    els.wallpaperGrades.innerHTML = settings.subjects.length
+      ? settings.subjects
+          .map((subject) => {
+            const grades = new Set(normalizedGrades(settings.grades[subject]));
+            return `<div class="wallpaper-grade-row">
+              <strong>${escapeHtml(subject)}</strong>
+              <div>
+                ${["1", "2", "3"]
+                  .map((grade) => {
+                    const checked = grades.has(grade) ? " checked" : "";
+                    return `<label class="wallpaper-grade-option">
+                      <input type="checkbox" value="${grade}" data-wallpaper-grade="${escapeHtml(subject)}"${checked} />
+                      <span>${grade}학년</span>
+                    </label>`;
+                  })
+                  .join("")}
+              </div>
+            </div>`;
+          })
+          .join("")
+      : `<p class="empty">과목을 선택하면 학년 설정이 표시됩니다.</p>`;
   }
 
   function renderWallpaperAutomation(settings) {
@@ -1033,35 +1126,30 @@
     }
 
     const subjectLabel = settings.subjects.join(", ");
-    const dayCards = days
-      .map((day) => {
-        const rows = periods
-          .map((period, periodIndex) => {
-            const matches = classes
-              .map((className) => {
-                const lesson = wallpaperLesson(day.iso, className, period, periodIndex);
-                if (!selected.has(normalizedSubject(lesson.title))) return "";
-                return `<span class="wallpaper-class-chip ${lesson.type === "change" ? "is-change" : ""}">
-                  <strong>${escapeHtml(className)}</strong>${escapeHtml(lesson.title)}
-                </span>`;
-              })
-              .filter(Boolean);
-            if (!matches.length) return "";
-            return `<div class="wallpaper-period">
-              <b>${period}교시</b>
-              <div>${matches.join("")}</div>
-            </div>`;
+    const headerCells = days
+      .map((day) => `<div class="wallpaper-table-head${day.iso === today ? " is-today" : ""}">
+        <strong>${day.weekday.label}</strong>
+        <span>${formatDate(day.iso)}</span>
+      </div>`)
+      .join("");
+    const tableRows = periods
+      .map((period, periodIndex) => {
+        const cells = days
+          .map((day) => {
+            const matches = classes.flatMap((className) => wallpaperMatchesForCell(day.iso, className, period, periodIndex, settings));
+            const chips = matches
+              .map((match) => `<span class="wallpaper-class-chip is-${match.type}">
+                <strong>${escapeHtml(match.className)}</strong>
+                <em>${escapeHtml(match.title)}</em>
+                ${match.note ? `<small>${escapeHtml(match.note)}</small>` : ""}
+              </span>`)
+              .join("");
+            return `<div class="wallpaper-table-cell">${chips}</div>`;
           })
-          .filter(Boolean)
           .join("");
-        const todayClass = day.iso === today ? " is-today" : "";
-        return `<article class="wallpaper-day${todayClass}">
-          <header>
-            <strong>${day.weekday.label}요일</strong>
-            <span>${formatDate(day.iso)}${day.iso === today ? " · 오늘" : ""}</span>
-          </header>
-          ${rows || `<p class="wallpaper-no-class">선택 과목 수업 없음</p>`}
-        </article>`;
+        return `<div class="wallpaper-table-period">
+          <strong>${period}교시</strong>
+        </div>${cells}`;
       })
       .join("");
 
@@ -1071,7 +1159,11 @@
         <h3>내 과목 주간표</h3>
         <span>${escapeHtml(subjectLabel)}</span>
       </header>
-      <div class="wallpaper-day-list">${dayCards}</div>
+      <div class="wallpaper-table" style="--wallpaper-day-count:${days.length}">
+        <div class="wallpaper-table-corner">교시</div>
+        ${headerCells}
+        ${tableRows}
+      </div>
     </div>`;
   }
 
@@ -1719,6 +1811,19 @@
     saveState(pendingRetryMessage);
   }
 
+  function readWallpaperControls() {
+    const subjects = $$("input[data-wallpaper-subject]:checked").map((input) => input.value);
+    const days = $$("input[data-wallpaper-day]:checked").map((input) => input.value);
+    const previous = wallpaperSettings();
+    const grades = Object.fromEntries(
+      subjects.map((subject) => {
+        const checkedGrades = $$(`input[data-wallpaper-grade="${CSS.escape(subject)}"]:checked`).map((input) => input.value);
+        return [subject, checkedGrades.length ? checkedGrades : normalizedGrades(previous.grades[subject])];
+      })
+    );
+    return { subjects, days, grades };
+  }
+
   function initControls() {
     fillSelect(els.viewClass, isBoardMode ? classes : ["all", ...classes], (value) => (value === "all" ? "전체 학급" : value));
     fillSelect(els.changeClass, classes);
@@ -1900,15 +2005,18 @@
       routeTo("view");
     });
     els.wallpaperSubjects.addEventListener("change", () => {
-      const subjects = $$("input[data-wallpaper-subject]:checked").map((input) => input.value);
-      const days = $$("input[data-wallpaper-day]:checked").map((input) => input.value);
-      saveWallpaperSettings(subjects, days);
+      const settings = readWallpaperControls();
+      saveWallpaperSettings(settings.subjects, settings.days, settings.grades);
       renderWallpaper();
     });
     els.wallpaperDays.addEventListener("change", () => {
-      const subjects = $$("input[data-wallpaper-subject]:checked").map((input) => input.value);
-      const days = $$("input[data-wallpaper-day]:checked").map((input) => input.value);
-      saveWallpaperSettings(subjects, days);
+      const settings = readWallpaperControls();
+      saveWallpaperSettings(settings.subjects, settings.days, settings.grades);
+      renderWallpaper();
+    });
+    els.wallpaperGrades.addEventListener("change", () => {
+      const settings = readWallpaperControls();
+      saveWallpaperSettings(settings.subjects, settings.days, settings.grades);
       renderWallpaper();
     });
     els.baseWeekday.addEventListener("change", renderBaseEditor);
