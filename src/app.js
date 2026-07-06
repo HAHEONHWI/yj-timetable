@@ -1131,21 +1131,22 @@
         <span>이미지 URL</span>
         <input value="${escapeHtml(url)}" readonly />
       </label>
-      <div class="button-row">
-        <button class="primary-button" data-copy-wallpaper-url type="button">URL 복사</button>
-        <button class="ghost-button" data-download-wallpaper-automation type="button">설정 파일 다운로드</button>
+      <div class="button-row" style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <button class="primary-button" data-setup-ios-shortcut type="button" style="background: linear-gradient(135deg, #a855f7, #7c3aed); border: none; color: white; font-weight: 800;">
+          📱 iPhone 단축어 등록
+        </button>
+        <button class="ghost-button" data-copy-wallpaper-url type="button">URL 복사</button>
+        <button class="ghost-button" data-download-wallpaper-automation type="button">설정 가이드 다운로드</button>
         <a class="ghost-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">이미지 열기</a>
       </div>
       <figure class="wallpaper-image-preview">
         <img src="${escapeHtml(url)}" alt="선택한 과목 배경화면 이미지 미리보기" loading="lazy" />
         <figcaption>단축어에서 가져갈 실제 이미지입니다.</figcaption>
       </figure>
-      <ol>
-        <li>단축어 앱에서 새 단축어를 만듭니다.</li>
-        <li>URL 액션에 위 이미지 URL을 기입합니다.</li>
-        <li>URL 콘텐츠 가져오기 (Get contents of URL) 동작을 추가합니다.</li>
-        <li>가져온 콘텐츠 이름을 'today-wallpaper.png' 로 이름 변경 (Set name of Contents of URL to today-wallpaper.png) 동작을 추가합니다.</li>
-        <li>배경화면 설정 (Set wallpaper to Renamed Item) 동작을 추가하여 이름을 바꾼 파일을 입혀줍니다.</li>
+      <ol style="margin-top: 14px;">
+        <li>위의 <strong>[iPhone 단축어 등록]</strong> 버튼을 누르면 이미지 URL이 클립보드에 자동 복사되며 단축어 추가 화면이 열립니다.</li>
+        <li>단축어를 추가한 후, <strong>[iOS 자동화 설정 가이드]</strong> 버튼을 눌러 일출, 08:40, 14:00 시간에 자동 갱신되도록 예약하면 끝납니다!</li>
+        <li style="color: #94a3b8; font-size: 13px;">(최초 1회 실행 시 배경화면 접근 권한을 '항상 허용'해 주시면 됩니다.)</li>
       </ol>
     </article>`;
   }
@@ -1963,6 +1964,26 @@
         showGlobalStatus("단축어 이미지 URL을 복사했습니다.", "success", { autoHide: true });
       }
     });
+    document.addEventListener("click", async (event) => {
+      if (!event.target.closest("[data-setup-ios-shortcut]")) return;
+      const input = els.wallpaperAutomation.querySelector(".wallpaper-url-field input");
+      if (!input) return;
+      
+      // 고유 PNG 이미지 URL 클립보드 강제 자동 복사
+      try {
+        await navigator.clipboard.writeText(input.value);
+      } catch {
+        input.select();
+        document.execCommand("copy");
+      }
+      
+      showGlobalStatus("단축어 이미지 URL이 자동 복사되었습니다! 1초 뒤 단축어 앱으로 이동합니다.", "success", { autoHide: true });
+      
+      setTimeout(() => {
+        window.open("https://www.icloud.com/shortcuts/9cdf31ace36745b88f88af68c18f55a8", "_blank");
+      }, 1000);
+    });
+
     document.addEventListener("click", (event) => {
       if (!event.target.closest("[data-download-wallpaper-automation]")) return;
       const settings = wallpaperSettings();
