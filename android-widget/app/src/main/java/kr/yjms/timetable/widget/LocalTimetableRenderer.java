@@ -259,71 +259,159 @@ public class LocalTimetableRenderer {
                     canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
                     paint.setPathEffect(null); // 원복
 
-                    // 텍스트 기입 페인트 설정
-                    paint.setStyle(Paint.Style.FILL);
-                    paint.setColor(textColor);
-                    paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
-                    if ("original".equals(type)) {
-                        // 사라진 과목 텍스트 위에는 취소선(StrikeThru) 긋기
-                        paint.setStrikeThruText(true);
-                    }
-
+                    // 텍스트 기입 페인트 설정 및 동적 비례 높이 정렬
                     float centerX = rect.centerX();
                     float centerY = rect.centerY();
                     float maxTextWidth = rect.width() - (10f * fontScale); // 칩 테두리와의 여백 여유값 확보
 
-                    // 행사제목/과목명이 2줄로 쪼개지는 대상인지 사전 측정
+                    float titleSize = (spanRows > 1) ? (42f * fontScale) : (34f * fontScale);
+                    if (spanRows == 1 && note.isEmpty()) {
+                        titleSize = 36f * fontScale;
+                    }
+                    
+                    paint.setTextSize(titleSize);
                     boolean isTitleMultiLine = paint.measureText(title) > maxTextWidth;
+                    int titleLines = isTitleMultiLine ? 2 : 1;
 
-                    if (spanRows > 1) {
-                        // 세로 병합 칩 (행사 등)
-                        paint.setTextSize(42f * fontScale);
+                    float noteSize = (spanRows > 1) ? (26f * fontScale) : (22f * fontScale);
+                    paint.setTextSize(noteSize);
+                    
+                    boolean hasNote = !note.isEmpty();
+                    boolean isNoteMultiLine = false;
+                    if (hasNote) {
+                        isNoteMultiLine = paint.measureText(note) > maxTextWidth;
+                    }
+                    int noteLines = hasNote ? (isNoteMultiLine ? 2 : 1) : 0;
+
+                    // 각 블록의 실질 가늠 높이 산정
+                    paint.setTextSize(titleSize);
+                    Paint.FontMetrics fmTitle = paint.getFontMetrics();
+                    float titleLineHeight = fmTitle.descent - fmTitle.ascent;
+                    float titleBlockHeight = titleLines * titleLineHeight * 0.82f;
+
+                    float noteBlockHeight = 0;
+                    float noteLineHeight = 0;
+                    if (hasNote) {
+                        paint.setTextSize(noteSize);
+                        Paint.FontMetrics fmNote = paint.getFontMetrics();
+                        noteLineHeight = fmNote.descent - fmNote.ascent;
+                        noteBlockHeight = noteLines * noteLineHeight * 0.82f;
+                    }
+
+                    // 칩 높이에 비례한 간격(textGap) 산정 및 총합 높이 계산
+                    float textGap = (spanRows > 1) ? (14f * scaleY) : (4f * scaleY);
+                    float totalHeight = titleBlockHeight + (hasNote ? (noteBlockHeight + textGap) : 0);
+
+                    // 정중앙 정렬을 위한 시작 오프셋 Y
+                    float startY = centerY - (totalHeight / 2f);
+
+                    // A. 과목명/행사제목 그리기
+                    paint.setTextSize(titleSize);
+                    paint.setStyle(Paint.Style.FILL);
+                    paint.setColor(textColor);
+                    paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
+                    if ("original".equals(type)) {
+                        paint.setStrikeThruText(true);
+                    }
+
+                    if (isTitleMultiLine) {
+                        float y1 = startY + (titleLineHeight * 0.35f);
+                        float y2 = startY + (titleLineHeight * 1.25f);
                         
-                        float titleY;
-                        float noteY;
-                        if (isTitleMultiLine) {
-                            // 2줄로 쪼개질 때는 위쪽으로 title을 더 밀고, 학급명(note)은 맨 아래쪽으로 유도하여 겹침 방지
-                            titleY = centerY - (26f * scaleY);
-                            noteY = centerY + (48f * scaleY);
+                        String line1 = title;
+                        String line2 = "";
+                        int center = title.length() / 2;
+                        int spaceIdx = -1;
+                        int minDiff = Integer.MAX_VALUE;
+                        int searchIdx = title.indexOf(' ');
+                        while (searchIdx != -1) {
+                            int diff = Math.abs(searchIdx - center);
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                spaceIdx = searchIdx;
+                            }
+                            searchIdx = title.indexOf(' ', searchIdx + 1);
+                        }
+                        if (spaceIdx != -1) {
+                            line1 = title.substring(0, spaceIdx);
+                            line2 = title.substring(spaceIdx + 1);
                         } else {
-                            titleY = centerY - (14f * scaleY);
-                            noteY = centerY + (18f * scaleY);
+                            line1 = title.substring(0, center);
+                            line2 = title.substring(center);
                         }
 
-                        drawTextFitWidth(canvas, title, centerX, titleY, paint, maxTextWidth);
-                        paint.setStrikeThruText(false); // 과목명 렌더링 완료 후 취소선 즉시 해제
-                        
-                        if (!note.isEmpty()) {
-                            paint.setTextSize(26f * fontScale);
-                            paint.setColor(textColor & 0xCCFFFFFF);
-                            drawTextFitWidth(canvas, note, centerX, noteY, paint, maxTextWidth);
+                        float originalTitleSize = titleSize;
+                        float curSize = titleSize;
+                        while ((paint.measureText(line1) > maxTextWidth || paint.measureText(line2) > maxTextWidth) && curSize > originalTitleSize * 0.4f) {
+                            curSize -= 1.0f;
+                            paint.setTextSize(curSize);
                         }
+                        
+                        Paint.FontMetrics fm1 = paint.getFontMetrics();
+                        canvas.drawText(line1, centerX, y1 - (fm1.descent + fm1.ascent)/2f, paint);
+                        if (!line2.isEmpty()) {
+                            Paint.FontMetrics fm2 = paint.getFontMetrics();
+                            canvas.drawText(line2, centerX, y2 - (fm2.descent + fm2.ascent)/2f, paint);
+                        }
+                        paint.setTextSize(titleSize);
                     } else {
-                        // 단일 1칸짜리 칩
-                        if (!note.isEmpty()) {
-                            paint.setTextSize(34f * fontScale);
+                        float y = startY + (titleBlockHeight / 2f);
+                        Paint.FontMetrics fm = paint.getFontMetrics();
+                        canvas.drawText(title, centerX, y - (fm.descent + fm.ascent)/2f, paint);
+                    }
+                    paint.setStrikeThruText(false);
+
+                    // B. 학급명/메모(note) 그리기
+                    if (hasNote) {
+                        paint.setTextSize(noteSize);
+                        paint.setColor(textColor & 0xCCFFFFFF);
+                        
+                        float noteStartY = startY + titleBlockHeight + textGap;
+                        
+                        if (isNoteMultiLine) {
+                            float y1 = noteStartY + (noteLineHeight * 0.35f);
+                            float y2 = noteStartY + (noteLineHeight * 1.25f);
                             
-                            float titleY;
-                            float noteY;
-                            if (isTitleMultiLine) {
-                                // 1칸짜리 협소 공간에서 2줄 쪼개기 시 Y폭 최대 이격 보정
-                                titleY = centerY - (18f * scaleY);
-                                noteY = centerY + (26f * scaleY);
+                            String line1 = note;
+                            String line2 = "";
+                            int center = note.length() / 2;
+                            int spaceIdx = -1;
+                            int minDiff = Integer.MAX_VALUE;
+                            int searchIdx = note.indexOf(' ');
+                            while (searchIdx != -1) {
+                                int diff = Math.abs(searchIdx - center);
+                                if (diff < minDiff) {
+                                    minDiff = diff;
+                                    spaceIdx = searchIdx;
+                                }
+                                searchIdx = note.indexOf(' ', searchIdx + 1);
+                            }
+                            if (spaceIdx != -1) {
+                                line1 = note.substring(0, spaceIdx);
+                                line2 = note.substring(spaceIdx + 1);
                             } else {
-                                titleY = centerY - (12f * scaleY);
-                                noteY = centerY + (16f * scaleY);
+                                line1 = note.substring(0, center);
+                                line2 = note.substring(center);
                             }
 
-                            drawTextFitWidth(canvas, title, centerX, titleY, paint, maxTextWidth);
-                            paint.setStrikeThruText(false); // 과목명 렌더링 완료 후 취소선 즉시 해제
-
-                            paint.setTextSize(22f * fontScale);
-                            paint.setColor(textColor & 0xCCFFFFFF);
-                            drawTextFitWidth(canvas, note, centerX, noteY, paint, maxTextWidth);
+                            float originalNoteSize = noteSize;
+                            float curSize = noteSize;
+                            while ((paint.measureText(line1) > maxTextWidth || paint.measureText(line2) > maxTextWidth) && curSize > originalNoteSize * 0.4f) {
+                                curSize -= 1.0f;
+                                paint.setTextSize(curSize);
+                            }
+                            
+                            Paint.FontMetrics fm1 = paint.getFontMetrics();
+                            canvas.drawText(line1, centerX, y1 - (fm1.descent + fm1.ascent)/2f, paint);
+                            if (!line2.isEmpty()) {
+                                Paint.FontMetrics fm2 = paint.getFontMetrics();
+                                canvas.drawText(line2, centerX, y2 - (fm2.descent + fm2.ascent)/2f, paint);
+                            }
+                            paint.setTextSize(noteSize);
                         } else {
-                            paint.setTextSize(36f * fontScale);
-                            drawTextFitWidth(canvas, title, centerX, centerY, paint, maxTextWidth);
-                            paint.setStrikeThruText(false); // 과목명 렌더링 완료 후 취소선 즉시 해제
+                            float y = noteStartY + (noteBlockHeight / 2f);
+                            Paint.FontMetrics fm = paint.getFontMetrics();
+                            canvas.drawText(note, centerX, y - (fm.descent + fm.ascent)/2f, paint);
                         }
                     }
 
@@ -336,7 +424,6 @@ public class LocalTimetableRenderer {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return bitmap;
     }
 }
