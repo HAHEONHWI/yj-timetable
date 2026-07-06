@@ -249,10 +249,10 @@ function renderWallpaperSvg(state, query) {
   const today = toISO(now);
   const days = schoolDaysForCurrentWeek(now).filter((day) => allowedDaySet.has(day.weekday.key));
 
-  const tableX = 46;
-  const tableY = 238;
-  const tableWidth = 1078;
-  const periodWidth = 92;
+  const tableX = 0;
+  const tableY = 720;
+  const tableWidth = 1170;
+  const periodWidth = 110;
   const dayWidth = (tableWidth - periodWidth) / Math.max(days.length, 1);
   const headerHeight = 76;
   const rowHeight = 160;
@@ -275,8 +275,7 @@ function renderWallpaperSvg(state, query) {
       const y = tableY + headerHeight + periodIndex * rowHeight;
       const periodCell = `
         <rect x="${tableX}" y="${y}" width="${periodWidth}" height="${rowHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
-        ${renderText(`P${period}`, tableX + periodWidth / 2, y + 66, { size: 28, anchor: "middle", weight: 900 })}
-        ${renderText(`${period}교시`, tableX + periodWidth / 2, y + 96, { size: 15, fill: "#64748b", anchor: "middle", weight: 800 })}
+        ${renderText(`${period}교시`, tableX + periodWidth / 2, y + 90, { size: 23, fill: "#f8fafc", anchor: "middle", weight: 900 })}
       `;
       const dayCells = days
         .map((day, dayIndex) => {
@@ -321,21 +320,21 @@ function renderWallpaperSvg(state, query) {
     </filter>
   </defs>
   <rect width="1170" height="2532" fill="#090d16" />
-  <circle cx="120" cy="350" r="300" fill="#3b82f6" opacity="0.22" filter="url(#glow)" />
-  <circle cx="1000" cy="450" r="280" fill="#8b5cf6" opacity="0.18" filter="url(#glow)" />
+  <circle cx="120" cy="850" r="300" fill="#3b82f6" opacity="0.22" filter="url(#glow)" />
+  <circle cx="1000" cy="950" r="280" fill="#8b5cf6" opacity="0.18" filter="url(#glow)" />
   <circle cx="1000" cy="2100" r="350" fill="#ec4899" opacity="0.15" filter="url(#glow)" />
   <circle cx="150" cy="2000" r="320" fill="#14b8a6" opacity="0.18" filter="url(#glow)" />
   <g font-family="Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
-    ${renderText("용정 시간표", 64, 78, { size: 28, fill: "#64748b", weight: 900 })}
-    ${renderText("내 과목 주간표", 64, 142, { size: 62, fill: "#f8fafc", weight: 900 })}
-    ${renderText(subjectLabel, 64, 184, { size: 28, fill: "#2dd4bf", weight: 900 })}
-    ${renderText(gradeLabel, 64, 218, { size: 20, fill: "#64748b", weight: 800 })}
+    ${renderText("용정 시간표", 64, 530, { size: 28, fill: "#64748b", weight: 900 })}
+    ${renderText("내 과목 주간표", 64, 594, { size: 62, fill: "#f8fafc", weight: 900 })}
+    ${renderText(subjectLabel, 64, 640, { size: 28, fill: "#2dd4bf", weight: 900 })}
+    ${renderText(gradeLabel, 64, 674, { size: 20, fill: "#64748b", weight: 800 })}
     <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
     ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f8fafc", anchor: "middle", weight: 900 })}
     ${headerCells}
     ${rows}
-    <rect x="46" y="1814" width="1078" height="78" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="2" rx="12" />
-    ${renderText("수업 변경: 주황색 · 취소된 원래 수업: 회색 · 행사: 민트색", 585, 1860, {
+    <rect x="46" y="2260" width="1078" height="78" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="2" rx="12" />
+    ${renderText("수업 변경: 주황색 · 취소된 원래 수업: 회색 · 행사: 민트색", 585, 2306, {
       size: 20,
       fill: "#94a3b8",
       anchor: "middle",
