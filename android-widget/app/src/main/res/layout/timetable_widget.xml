@@ -13,15 +13,21 @@
         android:layout_alignParentTop="true"
         android:paddingHorizontal="4dp">
 
+        <!-- 동적 타이틀 텍스트뷰 (선생님 성함 및 과목명 반영) -->
         <TextView
+            android:id="@+id/widget_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="용정시간표"
             android:textColor="#2dd4bf"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:layout_alignParentLeft="true"
-            android:layout_centerVertical="true" />
+            android:layout_centerVertical="true"
+            android:layout_toLeftOf="@+id/widget_last_update"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:layout_marginRight="8dp" />
 
         <!-- 최종 새로고침 시각 표시 텍스트뷰 -->
         <TextView

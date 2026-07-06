@@ -132,6 +132,15 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
                                 final String updateText = "갱신: " + sdf.format(new java.util.Date());
 
                                 SharedPreferences prefs = context.getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+                                String name = prefs.getString("name", "최세영");
+                                String subjects = prefs.getString("subjects", "");
+                                String titleText = "용정시간표";
+                                if (!name.isEmpty()) {
+                                    titleText += " - " + name + " 선생님";
+                                    if (!subjects.isEmpty()) {
+                                        titleText += "(" + subjects.replace(",", ", ") + ")";
+                                    }
+                                }
 
                                 // 개별 위젯의 가로세로 크기를 획득하여 최적 비트맵으로 각각 드로잉
                                 for (int appWidgetId : appWidgetIds) {
@@ -144,6 +153,7 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
                                         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.timetable_widget);
                                         views.setImageViewBitmap(R.id.widget_image, localBitmap);
                                         views.setTextViewText(R.id.widget_last_update, updateText);
+                                        views.setTextViewText(R.id.widget_title, titleText);
                                         
                                         // 🔄 클릭이벤트 재바인딩 누락 방지
                                         Intent refreshIntent = new Intent(context, TimetableWidgetProvider.class);
