@@ -1,6 +1,7 @@
 package kr.yjms.timetable.widget;
 
 import android.app.Activity;
+import android.app.DatePickerDialog;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -12,14 +13,20 @@ import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.DatePicker;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,18 +35,39 @@ import org.json.JSONObject;
 
 public class MainActivity extends Activity {
 
+    private EditText editName;
     private CheckBox chkMon, chkTue, chkWed, chkThu, chkFri;
     private CheckBox chkGrade1, chkGrade2, chkGrade3;
     private CheckBox chkSubEng, chkSubMath, chkSubKor, chkSubSci, chkSubSoc, chkSubHis, chkSubPe, chkSubMus;
     private Button btnSave;
 
+    // 관리자 관련 컴포넌트
+    private EditText editAdminPw;
+    private Button btnAdminLogin;
+    private TextView txtAdminStatus;
+    private LinearLayout cardAdminChange;
+
+    // 수업 변경 등록 컴포넌트
+    private EditText editChangeDate;
+    private Spinner spnChangeClass;
+    private Spinner spnChangePeriod;
+    private EditText editChangeSubject;
+    private Button btnAddChange;
+
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    private static final String SUPABASE_URL = "https://jzcectvzwbfvbgiszjkt.supabase.co";
+    private static final String SUPABASE_KEY = "sb_publishable_JgPxLeD5pJjk46GnS-n3ZQ_gzZmIIuq";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // 이름 입력란 매핑
+        editName = (EditText) findViewById(R.id.edit_name_native);
 
         // 요일 체크박스 매핑
         chkMon = (CheckBox) findViewById(R.id.chk_mon);
@@ -65,23 +93,67 @@ public class MainActivity extends Activity {
 
         btnSave = (Button) findViewById(R.id.btn_save_native);
 
+        // 관리자 UI 매핑
+        editAdminPw = (EditText) findViewById(R.id.edit_admin_pw);
+        btnAdminLogin = (Button) findViewById(R.id.btn_admin_login);
+        txtAdminStatus = (TextView) findViewById(R.id.txt_admin_status);
+        cardAdminChange = (LinearLayout) findViewById(R.id.card_admin_change);
+
+        // 수업 변경 UI 매핑
+        editChangeDate = (EditText) findViewById(R.id.edit_change_date);
+        spnChangeClass = (Spinner) findViewById(R.id.spn_change_class);
+        spnChangePeriod = (Spinner) findViewById(R.id.spn_change_period);
+        editChangeSubject = (EditText) findViewById(R.id.edit_change_subject);
+        btnAddChange = (Button) findViewById(R.id.btn_add_change);
+
         // 기존 설정값 로드 및 UI 체크 셋팅
         loadSavedSettings();
 
         // 앱 내부 시간표 조회 대시보드 갱신
         loadTimetableGrid();
 
+        // 저장 버튼 이벤트
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 saveSettings();
             }
         });
+
+        // 관리자 로그인 버튼 이벤트
+        btnAdminLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                performAdminLogin();
+            }
+        });
+
+        // 날짜 선택 DatePickerDialog 연동
+        editChangeDate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showDatePicker();
+            }
+        });
+
+        // 수업 변경 사항 등록 버튼 이벤트
+        btnAddChange.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                submitClassChange();
+            }
+        });
+
+        // 기로그인된 관리자 비번 존재 시 패널 자동 노출
+        checkAdminLoginState();
     }
 
     private void loadSavedSettings() {
         SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         
+        // 이름 로드
+        editName.setText(prefs.getString("name", "최세영"));
+
         // 요일 체크 셋팅
         String days = prefs.getString("days", "mon,tue,wed,thu,fri");
         chkMon.setChecked(days.contains("mon"));
@@ -109,7 +181,10 @@ public class MainActivity extends Activity {
     }
 
     private void saveSettings() {
-        // 1. 선택된 요일 빌드
+        String name = editName.getText().toString().trim();
+        if (name.isEmpty()) name = "최세영";
+
+        // 요일 빌드
         List<String> selectedDays = new ArrayList<>();
         if (chkMon.isChecked()) selectedDays.add("mon");
         if (chkTue.isChecked()) selectedDays.add("tue");
@@ -118,7 +193,7 @@ public class MainActivity extends Activity {
         if (chkFri.isChecked()) selectedDays.add("fri");
         String daysStr = joinList(selectedDays, ",");
 
-        // 2. 선택된 과목 빌드
+        // 과목 빌드
         List<String> selectedSubs = new ArrayList<>();
         if (chkSubEng.isChecked()) selectedSubs.add("영어");
         if (chkSubMath.isChecked()) selectedSubs.add("수학");
@@ -130,14 +205,13 @@ public class MainActivity extends Activity {
         if (chkSubMus.isChecked()) selectedSubs.add("음악");
         String subsStr = joinList(selectedSubs, ",");
 
-        // 3. 선택된 학년 빌드
+        // 학년 빌드
         List<String> selectedGrades = new ArrayList<>();
         if (chkGrade1.isChecked()) selectedGrades.add("1");
         if (chkGrade2.isChecked()) selectedGrades.add("2");
         if (chkGrade3.isChecked()) selectedGrades.add("3");
         String gradeNums = joinList(selectedGrades, "|");
 
-        // 과목과 학년 조합하여 포맷팅 (예: 영어:1|2;수학:1|2)
         StringBuilder gradesBuilder = new StringBuilder();
         if (!selectedGrades.isEmpty()) {
             for (int i = 0; i < selectedSubs.size(); i++) {
@@ -147,9 +221,10 @@ public class MainActivity extends Activity {
         }
         String gradesStr = gradesBuilder.toString();
 
-        // 4. SharedPreferences에 안전하게 저장
+        // SharedPreferences 저장
         SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("name", name);
         editor.putString("days", daysStr);
         editor.putString("subjects", subsStr);
         editor.putString("grades", gradesStr);
@@ -157,7 +232,7 @@ public class MainActivity extends Activity {
 
         Toast.makeText(this, "설정이 저장되어 위젯에 자동 동기화되었습니다.", Toast.LENGTH_SHORT).show();
 
-        // 5. 바탕화면 위젯 강제 업데이트 브로드캐스트 전송
+        // 위젯 강제 업데이트 브로드캐스트 전송
         Context context = getApplicationContext();
         Intent widgetIntent = new Intent(context, TimetableWidgetProvider.class);
         widgetIntent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
@@ -167,8 +242,218 @@ public class MainActivity extends Activity {
         widgetIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
         context.sendBroadcast(widgetIntent);
 
-        // 6. 앱 내부 시간표 조회 격자 리렌더링
+        // 시간표 텍스트 격자 리렌더링
         loadTimetableGrid();
+    }
+
+    private void checkAdminLoginState() {
+        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+        String savedPw = prefs.getString("admin_pw", "");
+        if (!savedPw.isEmpty()) {
+            txtAdminStatus.setText("관리자 권한 획득 성공 (수업 변경 가능)");
+            txtAdminStatus.setTextColor(0xFF2DD4BF);
+            cardAdminChange.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void performAdminLogin() {
+        final String pw = editAdminPw.getText().toString().trim();
+        if (pw.isEmpty()) {
+            Toast.makeText(this, "비밀번호를 입력하세요.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        txtAdminStatus.setText("로그인 요청 중...");
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    URL url = new URL(SUPABASE_URL + "/functions/v1/admin-login");
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("apikey", SUPABASE_KEY);
+                    conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_KEY);
+                    conn.setRequestProperty("Content-Type", "application/json");
+                    conn.setDoOutput(true);
+
+                    JSONObject bodyObj = new JSONObject();
+                    bodyObj.put("password", pw);
+
+                    OutputStream os = conn.getOutputStream();
+                    os.write(bodyObj.toString().getBytes("UTF-8"));
+                    os.close();
+
+                    int code = conn.getResponseCode();
+                    if (code == HttpURLConnection.HTTP_OK) {
+                        InputStream in = conn.getInputStream();
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, length);
+                        }
+                        in.close();
+
+                        JSONObject result = new JSONObject(out.toString("UTF-8"));
+                        final boolean ok = result.optBoolean("ok", false);
+
+                        mainHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (ok) {
+                                    SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+                                    prefs.edit().putString("admin_pw", pw).apply();
+
+                                    txtAdminStatus.setText("관리자 권한 획득 성공 (수업 변경 가능)");
+                                    txtAdminStatus.setTextColor(0xFF2DD4BF);
+                                    cardAdminChange.setVisibility(View.VISIBLE);
+                                    editAdminPw.setText("");
+                                    Toast.makeText(MainActivity.this, "관리자 로그인 성공!", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    txtAdminStatus.setText("비밀번호 불일치 (권한 없음)");
+                                    txtAdminStatus.setTextColor(0xFFEF4444);
+                                    cardAdminChange.setVisibility(View.GONE);
+                                    Toast.makeText(MainActivity.this, "비밀번호가 올바르지 않습니다.", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        });
+                    }
+                    conn.disconnect();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            txtAdminStatus.setText("로그인 연결 오류");
+                            txtAdminStatus.setTextColor(0xFFEF4444);
+                            Toast.makeText(MainActivity.this, "인터넷 연결을 확인하세요.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void showDatePicker() {
+        Calendar cal = Calendar.getInstance();
+        DatePickerDialog dialog = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                String formatted = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth);
+                editChangeDate.setText(formatted);
+            }
+        }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH));
+        dialog.show();
+    }
+
+    private void submitClassChange() {
+        final String date = editChangeDate.getText().toString().trim();
+        final String className = spnChangeClass.getSelectedItem().toString();
+        final int period = spnChangePeriod.getSelectedItemPosition() + 1;
+        final String subject = editChangeSubject.getText().toString().trim();
+
+        if (date.isEmpty() || subject.isEmpty()) {
+            Toast.makeText(this, "모든 정보를 입력하세요.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        SharedPreferences prefs = getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+        final String password = prefs.getString("admin_pw", "");
+        if (password.isEmpty()) {
+            Toast.makeText(this, "관리자 권한이 만료되었습니다. 다시 로그인하세요.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this, "수업 변경사항 데이터베이스 반영 중...", Toast.LENGTH_SHORT).show();
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // 1단계: Supabase app_state에서 id=eq.main 레코드의 data 데이터 로드 (GET)
+                    URL getUrl = new URL(SUPABASE_URL + "/rest/v1/app_state?id=eq.main&select=data");
+                    HttpURLConnection getConn = (HttpURLConnection) getUrl.openConnection();
+                    getConn.setRequestMethod("GET");
+                    getConn.setRequestProperty("apikey", SUPABASE_KEY);
+                    getConn.setRequestProperty("Authorization", "Bearer " + SUPABASE_KEY);
+                    getConn.connect();
+
+                    if (getConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                        InputStream in = getConn.getInputStream();
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, length);
+                        }
+                        in.close();
+
+                        JSONArray rows = new JSONArray(out.toString("UTF-8"));
+                        if (rows.length() > 0) {
+                            JSONObject rootState = rows.getJSONObject(0).getJSONObject("data");
+                            JSONObject changes = rootState.optJSONObject("changes");
+                            if (changes == null) {
+                                changes = new JSONObject();
+                                rootState.put("changes", changes);
+                            }
+
+                            // 2단계: changes 객체에 수업 변경 노드 갱신
+                            String key = date + "__" + className + "__" + period;
+                            JSONObject changeNode = new JSONObject();
+                            changeNode.put("date", date);
+                            changeNode.put("className", className);
+                            changeNode.put("period", String.valueOf(period));
+                            changeNode.put("subject", subject);
+                            changes.put(key, changeNode);
+
+                            // 3단계: save-state Edge Function을 호출하여 state 통째 갱신 (POST)
+                            URL postUrl = new URL(SUPABASE_URL + "/functions/v1/save-state");
+                            HttpURLConnection postConn = (HttpURLConnection) postUrl.openConnection();
+                            postConn.setRequestMethod("POST");
+                            postConn.setRequestProperty("apikey", SUPABASE_KEY);
+                            postConn.setRequestProperty("Authorization", "Bearer " + SUPABASE_KEY);
+                            postConn.setRequestProperty("Content-Type", "application/json");
+                            postConn.setDoOutput(true);
+
+                            JSONObject postBody = new JSONObject();
+                            postBody.put("password", password);
+                            postBody.put("state", rootState);
+
+                            OutputStream os = postConn.getOutputStream();
+                            os.write(postBody.toString().getBytes("UTF-8"));
+                            os.close();
+
+                            final int postCode = postConn.getResponseCode();
+                            mainHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (postCode == HttpURLConnection.HTTP_OK) {
+                                        Toast.makeText(MainActivity.this, "수업 변경 등록이 완료되었습니다!", Toast.LENGTH_LONG).show();
+                                        editChangeSubject.setText("");
+                                        
+                                        // 앱 및 바탕화면 위젯 연쇄 최신화 기동
+                                        loadTimetableGrid();
+                                        saveSettings();
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "DB 저장 실패 (암호 권한 에러)", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            });
+                            postConn.disconnect();
+                        }
+                    }
+                    getConn.disconnect();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "DB 통신 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private void loadTimetableGrid() {

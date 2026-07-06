@@ -2,4 +2,25 @@
     <string name="app_name">용정시간표 설정</string>
     <string name="widget_name">용정시간표 위젯</string>
     <string name="copyright">저작권 23기 하헌휘</string>
+
+    <string-array name="array_classes">
+        <item>1-1</item>
+        <item>1-2</item>
+        <item>2-1</item>
+        <item>2-2</item>
+        <item>3-1</item>
+        <item>3-2</item>
+    </string-array>
+
+    <string-array name="array_periods">
+        <item>1교시</item>
+        <item>2교시</item>
+        <item>3교시</item>
+        <item>4교시</item>
+        <item>5교시</item>
+        <item>6교시</item>
+        <item>7교시</item>
+        <item>8교시</item>
+        <item>9교시</item>
+    </string-array>
 </resources>

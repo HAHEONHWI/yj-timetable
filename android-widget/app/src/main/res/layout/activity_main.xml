@@ -16,7 +16,7 @@
             android:id="@+id/app_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="최세영 선생님 시간표 설정"
+            android:text="용정시간표 조회 및 설정"
             android:textColor="#2dd4bf"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -38,11 +38,11 @@
     <!-- 실시간 조회 대시보드 (앱 내부 5x9 네이티브 시간표 텍스트 격자판) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="240dp"
+        android:layout_height="220dp"
         android:orientation="vertical"
         android:background="#334155"
         android:padding="1dp"
-        android:layout_margin="12dp">
+        android:layout_margin="10dp">
 
         <!-- 요일 헤더 -->
         <LinearLayout
@@ -157,7 +157,38 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- 1. 요일 다중 선택 카드 -->
+            <!-- 1. 선생님 이름 입력 카드 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1e293b"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="선생님 이름"
+                    android:textColor="#2dd4bf"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="6dp" />
+
+                <EditText
+                    android:id="@+id/edit_name_native"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:background="#0f172a"
+                    android:textColor="#f8fafc"
+                    android:hint="예: 최세영"
+                    android:textColorHint="#475569"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="14sp"
+                    android:singleLine="true" />
+            </LinearLayout>
+
+            <!-- 2. 요일 다중 선택 카드 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -187,7 +218,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 2. 학년 다중 선택 카드 -->
+            <!-- 3. 학년 다중 선택 카드 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -215,7 +246,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 3. 강조 과목 다중 선택 카드 -->
+            <!-- 4. 강조 과목 다중 선택 카드 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -233,7 +264,6 @@
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
 
-                <!-- 1행 과목 체크박스 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -245,7 +275,6 @@
                     <CheckBox android:id="@+id/chk_sub_sci" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="과학" android:textColor="#f8fafc" android:textSize="12sp"/>
                 </LinearLayout>
 
-                <!-- 2행 과목 체크박스 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -266,7 +295,205 @@
                 android:text="설정 저장 및 바탕화면 위젯 동기화"
                 android:textColor="#0f172a"
                 android:textStyle="bold"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:layout_marginBottom="24dp" />
+
+            <!-- 5. 관리자 로그인 카드 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1e293b"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="관리자 로그인"
+                    android:textColor="#f59e0b"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <EditText
+                        android:id="@+id/edit_admin_pw"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1.5"
+                        android:background="#0f172a"
+                        android:textColor="#f8fafc"
+                        android:hint="관리자 패스워드"
+                        android:textColorHint="#475569"
+                        android:paddingHorizontal="10dp"
+                        android:textSize="13sp"
+                        android:inputType="textPassword"
+                        android:singleLine="true" />
+
+                    <Button
+                        android:id="@+id/btn_admin_login"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:layout_marginLeft="8dp"
+                        android:background="#334155"
+                        android:text="로그인"
+                        android:textColor="#f8fafc"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txt_admin_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="비로그인 상태 (수업 변경 불가)"
+                    android:textColor="#94a3b8"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- 6. 수업 변경 등록 카드 (로그인 성공 시 visible) -->
+            <LinearLayout
+                android:id="@+id/card_admin_change"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1e293b"
+                android:padding="12dp"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="수업 변경 등록 (관리자)"
+                    android:textColor="#2dd4bf"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- 날짜 선택 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="변경 날짜"
+                    android:textColor="#94a3b8"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_change_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="#0f172a"
+                    android:textColor="#f8fafc"
+                    android:hint="터치하여 날짜 선택 (YYYY-MM-DD)"
+                    android:textColorHint="#475569"
+                    android:paddingHorizontal="10dp"
+                    android:textSize="13sp"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- 학급 및 교시 선택 (가로 정렬) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginRight="6dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="학급"
+                            android:textColor="#94a3b8"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="4dp" />
+                        <Spinner
+                            android:id="@+id/spn_change_class"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:background="#0f172a"
+                            android:entries="@array/array_classes" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginLeft="6dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="교시"
+                            android:textColor="#94a3b8"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="4dp" />
+                        <Spinner
+                            android:id="@+id/spn_change_period"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:background="#0f172a"
+                            android:entries="@array/array_periods" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 변경 후 과목 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="변경 후 과목명"
+                    android:textColor="#94a3b8"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_change_subject"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="#0f172a"
+                    android:textColor="#f8fafc"
+                    android:hint="예: 영어 (결강 시 '-' 입력)"
+                    android:textColorHint="#475569"
+                    android:paddingHorizontal="10dp"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- 변경 등록 버튼 -->
+                <Button
+                    android:id="@+id/btn_add_change"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:background="#f59e0b"
+                    android:text="수업 변경사항 DB 등록"
+                    android:textColor="#0f172a"
+                    android:textStyle="bold"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/txt_copyright"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="저작권 23기 하헌휘"
+                android:textColor="#475569"
+                android:textSize="11sp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp" />
 
         </LinearLayout>
     </ScrollView>
