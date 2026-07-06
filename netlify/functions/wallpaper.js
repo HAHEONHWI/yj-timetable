@@ -248,12 +248,13 @@ function renderText(text, x, y, options = {}) {
   const weight = options.weight || 800;
   const fill = options.fill || "#f8fafc";
   const anchor = options.anchor ? ` text-anchor="${options.anchor}"` : "";
-  return `<text x="${x}" y="${y}" font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}"${anchor}>${escapeXml(text)}</text>`;
+  const decor = options.decoration ? ` text-decoration="${options.decoration}"` : "";
+  return `<text x="${x}" y="${y}" font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}"${anchor}${decor}>${escapeXml(text)}</text>`;
 }
 
 function chipColors(type) {
   if (type === "change") return { bg: "rgba(43, 27, 10, 0.95)", line: "#f59e0b", fg: "#fef3c7", note: "#fbbf24" };
-  if (type === "original") return { bg: "rgba(23, 29, 38, 0.95)", line: "#94a3b8", fg: "#cbd5e1", note: "#94a3b8" };
+  if (type === "original") return { bg: "rgba(23, 29, 38, 0.15)", line: "rgba(148, 163, 184, 0.25)", fg: "rgba(203, 213, 225, 0.35)", note: "rgba(148, 163, 184, 0.35)" };
   if (type === "event" || type === "merge") return { bg: "rgba(10, 37, 43, 0.95)", line: "#14b8a6", fg: "#ccfbf1", note: "#2dd4bf" };
   return { bg: "rgba(15, 23, 42, 0.95)", line: "#475569", fg: "#e2e8f0", note: "#94a3b8" };
 }
@@ -276,10 +277,13 @@ function renderChip(match, x, y, width, height, isFullSize = false) {
     noteY = y + (height / 2) + 26;
   }
 
+  const dashAttr = match.type === "original" ? ' stroke-dasharray="6,4"' : '';
+  const titleDecor = match.type === "original" ? "line-through" : "";
+
   return `
-    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="${colors.bg}" stroke="${colors.line}" stroke-width="2" />
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="${colors.bg}" stroke="${colors.line}" stroke-width="2"${dashAttr} />
     ${hasClassName ? renderText(match.className, x + width / 2, classY, { size: classSize, fill: colors.fg, anchor: "middle", weight: 900 }) : ""}
-    ${renderText(match.title, x + width / 2, titleY, { size: titleSize, fill: colors.fg, anchor: "middle", weight: 900 })}
+    ${renderText(match.title, x + width / 2, titleY, { size: titleSize, fill: colors.fg, anchor: "middle", weight: 900, decoration: titleDecor })}
     ${match.note ? renderText(match.note, x + width / 2, noteY, { size: noteSize, fill: colors.note, anchor: "middle", weight: 800 }) : ""}
   `;
 }
