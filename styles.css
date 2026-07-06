@@ -491,6 +491,50 @@ body.board-mode.board-light select {
   color: #0f172a;
 }
 
+/* 안드로이드 모바일 다운로드 버튼 스타일 (/?dev=1) */
+.android-web-download {
+  display: block;
+  margin-top: 15px;
+}
+
+.android-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(45, 212, 191, 0.04));
+  border: 1.5px solid #14b8a6;
+  border-radius: 12px;
+  padding: 14px 24px;
+  color: #2dd4bf;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 14.5px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.1);
+  cursor: pointer;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
+}
+
+.android-download-btn:hover {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.25), rgba(45, 212, 191, 0.1));
+  border-color: #2dd4bf;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(20, 184, 166, 0.25);
+}
+
+.android-download-btn .btn-icon {
+  font-size: 20px;
+  filter: drop-shadow(0 2px 4px rgba(20, 184, 166, 0.3));
+}
+
+.android-download-btn .btn-text {
+  letter-spacing: -0.3px;
+}
+
 .board-theme-button {
   display: none;
 }
