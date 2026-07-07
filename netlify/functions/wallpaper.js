@@ -521,7 +521,8 @@ exports.handler = async (event) => {
   const state = await readState();
   const query = event.queryStringParameters || {};
   
-  if (query.debug === "true") {
+  const debugToken = process.env.WALLPAPER_DEBUG_TOKEN || "";
+  if (query.debug === "true" && debugToken && query.debugToken === debugToken) {
     const debugInfo = {
       __dirname,
       cwd: process.cwd(),
