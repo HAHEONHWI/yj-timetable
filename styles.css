@@ -28,6 +28,10 @@ body {
   color: var(--ink);
 }
 
+body:not(.is-dev-mode) [data-dev-only] {
+  display: none !important;
+}
+
 button,
 input,
 select,

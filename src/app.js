@@ -401,11 +401,13 @@
       return true;
     }
     if (params.get("dev") === "0") {
-      localStorage.removeItem(DEV_MODE_KEY);
+      localStorage.setItem(DEV_MODE_KEY, "false");
       return false;
     }
+    const storedMode = localStorage.getItem(DEV_MODE_KEY);
+    if (storedMode === "true") return true;
+    if (storedMode === "false") return false;
     return (
-      localStorage.getItem(DEV_MODE_KEY) === "true" ||
       location.protocol === "file:" ||
       ["localhost", "127.0.0.1", "::1"].includes(location.hostname)
     );
@@ -413,6 +415,7 @@
 
   function applyDeveloperMode() {
     const enabled = isDeveloperMode();
+    document.body.classList.toggle("is-dev-mode", enabled);
     $$("[data-dev-only]").forEach((element) => {
       element.hidden = !enabled;
     });
