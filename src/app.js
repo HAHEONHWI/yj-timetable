@@ -9,6 +9,7 @@
     subscribeRemoteChanges,
     verifyAdminPassword,
     clearAdminPassword,
+    getAdminProfile,
     isSupabaseEnabled,
     changeKey,
   } = window.TimetableStore;
@@ -70,6 +71,7 @@
     wallpaperAutomation: $("#wallpaperAutomation"),
     loginPanel: $("#loginPanel"),
     adminWorkspace: $("#adminWorkspace"),
+    adminUsername: $("#adminUsername"),
     adminPassword: $("#adminPassword"),
     loginButton: $("#loginButton"),
     logoutButton: $("#logoutButton"),
@@ -301,7 +303,7 @@
       return "관리자 로그인 세션이 없습니다. 다시 로그인한 뒤 저장하세요.";
     }
     if (/Incorrect password|401|403|권한|unauthorized|forbidden/i.test(text)) {
-      return "관리자 권한이 확인되지 않았습니다. 다시 로그인하거나 관리자 비밀번호를 확인하세요.";
+      return "관리자 권한이 확인되지 않았습니다. 아이디와 비밀번호로 다시 로그인하세요.";
     }
     if (/Failed to fetch|NetworkError|Load failed|연결|network|fetch/i.test(text)) {
       return "Supabase에 연결하지 못했습니다. 인터넷 연결이나 Supabase 상태를 확인한 뒤 다시 저장하세요.";
@@ -310,7 +312,7 @@
       return "저장할 시간표 데이터 형식이 올바르지 않습니다. 방금 입력한 항목을 확인하세요.";
     }
     if (/ADMIN_PASSWORD/i.test(text)) {
-      return "서버 관리자 비밀번호 설정이 누락되었습니다. Supabase Edge Function 시크릿을 확인하세요.";
+      return "서버 관리자 인증 설정을 확인하세요.";
     }
     return text ? `원격 저장 중 오류가 발생했습니다. ${text}` : "원격 저장 중 알 수 없는 오류가 발생했습니다.";
   }
@@ -1702,7 +1704,7 @@
   }
 
   function canPersistAdminCleanup() {
-    return isLoggedIn() && Boolean(sessionStorage.getItem("timetable-admin-password"));
+    return isLoggedIn();
   }
 
   function applyRemoteState(remoteState, options = {}) {
@@ -2131,7 +2133,7 @@
     });
 
     els.loginButton.addEventListener("click", async () => {
-      const result = await verifyAdminPassword(els.adminPassword.value);
+      const result = await verifyAdminPassword(els.adminUsername.value, els.adminPassword.value);
       if (result.ok) {
         sessionStorage.setItem("timetable-admin", "true");
         els.adminPassword.value = "";
@@ -2143,10 +2145,15 @@
         }
         return;
       }
-      showMessage(els.loginMessage, result.error ? friendlyRemoteError(result.error) : "비밀번호가 올바르지 않습니다. 다시 확인하세요.");
+      showMessage(els.loginMessage, result.error ? friendlyRemoteError(result.error) : "아이디 또는 비밀번호가 올바르지 않습니다.");
     });
 
     els.adminPassword.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      els.loginButton.click();
+    });
+
+    els.adminUsername.addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
       els.loginButton.click();
     });
@@ -2455,7 +2462,9 @@
         showMessage(els.adminMessage, "관리자 비밀번호를 입력하세요.");
         return;
       }
-      const result = await verifyAdminPassword(password);
+      const profile = getAdminProfile();
+      const username = profile && profile.username ? profile.username : els.adminUsername.value;
+      const result = await verifyAdminPassword(username, password);
       if (!result.ok) {
         showMessage(els.adminMessage, "비밀번호가 맞지 않습니다.");
         return;

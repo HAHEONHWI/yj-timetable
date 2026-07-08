@@ -1,6 +1,9 @@
 (function () {
   const STORAGE_KEY = "school-timetable-v1";
-  const ADMIN_PASSWORD_KEY = "timetable-admin-password";
+  const ADMIN_PROFILE_KEY = "timetable-admin-profile";
+  const LEGACY_ADMIN_PASSWORD_KEY = "timetable-admin-password";
+  const AUTH_USERNAME_DOMAIN = "yjms.local";
+  const USERNAME_PATTERN = /^[a-z0-9_-]{3,32}$/;
 
   const classes = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2"];
   const weekdays = [
@@ -159,13 +162,33 @@
     return supabaseClient;
   }
 
-  async function invokeFunction(name, body) {
+  function normalizeUsername(value) {
+    const username = String(value || "").trim().toLowerCase();
+    if (!USERNAME_PATTERN.test(username)) {
+      throw new Error("아이디는 영문 소문자, 숫자, _, - 조합 3~32자만 사용할 수 있습니다.");
+    }
+    return username;
+  }
+
+  function usernameToEmail(username) {
+    return `${normalizeUsername(username)}@${AUTH_USERNAME_DOMAIN}`;
+  }
+
+  async function authAccessToken() {
+    if (!isSupabaseEnabled()) return "";
+    const { data, error } = await client().auth.getSession();
+    if (error) return "";
+    return data && data.session && data.session.access_token ? data.session.access_token : "";
+  }
+
+  async function invokeFunction(name, body, options = {}) {
     const config = window.SUPABASE_CONFIG;
+    const accessToken = options.accessToken || "";
     const response = await fetch(`${config.url}/functions/v1/${name}`, {
       method: "POST",
       headers: {
         apikey: config.anonKey,
-        Authorization: `Bearer ${config.anonKey}`,
+        Authorization: `Bearer ${accessToken || config.anonKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -238,15 +261,20 @@
   }
 
   async function writeRemote(state) {
-    const password = sessionStorage.getItem(ADMIN_PASSWORD_KEY);
-    if (!password) {
-      return { ok: false, error: "관리자 비밀번호 세션이 없습니다." };
+    const accessToken = await authAccessToken();
+    const legacyPassword = sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY);
+    if (!accessToken && !legacyPassword) {
+      return { ok: false, error: "관리자 로그인 세션이 없습니다." };
     }
 
     const publicState = { ...state };
     delete publicState.adminPassword;
 
-    const result = await invokeFunction("save-state", { password, state: publicState });
+    const result = await invokeFunction(
+      "save-state",
+      legacyPassword ? { password: legacyPassword, state: publicState } : { state: publicState },
+      { accessToken }
+    );
     if (result.ok === false) {
       console.warn("Supabase write failed:", result.error);
       return result;
@@ -255,26 +283,80 @@
     return result;
   }
 
-  async function verifyAdminPassword(password) {
+  async function verifyAdminPassword(username, password) {
     if (!isSupabaseEnabled()) {
-      const ok = password === read().adminPassword;
+      const safeUsername = String(username || "").trim() || "admin";
+      const ok = safeUsername === "admin" && password === read().adminPassword;
       if (ok) {
-        sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
+        sessionStorage.setItem(
+          ADMIN_PROFILE_KEY,
+          JSON.stringify({ username: "admin", displayName: "로컬 관리자", role: "owner" })
+        );
       }
       return { ok };
     }
 
-    const result = await invokeFunction("admin-login", { password });
-    if (result.ok !== true) {
-      return { ok: false, error: result.error || "" };
+    let email = "";
+    try {
+      email = usernameToEmail(username);
+    } catch (error) {
+      return { ok: false, error: error.message };
     }
 
-    sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
-    return { ok: true };
+    const { data, error } = await client().auth.signInWithPassword({ email, password });
+    if (!error && data && data.user) {
+      const { data: profile, error: profileError } = await client()
+        .from("admin_profiles")
+        .select("username, display_name, role, is_active")
+        .eq("user_id", data.user.id)
+        .single();
+
+      if (!profileError && profile && profile.is_active === true) {
+        const adminProfile = {
+          username: profile.username,
+          displayName: profile.display_name || profile.username,
+          role: profile.role || "manager",
+        };
+        sessionStorage.removeItem(LEGACY_ADMIN_PASSWORD_KEY);
+        sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(adminProfile));
+        return { ok: true, profile: adminProfile };
+      }
+
+      await client().auth.signOut();
+    }
+
+    const legacyResult = await invokeFunction("admin-login", { password });
+    if (legacyResult.ok === true) {
+      const legacyProfile = { username: "legacy-admin", displayName: "Legacy Admin", role: "manager" };
+      sessionStorage.setItem(LEGACY_ADMIN_PASSWORD_KEY, password);
+      sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(legacyProfile));
+      return { ok: true, profile: legacyProfile };
+    }
+
+    return { ok: false, error: error ? error.message : legacyResult.error || "로그인 실패" };
   }
 
   function clearAdminPassword() {
-    sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
+    sessionStorage.removeItem(ADMIN_PROFILE_KEY);
+    sessionStorage.removeItem(LEGACY_ADMIN_PASSWORD_KEY);
+    if (isSupabaseEnabled()) {
+      client().auth.signOut();
+    }
+  }
+
+  function getAdminProfile() {
+    try {
+      return JSON.parse(sessionStorage.getItem(ADMIN_PROFILE_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  async function hasAdminSession() {
+    if (!isSupabaseEnabled()) {
+      return Boolean(sessionStorage.getItem(ADMIN_PROFILE_KEY));
+    }
+    return Boolean((await authAccessToken()) || sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY));
   }
 
   function changeKey(date, className, period) {
@@ -291,6 +373,8 @@
     subscribeRemoteChanges,
     verifyAdminPassword,
     clearAdminPassword,
+    getAdminProfile,
+    hasAdminSession,
     isSupabaseEnabled,
     changeKey,
   };
