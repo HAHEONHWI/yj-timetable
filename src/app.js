@@ -157,6 +157,7 @@
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
     forceSlideReloadButton: $("#forceSlideReloadButton"),
+    refreshAuditLogsButton: $("#refreshAuditLogsButton"),
     accountUsername: $("#accountUsername"),
     accountDisplayName: $("#accountDisplayName"),
     accountRole: $("#accountRole"),
@@ -1761,6 +1762,25 @@
     return "teacher";
   }
 
+  function auditActionLabel(action) {
+    const labels = {
+      save_state: "전체 상태 저장",
+      update_base: "기본 시간표 수정",
+      update_base_merge: "기본 병합 수정",
+      update_special: "특별시간표 수정",
+      update_change: "단일교과 변경",
+      update_event: "행사 변경",
+      update_notice: "안내사항 수정",
+      update_slide_runtime: "슬라이드쇼 설정",
+      update_slide_typography: "슬라이드쇼 글자 크기",
+      force_reload: "강제 새로고침",
+      admin_account_create: "계정 생성",
+      admin_account_update: "계정 수정",
+      admin_account_deactivate: "계정 비활성화",
+    };
+    return labels[action] || action || "unknown";
+  }
+
   function formatDateTime(value) {
     if (!value) return "-";
     const date = new Date(value);
@@ -1839,12 +1859,20 @@
       ? auditLogs
           .map((log) => {
             const actor = log.actor_username || "unknown";
-            const role = log.actor_role ? ` · ${log.actor_role}` : "";
             const status = log.success === false ? "실패" : "성공";
-            return `<article class="audit-log-item">
-              <strong>${escapeHtml(log.action || "unknown")} · ${status}</strong>
-              <span>${formatDateTime(log.created_at)} · ${escapeHtml(actor)}${escapeHtml(role)}</span>
-              <span>${escapeHtml(log.target_type || "-")}${log.target_id ? ` · ${escapeHtml(log.target_id)}` : ""}${
+            const actorName = log.actor_name && log.actor_name !== actor ? ` · ${log.actor_name}` : "";
+            return `<article class="audit-log-item${log.success === false ? " is-failed" : ""}">
+              <div class="audit-log-main">
+                <strong>${escapeHtml(auditActionLabel(log.action))}</strong>
+                <span class="audit-status">${status}</span>
+              </div>
+              <div class="audit-actor">
+                <span class="audit-actor-label">작업 계정</span>
+                <strong>${escapeHtml(actor)}${escapeHtml(actorName)}</strong>
+                ${log.actor_role ? `<span class="role-badge is-${escapeHtml(log.actor_role)}">${escapeHtml(log.actor_role)}</span>` : ""}
+              </div>
+              <span>${formatDateTime(log.created_at)}</span>
+              <span>${escapeHtml(log.action || "unknown")} · ${escapeHtml(log.target_type || "-")}${log.target_id ? ` · ${escapeHtml(log.target_id)}` : ""}${
                 log.error_message ? ` · ${escapeHtml(log.error_message)}` : ""
               }</span>
             </article>`;
@@ -2416,10 +2444,15 @@
     $$(".admin-tab").forEach((button) => {
       button.addEventListener("click", () => {
         selectAdminTab(button.dataset.adminTab);
-        if (button.dataset.adminTab === "accounts") {
+        if (button.dataset.adminTab === "accounts" || button.dataset.adminTab === "auditLogs") {
           refreshAdminAccounts();
         }
       });
+    });
+
+    els.refreshAuditLogsButton.addEventListener("click", () => {
+      refreshAdminAccounts();
+      showMessage(els.adminMessage, "감사 로그를 새로고침했습니다.");
     });
 
     els.accountList.addEventListener("click", (event) => {

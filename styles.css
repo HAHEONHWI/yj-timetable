@@ -1680,7 +1680,7 @@ textarea {
 
 .admin-account-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 0.95fr) minmax(320px, 1.05fr);
+  grid-template-columns: minmax(360px, 0.82fr) minmax(420px, 1.18fr);
   gap: 18px;
   align-items: start;
 }
@@ -1691,36 +1691,113 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #0b1220;
-  padding: 16px;
+  padding: 18px;
+}
+
+.admin-account-form .form-grid.two {
+  grid-template-columns: 1fr;
+}
+
+.admin-account-form .form-grid {
+  grid-template-columns: minmax(140px, 0.9fr) minmax(160px, 1.1fr);
+}
+
+#accountList {
+  align-self: stretch;
+}
+
+#accountList .list-item {
+  min-height: 98px;
+}
+
+#accountList .role-badge {
+  margin-top: 2px;
 }
 
 .account-active-check {
   align-self: end;
 }
 
+.audit-log-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .audit-log-list {
   display: grid;
-  gap: 8px;
-  max-height: 420px;
+  gap: 10px;
+  max-height: min(620px, calc(100vh - 360px));
   overflow: auto;
 }
 
 .audit-log-item {
   display: grid;
-  gap: 5px;
+  grid-template-columns: minmax(210px, 0.75fr) minmax(280px, 1fr) minmax(150px, 0.55fr) minmax(190px, 0.8fr);
+  align-items: center;
+  gap: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #101826;
-  padding: 12px;
+  padding: 14px;
+}
+
+.audit-log-item.is-failed {
+  border-color: #9a3412;
+  background: #1f1411;
+}
+
+.audit-log-main,
+.audit-actor {
+  display: grid;
+  gap: 5px;
+}
+
+.audit-log-main {
+  min-width: 0;
+}
+
+.audit-log-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .audit-log-item strong {
   color: #f8fafc;
 }
 
-.audit-log-item span {
+.audit-log-item span,
+.audit-actor-label {
   color: var(--muted);
   font-size: 13px;
+}
+
+.audit-status {
+  width: max-content;
+  border: 1px solid #1d4ed8;
+  border-radius: 999px;
+  background: #0b1f4d;
+  color: #bfdbfe !important;
+  padding: 2px 8px;
+  font-weight: 900;
+}
+
+.audit-log-item.is-failed .audit-status {
+  border-color: #9a3412;
+  background: #431407;
+  color: #fed7aa !important;
+}
+
+.audit-actor {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.audit-actor-label {
+  grid-column: 1 / -1;
+  font-weight: 800;
 }
 
 .empty,
@@ -2213,7 +2290,17 @@ textarea {
   .form-grid,
   .form-grid.two,
   .period-editor,
-  .check-grid {
+  .check-grid,
+  .admin-account-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-log-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .audit-log-item {
     grid-template-columns: 1fr;
   }
 
