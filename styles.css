@@ -1629,6 +1629,42 @@ textarea {
   gap: 4px;
 }
 
+.list-item.is-disabled {
+  opacity: 0.62;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  min-height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #0b1220;
+  color: #cbd5e1;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.role-badge.is-dev {
+  border-color: #0f766e;
+  background: #052e2b;
+  color: #99f6e4;
+}
+
+.role-badge.is-manager {
+  border-color: #1d4ed8;
+  background: #0b1f4d;
+  color: #bfdbfe;
+}
+
+.role-badge.is-teacher {
+  border-color: #475569;
+  background: #111827;
+  color: #e2e8f0;
+}
+
 .list-actions {
   display: flex;
   gap: 6px;
@@ -1640,6 +1676,51 @@ textarea {
   color: var(--ink);
   border-color: var(--line);
   background: #111827;
+}
+
+.admin-account-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(320px, 1.05fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.admin-account-form {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0b1220;
+  padding: 16px;
+}
+
+.account-active-check {
+  align-self: end;
+}
+
+.audit-log-list {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.audit-log-item {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #101826;
+  padding: 12px;
+}
+
+.audit-log-item strong {
+  color: #f8fafc;
+}
+
+.audit-log-item span {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .empty,
@@ -2113,6 +2194,10 @@ textarea {
   }
 
   .wallpaper-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-account-layout {
     grid-template-columns: 1fr;
   }
 

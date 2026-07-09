@@ -8,6 +8,7 @@
     readRemote,
     subscribeRemoteChanges,
     verifyAdminPassword,
+    adminAccountsRequest,
     clearAdminPassword,
     getAdminProfile,
     isSupabaseEnabled,
@@ -32,6 +33,11 @@
   let boardRefreshTimer = null;
   let remoteUnsubscribe = null;
   let pendingRetryMessage = "";
+  let pendingRetryAction = "save_state";
+  let selectedAdminAccountId = "";
+  let adminAccounts = [];
+  let auditLogs = [];
+  let adminAccountsLoading = false;
   let analyticsRouteTrackingReady = false;
   const gaMeasurementId = "G-TTWC1RKWGL";
   const LAST_SAVE_KEY = "timetable-last-save-at";
@@ -41,6 +47,20 @@
   const WALLPAPER_GRADES_KEY = "wallpaper-grades";
   const DEV_MODE_KEY = "timetable-dev-mode";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
+  const ROLE_PERMISSIONS = {
+    save_state: ["dev", "manager", "teacher"],
+    update_base: ["dev", "manager"],
+    update_base_merge: ["dev", "manager"],
+    update_special: ["dev", "manager", "teacher"],
+    update_change: ["dev", "manager", "teacher"],
+    update_event: ["dev", "manager", "teacher"],
+    update_notice: ["dev", "manager", "teacher"],
+    update_slide_runtime: ["dev", "manager", "teacher"],
+    update_slide_typography: ["dev", "manager"],
+    force_reload: ["dev"],
+    manage_accounts: ["dev", "manager"],
+    read_audit_logs: ["dev", "manager", "teacher"],
+  };
 
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -137,6 +157,16 @@
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
     forceSlideReloadButton: $("#forceSlideReloadButton"),
+    accountUsername: $("#accountUsername"),
+    accountDisplayName: $("#accountDisplayName"),
+    accountRole: $("#accountRole"),
+    accountPassword: $("#accountPassword"),
+    accountActive: $("#accountActive"),
+    saveAccountButton: $("#saveAccountButton"),
+    newAccountButton: $("#newAccountButton"),
+    deactivateAccountButton: $("#deactivateAccountButton"),
+    accountList: $("#accountList"),
+    auditLogList: $("#auditLogList"),
   };
 
   function pad(value) {
@@ -365,6 +395,23 @@
     return sessionStorage.getItem("timetable-admin") === "true";
   }
 
+  function currentAdminRole() {
+    const profile = getAdminProfile();
+    return profile && profile.role ? profile.role : "teacher";
+  }
+
+  function canRole(action) {
+    const allowedRoles = ROLE_PERMISSIONS[action] || ROLE_PERMISSIONS.save_state;
+    return allowedRoles.includes(currentAdminRole());
+  }
+
+  function ensurePermission(action, label) {
+    if (canRole(action)) return true;
+    showMessage(els.adminMessage, `${label} 권한이 없습니다.`);
+    showGlobalError(`${label} 권한이 없습니다.`, { autoHide: true });
+    return false;
+  }
+
   function routeFromPath() {
     const path = location.pathname.replace(/\/+$/, "") || "/";
     if (path === "/admin") return "admin";
@@ -477,7 +524,84 @@
     const loggedIn = isLoggedIn();
     els.loginPanel.classList.toggle("is-hidden", loggedIn);
     els.adminWorkspace.classList.toggle("is-hidden", !loggedIn);
-    if (loggedIn) selectAdminTab("change");
+    if (loggedIn) {
+      selectAdminTab("change");
+      refreshAdminAccounts();
+    } else {
+      selectedAdminAccountId = "";
+      adminAccounts = [];
+      auditLogs = [];
+      renderAdminAccounts();
+      renderAuditLogs();
+    }
+    applyAdminPermissions();
+  }
+
+  function setControlDisabled(control, disabled) {
+    if (!control) return;
+    control.disabled = disabled;
+    control.setAttribute("aria-disabled", disabled ? "true" : "false");
+  }
+
+  function setContainerDisabled(selector, disabled) {
+    const container = $(selector);
+    if (!container) return;
+    container.querySelectorAll("input, select, textarea, button").forEach((control) => {
+      setControlDisabled(control, disabled);
+    });
+  }
+
+  function applyAdminPermissions() {
+    if (!els.adminWorkspace || els.adminWorkspace.classList.contains("is-hidden")) return;
+    const canBase = canRole("update_base");
+    const canBaseMerge = canRole("update_base_merge");
+    const canSlideRuntime = canRole("update_slide_runtime");
+    const canSlideTypography = canRole("update_slide_typography");
+    const canForceReload = canRole("force_reload");
+
+    setContainerDisabled("#baseEditor", !canBase);
+    setControlDisabled(els.saveBaseButton, !canBase);
+    [els.baseMergeStart, els.baseMergeEnd, els.baseMergeTitle, els.baseMergeMemo, els.saveBaseMergeButton].forEach((control) =>
+      setControlDisabled(control, !canBaseMerge)
+    );
+    setContainerDisabled("#baseMergeClassChecks", !canBaseMerge);
+    if (els.baseMergeList) {
+      els.baseMergeList.querySelectorAll("[data-delete-base-merge]").forEach((button) => setControlDisabled(button, !canBaseMerge));
+    }
+
+    [els.slideInterval, els.slideRefreshInterval, els.slideScheduleDate, els.saveSlideSettingsButton].forEach((control) =>
+      setControlDisabled(control, !canSlideRuntime)
+    );
+    [
+      els.slideLessonFontScale,
+      els.slideClassHeaderFontScale,
+      els.slidePeriodHeaderFontScale,
+      els.slideEventFontScale,
+    ].forEach((control) => setControlDisabled(control, !canSlideTypography));
+    [els.slideReloadPassword, els.forceSlideReloadButton].forEach((control) => setControlDisabled(control, !canForceReload));
+
+    const canManageAccounts = canRole("manage_accounts");
+    [els.accountDisplayName, els.accountRole, els.accountPassword, els.accountActive, els.saveAccountButton, els.newAccountButton].forEach((control) =>
+      setControlDisabled(control, !canManageAccounts)
+    );
+    const selectedAccount = adminAccounts.find((account) => account.user_id === selectedAdminAccountId);
+    const selectedIsDev = selectedAccount && selectedAccount.role === "dev";
+    const selectedIsSelf = selectedAccount && getAdminProfile() && selectedAccount.username === getAdminProfile().username;
+    const canDeactivateSelected = canManageAccounts && selectedAccount && !selectedIsSelf && (currentAdminRole() === "dev" || !selectedIsDev);
+    setControlDisabled(els.accountUsername, !canManageAccounts || Boolean(selectedAdminAccountId));
+    setControlDisabled(els.deactivateAccountButton, !canDeactivateSelected);
+    if (els.accountRole) {
+      Array.from(els.accountRole.options).forEach((option) => {
+        option.disabled = option.value === "dev" && currentAdminRole() !== "dev";
+      });
+    }
+    if (els.accountList) {
+      els.accountList.querySelectorAll("[data-select-account]").forEach((button) => {
+        const account = adminAccounts.find((item) => item.user_id === button.dataset.selectAccount);
+        const locked = account && account.role === "dev" && currentAdminRole() !== "dev";
+        setControlDisabled(button, !canManageAccounts || locked);
+      });
+    }
   }
 
   function trackRoutePageView(route) {
@@ -1631,6 +1755,126 @@
     </article>`;
   }
 
+  function roleLabel(role) {
+    if (role === "dev") return "dev";
+    if (role === "manager") return "manager";
+    return "teacher";
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  function resetAccountForm() {
+    selectedAdminAccountId = "";
+    els.accountUsername.value = "";
+    els.accountUsername.disabled = !canRole("manage_accounts");
+    els.accountDisplayName.value = "";
+    els.accountRole.value = "teacher";
+    els.accountPassword.value = "";
+    els.accountActive.checked = true;
+    els.saveAccountButton.textContent = "계정 생성";
+    renderAdminAccounts();
+  }
+
+  function loadAccountEditor(userId) {
+    const account = adminAccounts.find((item) => item.user_id === userId);
+    if (!account) return;
+    selectedAdminAccountId = account.user_id;
+    els.accountUsername.value = account.username || "";
+    els.accountUsername.disabled = true;
+    els.accountDisplayName.value = account.display_name || account.username || "";
+    els.accountRole.value = account.role || "teacher";
+    els.accountPassword.value = "";
+    els.accountActive.checked = account.is_active === true;
+    els.saveAccountButton.textContent = "계정 수정";
+    renderAdminAccounts();
+    applyAdminPermissions();
+  }
+
+  function renderAdminAccounts() {
+    if (!els.accountList) return;
+    if (adminAccountsLoading) {
+      els.accountList.innerHTML = `<p class="empty">계정 정보를 불러오는 중입니다.</p>`;
+      return;
+    }
+    if (!canRole("manage_accounts")) {
+      els.accountList.innerHTML = `<p class="empty">계정 관리는 manager 이상 권한이 필요합니다.</p>`;
+      return;
+    }
+    els.accountList.innerHTML = adminAccounts.length
+      ? adminAccounts
+          .map((account) => {
+            const selected = account.user_id === selectedAdminAccountId ? " is-active" : "";
+            const inactive = account.is_active ? "" : " is-disabled";
+            const locked = account.role === "dev" && currentAdminRole() !== "dev";
+            return `<article class="list-item${selected}${inactive}">
+              <div>
+                <strong>${escapeHtml(account.display_name || account.username)}</strong>
+                <span>${escapeHtml(account.username)} · ${account.is_active ? "활성" : "비활성"} · 수정 ${formatDateTime(account.updated_at)}</span>
+                <span class="role-badge is-${escapeHtml(account.role || "teacher")}">${roleLabel(account.role)}</span>
+              </div>
+              <div class="list-actions">
+                <button class="text-button neutral" data-select-account="${escapeHtml(account.user_id)}" type="button"${
+                  locked ? " disabled" : ""
+                }>수정</button>
+              </div>
+            </article>`;
+          })
+          .join("")
+      : `<p class="empty">등록된 관리자 계정이 없습니다.</p>`;
+    applyAdminPermissions();
+  }
+
+  function renderAuditLogs() {
+    if (!els.auditLogList) return;
+    if (!canRole("read_audit_logs")) {
+      els.auditLogList.innerHTML = `<p class="empty">감사 로그는 로그인 후 확인할 수 있습니다.</p>`;
+      return;
+    }
+    els.auditLogList.innerHTML = auditLogs.length
+      ? auditLogs
+          .map((log) => {
+            const actor = log.actor_username || "unknown";
+            const role = log.actor_role ? ` · ${log.actor_role}` : "";
+            const status = log.success === false ? "실패" : "성공";
+            return `<article class="audit-log-item">
+              <strong>${escapeHtml(log.action || "unknown")} · ${status}</strong>
+              <span>${formatDateTime(log.created_at)} · ${escapeHtml(actor)}${escapeHtml(role)}</span>
+              <span>${escapeHtml(log.target_type || "-")}${log.target_id ? ` · ${escapeHtml(log.target_id)}` : ""}${
+                log.error_message ? ` · ${escapeHtml(log.error_message)}` : ""
+              }</span>
+            </article>`;
+          })
+          .join("")
+      : `<p class="empty">감사 로그가 없습니다.</p>`;
+  }
+
+  async function refreshAdminAccounts() {
+    if (!isLoggedIn() || !adminAccountsRequest) return;
+    adminAccountsLoading = true;
+    renderAdminAccounts();
+    const result = await adminAccountsRequest({ action: "list" });
+    adminAccountsLoading = false;
+    if (result && result.ok) {
+      adminAccounts = Array.isArray(result.accounts) ? result.accounts : [];
+      auditLogs = Array.isArray(result.auditLogs) ? result.auditLogs : [];
+      if (selectedAdminAccountId && !adminAccounts.some((account) => account.user_id === selectedAdminAccountId)) {
+        selectedAdminAccountId = "";
+      }
+      renderAdminAccounts();
+      renderAuditLogs();
+      applyAdminPermissions();
+      return;
+    }
+    renderAdminAccounts();
+    renderAuditLogs();
+    showMessage(els.adminMessage, `계정 정보를 불러오지 못했습니다: ${friendlyRemoteError(result && result.error)}`);
+  }
+
   function renderSlideScheduleDateOptions() {
     const today = toISO(new Date());
     if (state.slideshow.scheduleDateExpiresOn && today >= state.slideshow.scheduleDateExpiresOn) {
@@ -1673,6 +1917,9 @@
     els.slideEventFontScale.value = clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
     els.slideEventFontScaleLabel.textContent = `행사 ${els.slideEventFontScale.value}%`;
     renderNoticePreview();
+    renderAdminAccounts();
+    renderAuditLogs();
+    applyAdminPermissions();
   }
 
   function cleanupExpiredScheduleData() {
@@ -1740,7 +1987,7 @@
       }
     }
     if (cleanedExpiredData) {
-      write(state).then((result) => {
+      write(state, "save_state").then((result) => {
         if (result && result.ok === false) {
           console.warn("Expired schedule cleanup failed:", result.error || "unknown error");
         }
@@ -1826,10 +2073,11 @@
     window.clearTimeout(globalStatusTimer);
   }
 
-  async function saveState(message) {
+  async function saveState(message, action = "save_state") {
     pendingRetryMessage = message;
+    pendingRetryAction = action;
     updateLastSaveStatus("saving");
-    const resultPromise = write(state);
+    const resultPromise = write(state, action);
     renderView();
     if (currentRoute === "wallpaper") {
       renderWallpaper();
@@ -1851,6 +2099,7 @@
       return;
     }
     pendingRetryMessage = "";
+    pendingRetryAction = "save_state";
     markLastSaveSuccess();
     showGlobalStatus(message, "success", { autoHide: true });
     showMessage(els.adminMessage, `${message} · ${isSupabaseEnabled && isSupabaseEnabled() ? "원격 동기화 완료" : "이 브라우저에 저장됨"}`);
@@ -1860,7 +2109,7 @@
     if (!pendingRetryMessage) return;
     showGlobalStatus("Supabase에 다시 저장하는 중입니다.", "info");
     showMessage(els.adminMessage, "Supabase에 다시 저장하는 중입니다.");
-    saveState(pendingRetryMessage);
+    saveState(pendingRetryMessage, pendingRetryAction);
   }
 
   function readWallpaperControls() {
@@ -2139,7 +2388,7 @@
         els.adminPassword.value = "";
         refreshAdminAuth();
         if (cleanupExpiredScheduleData()) {
-          saveState("지난 특별시간표/수업교체/행사를 자동 정리했습니다.");
+          saveState("지난 특별시간표/수업교체/행사를 자동 정리했습니다.", "save_state");
         } else {
           renderAdmin();
         }
@@ -2167,10 +2416,123 @@
     $$(".admin-tab").forEach((button) => {
       button.addEventListener("click", () => {
         selectAdminTab(button.dataset.adminTab);
+        if (button.dataset.adminTab === "accounts") {
+          refreshAdminAccounts();
+        }
       });
     });
 
+    els.accountList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-select-account]");
+      if (!button) return;
+      loadAccountEditor(button.dataset.selectAccount);
+    });
+
+    els.newAccountButton.addEventListener("click", () => {
+      if (!ensurePermission("manage_accounts", "계정 관리")) return;
+      resetAccountForm();
+      showMessage(els.adminMessage, "새 계정 정보를 입력하세요.");
+    });
+
+    els.saveAccountButton.addEventListener("click", async () => {
+      if (!ensurePermission("manage_accounts", "계정 관리")) return;
+      const username = els.accountUsername.value.trim();
+      const displayName = els.accountDisplayName.value.trim();
+      const role = els.accountRole.value;
+      const password = els.accountPassword.value;
+      const isActive = els.accountActive.checked;
+      if (!/^[a-z0-9_-]{3,32}$/.test(username)) {
+        showMessage(els.adminMessage, "아이디는 영문 소문자, 숫자, _, - 조합 3~32자로 입력하세요.");
+        return;
+      }
+      if (!displayName) {
+        showMessage(els.adminMessage, "표시 이름을 입력하세요.");
+        return;
+      }
+      if (role === "dev" && currentAdminRole() !== "dev") {
+        showMessage(els.adminMessage, "dev 권한은 dev 계정만 부여할 수 있습니다.");
+        return;
+      }
+      const selectedAccount = adminAccounts.find((account) => account.user_id === selectedAdminAccountId);
+      if (selectedAccount && selectedAccount.role === "dev" && currentAdminRole() !== "dev") {
+        showMessage(els.adminMessage, "manager는 dev 계정을 수정할 수 없습니다.");
+        return;
+      }
+      if (!selectedAdminAccountId && password.length < 6) {
+        showMessage(els.adminMessage, "새 계정 비밀번호는 6자 이상으로 입력하세요.");
+        return;
+      }
+      if (selectedAdminAccountId && password && password.length < 6) {
+        showMessage(els.adminMessage, "새 비밀번호는 6자 이상으로 입력하세요.");
+        return;
+      }
+
+      const payload = selectedAdminAccountId
+        ? {
+            action: "update",
+            account: {
+              userId: selectedAdminAccountId,
+              displayName,
+              role,
+              isActive,
+              password: password || undefined,
+            },
+          }
+        : {
+            action: "create",
+            account: {
+              username,
+              displayName,
+              role,
+              isActive,
+              password,
+            },
+          };
+      showMessage(els.adminMessage, "계정 정보를 저장하는 중입니다.");
+      const result = await adminAccountsRequest(payload);
+      if (!result || !result.ok) {
+        showMessage(els.adminMessage, `계정 저장 실패: ${friendlyRemoteError(result && result.error)}`);
+        return;
+      }
+      els.accountPassword.value = "";
+      selectedAdminAccountId = result.account && result.account.user_id ? result.account.user_id : selectedAdminAccountId;
+      showGlobalStatus("계정 정보를 저장했습니다.", "success", { autoHide: true });
+      showMessage(els.adminMessage, "계정 정보를 저장했습니다.");
+      refreshAdminAccounts();
+    });
+
+    els.deactivateAccountButton.addEventListener("click", async () => {
+      if (!ensurePermission("manage_accounts", "계정 관리")) return;
+      const selectedAccount = adminAccounts.find((account) => account.user_id === selectedAdminAccountId);
+      if (!selectedAccount) {
+        showMessage(els.adminMessage, "비활성화할 계정을 선택하세요.");
+        return;
+      }
+      if (selectedAccount.username === (getAdminProfile() && getAdminProfile().username)) {
+        showMessage(els.adminMessage, "현재 로그인한 자기 계정은 비활성화할 수 없습니다.");
+        return;
+      }
+      if (selectedAccount.role === "dev" && currentAdminRole() !== "dev") {
+        showMessage(els.adminMessage, "manager는 dev 계정을 비활성화할 수 없습니다.");
+        return;
+      }
+      if (!confirmAction(`${selectedAccount.username} 계정을 비활성화할까요?`)) return;
+      const result = await adminAccountsRequest({
+        action: "deactivate",
+        account: { userId: selectedAccount.user_id },
+      });
+      if (!result || !result.ok) {
+        showMessage(els.adminMessage, `계정 비활성화 실패: ${friendlyRemoteError(result && result.error)}`);
+        return;
+      }
+      selectedAdminAccountId = "";
+      resetAccountForm();
+      showGlobalStatus("계정을 비활성화했습니다.", "success", { autoHide: true });
+      refreshAdminAccounts();
+    });
+
     els.saveBaseButton.addEventListener("click", () => {
+      if (!ensurePermission("update_base", "기본 시간표 수정")) return;
       const weekday = els.baseWeekday.value;
       classes.forEach((className) => {
         state.base[className][weekday] = periods.map((_, periodIndex) => {
@@ -2178,10 +2540,11 @@
           return input ? input.value.trim() : "";
         });
       });
-      saveState("기본 시간표를 저장했습니다.");
+      saveState("기본 시간표를 저장했습니다.", "update_base");
     });
 
     els.saveBaseMergeButton.addEventListener("click", () => {
+      if (!ensurePermission("update_base_merge", "기본 병합 수정")) return;
       const title = els.baseMergeTitle.value.trim();
       const start = Number(els.baseMergeStart.value);
       const end = Number(els.baseMergeEnd.value);
@@ -2201,10 +2564,11 @@
       });
       els.baseMergeTitle.value = "";
       els.baseMergeMemo.value = "";
-      saveState("기본 병합을 저장했습니다.");
+      saveState("기본 병합을 저장했습니다.", "update_base_merge");
     });
 
     els.saveSpecialButton.addEventListener("click", () => {
+      if (!ensurePermission("update_special", "특별시간표 수정")) return;
       if (!els.specialDate.value) {
         showMessage(els.adminMessage, "특별시간표 날짜를 선택하세요.");
         return;
@@ -2226,10 +2590,11 @@
         return;
       }
       state.specialSchedules[els.specialDate.value] = nextSchedule;
-      saveState("특별시간표를 저장했습니다.");
+      saveState("특별시간표를 저장했습니다.", "update_special");
     });
 
     els.deleteSpecialButton.addEventListener("click", () => {
+      if (!ensurePermission("update_special", "특별시간표 수정")) return;
       const date = els.specialDate.value;
       if (!state.specialSchedules[date]) {
         showMessage(els.adminMessage, "삭제할 특별시간표가 없습니다.");
@@ -2238,7 +2603,7 @@
       if (!confirmAction(`${date} 특별시간표를 삭제할까요?`)) return;
       delete state.specialSchedules[date];
       renderSpecialEditor();
-      saveState("특별시간표를 삭제했습니다.");
+      saveState("특별시간표를 삭제했습니다.", "update_special");
     });
 
     els.specialList.addEventListener("click", (event) => {
@@ -2252,12 +2617,14 @@
     els.baseMergeList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-delete-base-merge]");
       if (!button) return;
+      if (!ensurePermission("update_base_merge", "기본 병합 수정")) return;
       if (!confirmAction("기본 병합을 삭제할까요?")) return;
       state.baseMerges = state.baseMerges.filter((merge) => merge.id !== button.dataset.deleteBaseMerge);
-      saveState("기본 병합을 삭제했습니다.");
+      saveState("기본 병합을 삭제했습니다.", "update_base_merge");
     });
 
     els.saveChangeButton.addEventListener("click", () => {
+      if (!ensurePermission("update_change", "단일교과 변경")) return;
       const subject = els.changeSubject.value.trim();
       if (!els.changeDate.value || !subject) {
         showMessage(els.adminMessage, "날짜와 변경 교과를 입력하세요.");
@@ -2267,10 +2634,11 @@
       state.changes[key] = { subject, memo: els.changeMemo.value.trim() };
       els.changeSubject.value = "";
       els.changeMemo.value = "";
-      saveState("단일교과 변경을 저장했습니다.");
+      saveState("단일교과 변경을 저장했습니다.", "update_change");
     });
 
     els.deleteChangeButton.addEventListener("click", () => {
+      if (!ensurePermission("update_change", "단일교과 변경")) return;
       const key = changeKey(els.changeDate.value, els.changeClass.value, els.changePeriod.value);
       if (!state.changes[key]) {
         showMessage(els.adminMessage, "삭제할 단일 변경이 없습니다.");
@@ -2278,18 +2646,20 @@
       }
       if (!confirmAction("해당 단일교과 변경을 삭제할까요?")) return;
       delete state.changes[key];
-      saveState("해당 단일 변경을 삭제했습니다.");
+      saveState("해당 단일 변경을 삭제했습니다.", "update_change");
     });
 
     els.changeList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-revert-change]");
       if (!button) return;
+      if (!ensurePermission("update_change", "단일교과 변경")) return;
       if (!confirmAction("해당 교과 변경을 되돌릴까요?")) return;
       delete state.changes[button.dataset.revertChange];
-      saveState("해당 교과 변경을 되돌렸습니다.");
+      saveState("해당 교과 변경을 되돌렸습니다.", "update_change");
     });
 
     els.saveEventButton.addEventListener("click", () => {
+      if (!ensurePermission("update_event", "행사 수정")) return;
       const title = els.eventTitle.value.trim();
       const start = Number(els.eventStart.value);
       const end = Number(els.eventEnd.value);
@@ -2310,12 +2680,12 @@
       if (selectedEventId) {
         state.events = state.events.map((item) => (item.id === selectedEventId ? nextEvent : item));
         resetEventForm();
-        saveState("행사 시간표를 수정했습니다.");
+        saveState("행사 시간표를 수정했습니다.", "update_event");
         return;
       }
       state.events.push(nextEvent);
       resetEventForm();
-      saveState("행사 시간표를 저장했습니다.");
+      saveState("행사 시간표를 저장했습니다.", "update_event");
     });
 
     els.cancelEventEditButton.addEventListener("click", () => {
@@ -2331,12 +2701,13 @@
       }
       const button = event.target.closest("[data-delete-event]");
       if (!button) return;
+      if (!ensurePermission("update_event", "행사 수정")) return;
       if (!confirmAction("행사를 삭제할까요?")) return;
       state.events = state.events.filter((item) => item.id !== button.dataset.deleteEvent);
       if (selectedEventId === button.dataset.deleteEvent) {
         resetEventForm();
       }
-      saveState("행사를 삭제했습니다.");
+      saveState("행사를 삭제했습니다.", "update_event");
     });
 
     els.slideEventFontScale.addEventListener("input", () => {
@@ -2345,9 +2716,14 @@
     });
 
     els.slideEventFontScale.addEventListener("change", () => {
+      if (!ensurePermission("update_slide_typography", "슬라이드쇼 글자 크기 수정")) {
+        els.slideEventFontScale.value = clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
+        els.slideEventFontScaleLabel.textContent = `행사 ${els.slideEventFontScale.value}%`;
+        return;
+      }
       state.slideshow.eventFontScale = clamp(Number(els.slideEventFontScale.value) || 100, 70, 150);
       if (currentRoute === "slideshow") renderSlideshow();
-      saveState("슬라이드쇼 행사 글자 크기를 저장했습니다.");
+      saveState("슬라이드쇼 행사 글자 크기를 저장했습니다.", "update_slide_typography");
     });
 
     [
@@ -2363,22 +2739,37 @@
     });
 
     els.slideLessonFontScale.addEventListener("change", () => {
+      if (!ensurePermission("update_slide_typography", "슬라이드쇼 글자 크기 수정")) {
+        els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
+        renderNoticePreview();
+        return;
+      }
       state.slideshow.lessonFontScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
       renderView();
       if (currentRoute === "slideshow") renderSlideshow();
-      saveState("슬라이드쇼 시간표 글자 크기를 저장했습니다.");
+      saveState("슬라이드쇼 시간표 글자 크기를 저장했습니다.", "update_slide_typography");
     });
 
     els.slideClassHeaderFontScale.addEventListener("change", () => {
+      if (!ensurePermission("update_slide_typography", "슬라이드쇼 글자 크기 수정")) {
+        els.slideClassHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170);
+        renderNoticePreview();
+        return;
+      }
       state.slideshow.classHeaderFontScale = clamp(Number(els.slideClassHeaderFontScale.value) || 100, 70, 170);
       if (currentRoute === "slideshow") renderSlideshow();
-      saveState("슬라이드쇼 학급 글자 크기를 저장했습니다.");
+      saveState("슬라이드쇼 학급 글자 크기를 저장했습니다.", "update_slide_typography");
     });
 
     els.slidePeriodHeaderFontScale.addEventListener("change", () => {
+      if (!ensurePermission("update_slide_typography", "슬라이드쇼 글자 크기 수정")) {
+        els.slidePeriodHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170);
+        renderNoticePreview();
+        return;
+      }
       state.slideshow.periodHeaderFontScale = clamp(Number(els.slidePeriodHeaderFontScale.value) || 100, 70, 170);
       if (currentRoute === "slideshow") renderSlideshow();
-      saveState("슬라이드쇼 교시 글자 크기를 저장했습니다.");
+      saveState("슬라이드쇼 교시 글자 크기를 저장했습니다.", "update_slide_typography");
     });
 
     els.addNoticeButton.addEventListener("click", () => {
@@ -2388,6 +2779,7 @@
     });
 
     els.saveNoticeButton.addEventListener("click", () => {
+      if (!ensurePermission("update_notice", "안내사항 수정")) return;
       const title = els.noticeTitle.value.trim();
       const body = els.noticeBody.value.trim();
       if (!title || !body) {
@@ -2408,19 +2800,20 @@
         state.notices.push(savedNotice);
         selectedNoticeId = savedNotice.id;
       }
-      saveState("안내사항을 저장했습니다.");
+      saveState("안내사항을 저장했습니다.", "update_notice");
     });
 
     els.noticeList.addEventListener("click", (event) => {
       const deleteButton = event.target.closest("[data-delete-notice]");
       if (deleteButton) {
+        if (!ensurePermission("update_notice", "안내사항 수정")) return;
         if (!confirmAction("안내사항을 삭제할까요?")) return;
         state.notices = state.notices.filter((notice) => notice.id !== deleteButton.dataset.deleteNotice);
         if (selectedNoticeId === deleteButton.dataset.deleteNotice) {
           selectedNoticeId = state.notices[0] ? state.notices[0].id : "";
           loadNoticeEditor(selectedNoticeId);
         }
-        saveState("안내사항을 삭제했습니다.");
+        saveState("안내사항을 삭제했습니다.", "update_notice");
         return;
       }
 
@@ -2430,18 +2823,34 @@
     });
 
     els.saveSlideSettingsButton.addEventListener("click", () => {
+      if (!ensurePermission("update_slide_runtime", "슬라이드쇼 설정 수정")) return;
       const interval = Math.max(3, Math.min(120, Number(els.slideInterval.value) || 8));
       const refreshInterval = Math.max(10, Math.min(3600, Number(els.slideRefreshInterval.value) || 60));
       const scheduleDate = els.slideScheduleDate.value;
       const selectedNotice = state.notices.find((notice) => notice.id === selectedNoticeId);
+      const nextLessonFontScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
+      const nextClassHeaderFontScale = clamp(Number(els.slideClassHeaderFontScale.value) || 100, 70, 170);
+      const nextPeriodHeaderFontScale = clamp(Number(els.slidePeriodHeaderFontScale.value) || 100, 70, 170);
+      const nextEventFontScale = clamp(Number(els.slideEventFontScale.value) || 100, 70, 150);
+      const typographyChanged =
+        nextLessonFontScale !== clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150) ||
+        nextClassHeaderFontScale !== clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170) ||
+        nextPeriodHeaderFontScale !== clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170) ||
+        nextEventFontScale !== clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
+      if (typographyChanged && !ensurePermission("update_slide_typography", "슬라이드쇼 글자 크기 수정")) {
+        renderAdmin();
+        return;
+      }
       state.slideshow.intervalSeconds = interval;
       state.slideshow.refreshSeconds = refreshInterval;
       state.slideshow.scheduleDate = scheduleDate;
       state.slideshow.scheduleDateExpiresOn = scheduleDate ? nextDateIso(scheduleDate) : "";
-      state.slideshow.lessonFontScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
-      state.slideshow.classHeaderFontScale = clamp(Number(els.slideClassHeaderFontScale.value) || 100, 70, 170);
-      state.slideshow.periodHeaderFontScale = clamp(Number(els.slidePeriodHeaderFontScale.value) || 100, 70, 170);
-      state.slideshow.eventFontScale = clamp(Number(els.slideEventFontScale.value) || 100, 70, 150);
+      if (canRole("update_slide_typography")) {
+        state.slideshow.lessonFontScale = nextLessonFontScale;
+        state.slideshow.classHeaderFontScale = nextClassHeaderFontScale;
+        state.slideshow.periodHeaderFontScale = nextPeriodHeaderFontScale;
+        state.slideshow.eventFontScale = nextEventFontScale;
+      }
       if (selectedNotice) {
         selectedNotice.titleFontSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);
         selectedNotice.detailFontSize = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
@@ -2453,10 +2862,11 @@
       if (currentRoute === "slideshow") {
         startSlideshow();
       }
-      saveState("슬라이드쇼 설정을 저장했습니다.");
+      saveState("슬라이드쇼 설정을 저장했습니다.", typographyChanged ? "update_slide_typography" : "update_slide_runtime");
     });
 
     els.forceSlideReloadButton.addEventListener("click", async () => {
+      if (!ensurePermission("force_reload", "슬라이드쇼 강제 새로고침")) return;
       const password = els.slideReloadPassword.value;
       if (!password) {
         showMessage(els.adminMessage, "관리자 비밀번호를 입력하세요.");
@@ -2471,7 +2881,7 @@
       }
       els.slideReloadPassword.value = "";
       state.slideshow.reloadToken = `${Date.now()}`;
-      saveState("슬라이드쇼 화면에 강제 새로고침 명령을 보냈습니다.");
+      saveState("슬라이드쇼 화면에 강제 새로고침 명령을 보냈습니다.", "force_reload");
     });
   }
 

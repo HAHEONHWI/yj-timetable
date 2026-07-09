@@ -2,7 +2,7 @@ create table if not exists public.admin_profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   username text not null unique check (username ~ '^[a-z0-9_-]{3,32}$'),
   display_name text not null,
-  role text not null default 'manager' check (role in ('owner', 'manager', 'viewer')),
+  role text not null default 'teacher' check (role in ('dev', 'manager', 'teacher')),
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -25,6 +25,7 @@ create table if not exists public.audit_logs (
   actor_id uuid references auth.users(id) on delete set null,
   actor_username text,
   actor_name text,
+  actor_role text,
   action text not null,
   target_type text not null,
   target_id text,

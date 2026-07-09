@@ -66,6 +66,8 @@ refactor: 시간표 렌더링 로직 분리
 chore: Netlify 배포 스크립트 정리
 ```
 
+Codex 사용량 제한, sandbox 승인 실패, 또는 권한 문제로 커밋/푸시/배포 명령을 직접 완료하지 못하면 사용자가 그대로 복붙해 실행할 수 있는 명령어를 반드시 제공한다. 명령어는 항상 `cd /Users/dgsw09/timetable-service`부터 시작하고, 필요한 `git add`, `git commit`, `git push`, `npx netlify deploy --prod`, `npx supabase ...` 순서를 포함한다.
+
 ## 검증 명령
 
 웹 클라이언트 문법 확인:
@@ -125,12 +127,33 @@ username 규칙:
 관리자 권한은 `admin_profiles.role`로 구분한다.
 
 ```text
-owner: 전체 권한
-manager: 시간표/행사/안내사항 운영 권한
-viewer: 조회 전용
+dev: 서비스 제작자/시스템 최고 권한
+manager: 학교 운영 총괄 권한
+teacher: 교사용 제한 운영 권한
 ```
 
-`viewer`는 저장/삭제/강제 새로고침을 할 수 없어야 한다. 프론트 UI뿐 아니라 `save-state` Edge Function에서도 차단해야 한다.
+초기 계정:
+
+```text
+heonhwi/admin -> dev
+admin/admin -> manager
+```
+
+역할명 변경 규칙:
+
+- 예전 `owner`는 `manager`로 매핑한다.
+- 예전 `manager`는 `teacher`로 매핑한다.
+- 예전 `viewer`는 `teacher`로 매핑한다.
+- `dev`는 그대로 유지한다.
+
+권한 정책:
+
+- `update_base`, `update_base_merge`: `dev`, `manager`
+- `update_special`, `update_change`, `update_event`, `update_notice`: `dev`, `manager`, `teacher`
+- `update_slide_runtime`: `dev`, `manager`, `teacher`
+- `update_slide_typography`: `dev`, `manager`
+- `force_reload`: `dev`
+- 계정 관리는 `dev`, `manager`만 가능하게 설계한다. 단, `manager`는 `dev` 계정을 수정/비활성화하거나 `dev` 권한을 부여할 수 없다.
 
 감사 로그는 `audit_logs`에 저장한다.
 
@@ -139,6 +162,7 @@ viewer: 조회 전용
 - `actor_id`
 - `actor_username`
 - `actor_name`
+- `actor_role`
 - `action`
 - `target_type`
 - `target_id`

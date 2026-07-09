@@ -108,10 +108,10 @@
     }
   }
 
-  function write(state) {
+  function write(state, action = "save_state") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     if (isSupabaseEnabled()) {
-      return writeRemote(state);
+      return writeRemote(state, action);
     }
     return Promise.resolve({ ok: true });
   }
@@ -260,7 +260,7 @@
     };
   }
 
-  async function writeRemote(state) {
+  async function writeRemote(state, action = "save_state") {
     const accessToken = await authAccessToken();
     const legacyPassword = sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY);
     if (!accessToken && !legacyPassword) {
@@ -272,7 +272,7 @@
 
     const result = await invokeFunction(
       "save-state",
-      legacyPassword ? { password: legacyPassword, state: publicState } : { state: publicState },
+      legacyPassword ? { action, password: legacyPassword, state: publicState } : { action, state: publicState },
       { accessToken }
     );
     if (result.ok === false) {
@@ -283,6 +283,14 @@
     return result;
   }
 
+  async function adminAccountsRequest(body) {
+    const accessToken = await authAccessToken();
+    if (!accessToken) {
+      return { ok: false, error: "관리자 로그인 세션이 없습니다." };
+    }
+    return invokeFunction("admin-accounts", body, { accessToken });
+  }
+
   async function verifyAdminPassword(username, password) {
     if (!isSupabaseEnabled()) {
       const safeUsername = String(username || "").trim() || "admin";
@@ -290,7 +298,7 @@
       if (ok) {
         sessionStorage.setItem(
           ADMIN_PROFILE_KEY,
-          JSON.stringify({ username: "admin", displayName: "로컬 관리자", role: "owner" })
+          JSON.stringify({ username: "admin", displayName: "로컬 관리자", role: "dev" })
         );
       }
       return { ok };
@@ -315,7 +323,7 @@
         const adminProfile = {
           username: profile.username,
           displayName: profile.display_name || profile.username,
-          role: profile.role || "manager",
+          role: profile.role || "teacher",
         };
         sessionStorage.removeItem(LEGACY_ADMIN_PASSWORD_KEY);
         sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(adminProfile));
@@ -372,6 +380,7 @@
     readRemote,
     subscribeRemoteChanges,
     verifyAdminPassword,
+    adminAccountsRequest,
     clearAdminPassword,
     getAdminProfile,
     hasAdminSession,

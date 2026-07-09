@@ -413,6 +413,7 @@
           <button class="admin-tab" data-admin-tab="event" type="button">행사 변경</button>
           <button class="admin-tab" data-admin-tab="notice" type="button">안내사항</button>
           <button class="admin-tab" data-admin-tab="slideshowSettings" type="button">슬라이드쇼 설정</button>
+          <button class="admin-tab" data-admin-tab="accounts" type="button">계정 관리</button>
         </div>
 
         <section id="basePanel" class="admin-panel is-hidden">
@@ -628,6 +629,59 @@
               </div>
             </div>
             <button id="forceSlideReloadButton" class="danger-button" type="button">슬라이드쇼 강제 새로고침</button>
+          </div>
+        </section>
+
+        <section id="accountsPanel" class="admin-panel is-hidden">
+          <div>
+            <h3>관리자 계정</h3>
+            <p class="muted">manager 이상은 계정을 관리할 수 있습니다. manager는 dev 계정을 수정하거나 dev 권한을 부여할 수 없습니다.</p>
+          </div>
+          <div class="admin-account-layout">
+            <div class="admin-account-form">
+              <div class="form-grid two">
+                <div class="field">
+                  <label for="accountUsername">아이디</label>
+                  <input id="accountUsername" type="text" placeholder="영문/숫자 3~32자" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="accountDisplayName">표시 이름</label>
+                  <input id="accountDisplayName" type="text" placeholder="예: 홍길동" autocomplete="off" />
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="accountRole">권한</label>
+                  <select id="accountRole">
+                    <option value="teacher">teacher</option>
+                    <option value="manager">manager</option>
+                    <option value="dev">dev</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="accountPassword">새 비밀번호</label>
+                  <input id="accountPassword" type="password" placeholder="생성 시 필수, 수정 시 선택" autocomplete="new-password" />
+                </div>
+                <label class="check-item account-active-check">
+                  <input id="accountActive" type="checkbox" checked />
+                  <span>활성 계정</span>
+                </label>
+              </div>
+              <div class="button-row">
+                <button id="saveAccountButton" class="primary-button" type="button">계정 저장</button>
+                <button id="newAccountButton" class="ghost-button" type="button">새 계정</button>
+                <button id="deactivateAccountButton" class="danger-button" type="button">비활성화</button>
+              </div>
+            </div>
+            <div id="accountList" class="list"></div>
+          </div>
+
+          <div class="subsection">
+            <div>
+              <h3>감사 로그</h3>
+              <p class="muted">로그인한 계정은 최근 저장/계정 변경 기록을 확인할 수 있습니다.</p>
+            </div>
+            <div id="auditLogList" class="audit-log-list"></div>
           </div>
         </section>
 
