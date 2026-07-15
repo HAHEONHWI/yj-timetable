@@ -252,6 +252,88 @@ function renderText(text, x, y, options = {}) {
   return `<text x="${x}" y="${y}" font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}"${anchor}${decor}>${escapeXml(text)}</text>`;
 }
 
+function textWidthUnits(value) {
+  return Array.from(String(value || "")).reduce((total, character) => {
+    if (/\s/.test(character)) return total + 0.34;
+    if (/[\x00-\x7F]/.test(character)) return total + 0.58;
+    return total + 1;
+  }, 0);
+}
+
+function truncateToUnits(value, maxUnits) {
+  const characters = Array.from(String(value || ""));
+  if (textWidthUnits(characters.join("")) <= maxUnits) return characters.join("");
+
+  const ellipsis = "…";
+  const limit = Math.max(0, maxUnits - textWidthUnits(ellipsis));
+  let result = "";
+  for (const character of characters) {
+    if (textWidthUnits(result + character) > limit) break;
+    result += character;
+  }
+  return `${result.trimEnd()}${ellipsis}`;
+}
+
+function splitBalancedLines(value) {
+  const text = String(value || "").trim();
+  const characters = Array.from(text);
+  if (characters.length < 2) return [text];
+
+  let best = null;
+  for (let index = 1; index < characters.length; index++) {
+    const first = characters.slice(0, index).join("").trim();
+    const second = characters.slice(index).join("").trim();
+    if (!first || !second) continue;
+    const imbalance = Math.abs(textWidthUnits(first) - textWidthUnits(second));
+    const boundaryBonus = /[\s/·,()-]/.test(characters[index - 1]) || /[\s/·,()-]/.test(characters[index]) ? -0.35 : 0;
+    const score = imbalance + boundaryBonus;
+    if (!best || score < best.score) best = { score, lines: [first, second] };
+  }
+  return best ? best.lines : [text];
+}
+
+function fitText(value, maxWidth, options = {}) {
+  const text = String(value || "").trim();
+  const baseSize = options.size || 34;
+  const minSize = Math.min(options.minSize || Math.max(8, baseSize * 0.55), baseSize);
+  const maxLines = Math.max(1, options.maxLines || 1);
+  if (!text) return { lines: [""], size: baseSize };
+
+  const singleLineSize = Math.min(baseSize, maxWidth / Math.max(textWidthUnits(text), 0.01));
+  if (singleLineSize >= minSize || maxLines === 1) {
+    const size = Math.max(minSize, singleLineSize);
+    return {
+      lines: [truncateToUnits(text, maxWidth / size)],
+      size,
+    };
+  }
+
+  const lines = splitBalancedLines(text).slice(0, maxLines);
+  const widestLine = Math.max(...lines.map(textWidthUnits), 0.01);
+  const size = Math.max(minSize, Math.min(baseSize, maxWidth / widestLine));
+  const maxUnits = maxWidth / size;
+  return {
+    lines: lines.map((line) => truncateToUnits(line, maxUnits)),
+    size,
+  };
+}
+
+function renderFittedText(text, x, centerY, maxWidth, options = {}) {
+  const fitted = fitText(text, maxWidth, options);
+  const fill = options.fill || "#f8fafc";
+  const weight = options.weight || 800;
+  const anchor = options.anchor || "middle";
+  const decor = options.decoration ? ` text-decoration="${options.decoration}"` : "";
+  const lineHeight = fitted.size * (options.lineHeight || 1.08);
+  const tspans = fitted.lines
+    .map((line, index) => {
+      const y = centerY + (index - (fitted.lines.length - 1) / 2) * lineHeight;
+      return `<tspan x="${x}" y="${y}">${escapeXml(line)}</tspan>`;
+    })
+    .join("");
+  return `<text x="${x}" y="${centerY}" text-anchor="${anchor}" dominant-baseline="middle" font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif" font-size="${fitted.size}" font-weight="${weight}" fill="${fill}"${decor}>${tspans}</text>`;
+}
+
 function chipColors(type) {
   if (type === "change") return { bg: "rgba(43, 27, 10, 0.95)", line: "#f59e0b", fg: "#fef3c7", note: "#fbbf24" };
   if (type === "original") return { bg: "rgba(23, 29, 38, 0.15)", line: "rgba(148, 163, 184, 0.25)", fg: "rgba(203, 213, 225, 0.35)", note: "rgba(148, 163, 184, 0.35)" };
@@ -262,31 +344,45 @@ function chipColors(type) {
 function renderChip(match, x, y, width, height, isFullSize = false) {
   const colors = chipColors(match.type);
   const hasClassName = !!match.className;
+  const hasNote = !!match.note;
+  const compact = !isFullSize || height < 100;
+  const maxTextWidth = Math.max(24, width - 16);
+  const classSize = compact ? 18 : 28;
+  const titleSize = compact ? 17 : 32;
+  const noteSize = compact ? 10 : 14;
+  const centerY = y + height / 2;
 
-  const classSize = isFullSize ? 28 : 23;
-  const titleSize = isFullSize ? (match.title.length > 6 ? 26 : 32) : 17;
-  const noteSize = isFullSize ? 14 : 11;
-
-  let classY, titleY, noteY;
-  if (hasClassName) {
-    classY = y + (height / 2) - 25;
-    titleY = y + (height / 2) + 12;
-    noteY = y + (height / 2) + 42;
-  } else {
-    titleY = y + (height / 2) - 5;
-    noteY = y + (height / 2) + 26;
+  let classY = centerY;
+  let titleY = centerY;
+  let noteY = centerY;
+  if (hasClassName && hasNote) {
+    classY = y + height * 0.2;
+    titleY = y + height * 0.5;
+    noteY = y + height * 0.82;
+  } else if (hasClassName) {
+    classY = y + height * 0.31;
+    titleY = y + height * 0.68;
+  } else if (hasNote) {
+    titleY = y + height * 0.38;
+    noteY = y + height * 0.72;
   }
 
   const dashAttr = match.type === "original" ? ' stroke-dasharray="6,4"' : '';
   const titleDecor = match.type === "original" ? "line-through" : "";
+  const clipId = `wallpaper-chip-${renderChip.sequence++}`;
 
   return `
+    <defs><clipPath id="${clipId}"><rect x="${x + 4}" y="${y + 4}" width="${Math.max(0, width - 8)}" height="${Math.max(0, height - 8)}" rx="7" /></clipPath></defs>
     <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="${colors.bg}" stroke="${colors.line}" stroke-width="2"${dashAttr} />
-    ${hasClassName ? renderText(match.className, x + width / 2, classY, { size: classSize, fill: colors.fg, anchor: "middle", weight: 900 }) : ""}
-    ${renderText(match.title, x + width / 2, titleY, { size: titleSize, fill: colors.fg, anchor: "middle", weight: 900, decoration: titleDecor })}
-    ${match.note ? renderText(match.note, x + width / 2, noteY, { size: noteSize, fill: colors.note, anchor: "middle", weight: 800 }) : ""}
+    <g clip-path="url(#${clipId})">
+      ${hasClassName ? renderFittedText(match.className, x + width / 2, classY, maxTextWidth, { size: classSize, minSize: compact ? 11 : 16, maxLines: 1, fill: colors.fg, weight: 900 }) : ""}
+      ${renderFittedText(match.title, x + width / 2, titleY, maxTextWidth, { size: titleSize, minSize: compact ? 9 : 16, maxLines: 2, fill: colors.fg, weight: 900, decoration: titleDecor })}
+      ${hasNote ? renderFittedText(match.note, x + width / 2, noteY, maxTextWidth, { size: noteSize, minSize: compact ? 7 : 9, maxLines: 2, fill: colors.note, weight: 800 }) : ""}
+    </g>
   `;
 }
+
+renderChip.sequence = 0;
 
 function mergeSameEvents(matches) {
   const merged = [];
@@ -319,6 +415,7 @@ function mergeSameEvents(matches) {
 }
 
 function renderWallpaperSvg(state, query) {
+  renderChip.sequence = 0;
   const name = query.name || query.n || "";
   const titleLabel = name ? `${name} 선생님의 이번 주 시간표` : "내 과목 주간표";
   const titleSize = name ? (name.length > 5 ? 44 : 52) : 62;
@@ -453,9 +550,11 @@ function renderWallpaperSvg(state, query) {
             .join("");
         } else {
           const chipWidth = Math.max(92, dayWidth / 2 - 10);
-          const chipHeight = 70;
-          cellChips = cellMatches
-            .slice(0, 4)
+          const chipHeight = (rowHeight - 22) / 2;
+          const visibleMatches = cellMatches.length > 4
+            ? [...cellMatches.slice(0, 3), { className: "", title: `+${cellMatches.length - 3}`, note: "추가 수업", type: "base" }]
+            : cellMatches.slice(0, 4);
+          cellChips = visibleMatches
             .map((match, matchIndex) => {
               const chipX = x + 8 + (matchIndex % 2) * (chipWidth + 8);
               const chipY = y + 10 + Math.floor(matchIndex / 2) * (chipHeight + 8);
@@ -464,16 +563,7 @@ function renderWallpaperSvg(state, query) {
             .join("");
         }
 
-        const overflow =
-          cellMatches.length > 4
-            ? renderText(`+${cellMatches.length - 4}`, x + dayWidth - 22, y + rowHeight - 14, {
-                size: 18,
-                fill: "#94a3b8",
-                anchor: "end",
-              })
-            : "";
-
-        chipsMarkup += cellChips + overflow;
+        chipsMarkup += cellChips;
         visited[d][p] = true;
       }
     }
@@ -498,8 +588,8 @@ function renderWallpaperSvg(state, query) {
   <g font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif">
     ${renderText("용정 시간표", 64, 670, { size: 28, fill: "#64748b", weight: 900 })}
     ${renderText(titleLabel, 64, 725, { size: titleSize, fill: "#f8fafc", weight: 900 })}
-    ${renderText(subjectLabel, 64, 775, { size: 28, fill: "#2dd4bf", weight: 900 })}
-    ${renderText(gradeLabel, 64, 805, { size: 20, fill: "#64748b", weight: 800 })}
+    ${renderFittedText(subjectLabel, 64, 770, 1042, { size: 28, minSize: 15, maxLines: 1, fill: "#2dd4bf", weight: 900, anchor: "start" })}
+    ${renderFittedText(gradeLabel, 64, 803, 1042, { size: 20, minSize: 12, maxLines: 1, fill: "#64748b", weight: 800, anchor: "start" })}
     <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
     ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f8fafc", anchor: "middle", weight: 900 })}
     ${headerCells}

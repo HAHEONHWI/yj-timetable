@@ -2176,6 +2176,8 @@ textarea {
 .wallpaper-class-chip {
   display: grid;
   gap: 1px;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid #0f172a;
   border-radius: 5px;
   padding: 3px;
@@ -2184,6 +2186,8 @@ textarea {
   font-size: 9px;
   font-weight: 900;
   line-height: 1.1;
+  text-align: center;
+  container-type: inline-size;
 }
 
 .wallpaper-class-chip.is-change {
@@ -2206,17 +2210,37 @@ textarea {
 }
 
 .wallpaper-class-chip strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: inherit;
-  font-size: 12px;
+  font-size: clamp(8px, 18cqw, 12px);
 }
 
 .wallpaper-class-chip em {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-style: normal;
+  font-size: clamp(7px, 15cqw, 10px);
+  line-height: 1.05;
 }
 
 .wallpaper-class-chip small {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   color: inherit;
-  font-size: 7px;
+  font-size: clamp(6px, 11cqw, 7px);
+  line-height: 1.05;
   opacity: 0.78;
 }
 
