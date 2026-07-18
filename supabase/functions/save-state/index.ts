@@ -55,6 +55,35 @@ function addChangedAction(actions: Set<string>, before: Record<string, unknown>,
   }
 }
 
+function eventRecordMap(value: unknown) {
+  const events = Array.isArray(value) ? value : [];
+  return new Map(
+    events
+      .filter((event): event is Record<string, unknown> => Boolean(event && typeof event === "object" && !Array.isArray(event)))
+      .map((event) => [String(event.id || ""), event]),
+  );
+}
+
+function eventTypographyChanged(beforeEvents: unknown, afterEvents: unknown) {
+  const beforeById = eventRecordMap(beforeEvents);
+  const afterById = eventRecordMap(afterEvents);
+
+  for (const [id, afterEvent] of afterById) {
+    const beforeEvent = beforeById.get(id);
+    const afterEnabled = afterEvent.useCustomSlideFontScale === true;
+    if (!beforeEvent) {
+      if (afterEnabled) return true;
+      continue;
+    }
+
+    const beforeEnabled = beforeEvent.useCustomSlideFontScale === true;
+    if (beforeEnabled !== afterEnabled) return true;
+    if (afterEnabled && isDifferent(beforeEvent.slideFontScale, afterEvent.slideFontScale)) return true;
+  }
+
+  return false;
+}
+
 function changedActions(beforeState: unknown, afterState: Record<string, unknown>, fallbackAction: string) {
   if (!beforeState || typeof beforeState !== "object" || Array.isArray(beforeState)) {
     return [fallbackAction];
@@ -68,6 +97,9 @@ function changedActions(beforeState: unknown, afterState: Record<string, unknown
   addChangedAction(actions, before, afterState, "changes", "update_change");
   addChangedAction(actions, before, afterState, "events", "update_event");
   addChangedAction(actions, before, afterState, "notices", "update_notice");
+  if (eventTypographyChanged(before.events, afterState.events)) {
+    actions.add("update_slide_typography");
+  }
 
   const beforeSlide = before.slideshow && typeof before.slideshow === "object" ? before.slideshow as Record<string, unknown> : {};
   const afterSlide = afterState.slideshow && typeof afterState.slideshow === "object" ? afterState.slideshow as Record<string, unknown> : {};

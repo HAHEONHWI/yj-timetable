@@ -153,9 +153,11 @@
 
     if (change) {
       const original = getSubjectsForDate(date, className)[periodIndex] || "-";
-      return `<div class="lesson is-change${subjectHighlightClass(change.subject, { className })}">
+      const changeTypeClass = change.type === "new" ? " is-new-change" : "";
+      const changeMeta = change.type === "new" ? "신설 수업" : `${escapeHtml(original)} 변경`;
+      return `<div class="lesson is-change${changeTypeClass}${subjectHighlightClass(change.subject, { className })}">
         <strong>${escapeHtml(change.subject)}</strong>
-        <small>${escapeHtml(original)} 변경${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
+        <small>${changeMeta}${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
       </div>`;
     }
 

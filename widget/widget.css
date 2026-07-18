@@ -9,6 +9,9 @@
   --today: #172554;
   --change: #253245;
   --change-line: #64748b;
+  --new-change: #450a0a;
+  --new-change-line: #ef4444;
+  --new-change-text: #fecaca;
   --subject-highlight: #123c52;
   --subject-highlight-line: #38bdf8;
   --subject-highlight-text: #e0faff;
@@ -38,6 +41,9 @@ body.theme-dark {
   --change: #253245;
   --change-line: #64748b;
   --change-text: #f1f5f9;
+  --new-change: #450a0a;
+  --new-change-line: #ef4444;
+  --new-change-text: #fecaca;
   --subject-highlight: #123c52;
   --subject-highlight-line: #38bdf8;
   --subject-highlight-text: #e0faff;
@@ -72,6 +78,9 @@ body.theme-light {
   --change: #edf2f7;
   --change-line: #94a3b8;
   --change-text: #1f2937;
+  --new-change: #fee2e2;
+  --new-change-line: #dc2626;
+  --new-change-text: #991b1b;
   --subject-highlight: #dff7ff;
   --subject-highlight-line: #0284c7;
   --subject-highlight-text: #083344;
@@ -501,6 +510,12 @@ main {
   border: 1px solid var(--change-line);
   background: var(--change);
   color: var(--change-text);
+}
+
+.lesson.is-change.is-new-change {
+  border-color: var(--new-change-line);
+  background: var(--new-change);
+  color: var(--new-change-text);
 }
 
 .lesson.is-event {

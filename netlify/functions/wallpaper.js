@@ -175,7 +175,7 @@ function lessonFor(state, date, className, period, periodIndex) {
   if (event) return { title: event.title, type: "event" };
 
   const change = state.changes[changeKey(date, className, period)];
-  if (change) return { title: change.subject, type: "change" };
+  if (change) return { title: change.subject, type: change.type === "new" ? "new" : "change" };
 
   const merge = getBaseMergesForDate(state, date).find((item) => {
     return item.classes.includes(className) && period >= item.start && period <= item.end;
@@ -228,7 +228,7 @@ function matchesForCell(state, date, className, period, periodIndex, subjects, g
 
   if (change) {
     if (subjectSet.has(change.subject) && isSubjectAllowed(gradesBySubject, change.subject, className)) {
-      matches.push({ className, title: change.subject, note: `${original}에서 변경`, type: "change" });
+      matches.push({ className, title: change.subject, note: change.type === "new" ? "신설 수업" : `${original}에서 변경`, type: change.type === "new" ? "new" : "change" });
     }
     if (subjectSet.has(original) && isSubjectAllowed(gradesBySubject, original, className)) {
       matches.push({ className, title: original, note: `${change.subject}로 변경됨`, type: "original" });
@@ -336,6 +336,7 @@ function renderFittedText(text, x, centerY, maxWidth, options = {}) {
 
 function chipColors(type) {
   if (type === "change") return { bg: "rgba(43, 27, 10, 0.95)", line: "#f59e0b", fg: "#fef3c7", note: "#fbbf24" };
+  if (type === "new") return { bg: "rgba(69, 10, 10, 0.96)", line: "#ef4444", fg: "#fecaca", note: "#fca5a5" };
   if (type === "original") return { bg: "rgba(23, 29, 38, 0.15)", line: "rgba(148, 163, 184, 0.25)", fg: "rgba(203, 213, 225, 0.35)", note: "rgba(148, 163, 184, 0.35)" };
   if (type === "event" || type === "merge") return { bg: "rgba(10, 37, 43, 0.95)", line: "#14b8a6", fg: "#ccfbf1", note: "#2dd4bf" };
   return { bg: "rgba(15, 23, 42, 0.95)", line: "#475569", fg: "#e2e8f0", note: "#94a3b8" };
@@ -596,7 +597,7 @@ function renderWallpaperSvg(state, query) {
     ${rows}
     ${chipsMarkup}
     <rect x="46" y="2260" width="1078" height="78" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="2" rx="12" />
-    ${renderText("수업 변경: 주황색 · 취소된 원래 수업: 회색 · 행사: 민트색", 585, 2306, {
+    ${renderText("1:1 변경: 주황색 · 신설 변경: 붉은색 · 취소된 원래 수업: 회색 · 행사: 민트색", 585, 2306, {
       size: 20,
       fill: "#94a3b8",
       anchor: "middle",

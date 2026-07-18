@@ -120,6 +120,7 @@
     changeClass: $("#changeClass"),
     changePeriod: $("#changePeriod"),
     changeSubject: $("#changeSubject"),
+    changeType: $("#changeType"),
     changeMemo: $("#changeMemo"),
     saveChangeButton: $("#saveChangeButton"),
     deleteChangeButton: $("#deleteChangeButton"),
@@ -130,6 +131,10 @@
     eventTitle: $("#eventTitle"),
     eventMemo: $("#eventMemo"),
     eventClassChecks: $("#eventClassChecks"),
+    eventCustomFontEnabled: $("#eventCustomFontEnabled"),
+    eventCustomFontControls: $("#eventCustomFontControls"),
+    eventCustomFontScale: $("#eventCustomFontScale"),
+    eventCustomFontScaleLabel: $("#eventCustomFontScaleLabel"),
     slideEventFontScale: $("#slideEventFontScale"),
     slideEventFontScaleLabel: $("#slideEventFontScaleLabel"),
     saveEventButton: $("#saveEventButton"),
@@ -578,6 +583,8 @@
       els.slideClassHeaderFontScale,
       els.slidePeriodHeaderFontScale,
       els.slideEventFontScale,
+      els.eventCustomFontEnabled,
+      els.eventCustomFontScale,
     ].forEach((control) => setControlDisabled(control, !canSlideTypography));
     [els.slideReloadPassword, els.forceSlideReloadButton].forEach((control) => setControlDisabled(control, !canForceReload));
 
@@ -658,6 +665,16 @@
 
   function getChange(date, className, period) {
     return state.changes[changeKey(date, className, period)] || null;
+  }
+
+  function isNewChange(change) {
+    return Boolean(change && change.type === "new");
+  }
+
+  function eventSlideFontScale(event) {
+    const globalScale = clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
+    if (!event || event.useCustomSlideFontScale !== true) return globalScale;
+    return clamp(Number(event.slideFontScale) || globalScale, 70, 150);
   }
 
   function getEventsForDate(date) {
@@ -825,7 +842,7 @@
           const metaLines = rowSpan === 1 ? 1 : 2;
           const periodStart = placement.periodStart || item.start;
           const periodEnd = placement.periodEnd || item.end;
-          const eventScale = isEventCell && compact ? clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150) / 100 : 1;
+          const eventScale = isEventCell && compact ? eventSlideFontScale(item) / 100 : 1;
           return `<div class="${className}${hasVisibleMeta ? " has-memo" : " is-no-memo"}${rowSpan === 1 ? " is-single-row" : ""}" style="grid-column:${placement.columnStart}/${placement.columnEnd};grid-row:${placement.rowStart}/${placement.rowEnd};--merge-title-size:${titleSize * eventScale}px;--merge-meta-size:${metaSize}px;--merge-title-lines:${titleLines};--merge-meta-lines:${metaLines};--merge-gap:${rowSpan === 1 ? (hasVisibleMeta ? 3 : 1) : 4}px;--merge-padding:${rowSpan === 1 ? 5 : 8}px">
             <strong>${escapeHtml(item.title)}</strong>
             ${showMeta ? `<small>${formatPeriodRange(periodStart, periodEnd)}${item.memo ? ` · ${escapeHtml(item.memo)}` : ""}</small>` : ""}
@@ -862,7 +879,8 @@
             }
             const subject = change ? change.subject : getSubjectsForDate(date, className)[index];
             const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
-            return `<div class="lesson-cell${change ? " is-change" : ""}" style="${placement}">
+            const changeClass = change ? ` is-change${isNewChange(change) ? " is-new-change" : ""}` : "";
+            return `<div class="lesson-cell${changeClass}" style="${placement}">
               <strong>${escapeHtml(subject || "-")}</strong>${memo}
             </div>`;
           })
@@ -901,9 +919,11 @@
     const change = getChange(date, className, period);
     if (change) {
       const original = getSubjectsForDate(date, className)[periodIndex] || "-";
-      return `<div class="board-lesson is-change${isToday ? " is-today" : ""}">
+      const changeTypeClass = isNewChange(change) ? " is-new-change" : "";
+      const changeMeta = isNewChange(change) ? "신설 수업" : `${escapeHtml(original)} 변경`;
+      return `<div class="board-lesson is-change${changeTypeClass}${isToday ? " is-today" : ""}">
         <strong>${escapeHtml(change.subject)}</strong>
-        <small>${escapeHtml(original)} 변경${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
+        <small>${changeMeta}${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
       </div>`;
     }
 
@@ -1153,8 +1173,8 @@
         matches.push({
           className,
           title: change.subject,
-          note: `${original}에서 변경`,
-          type: "change",
+          note: isNewChange(change) ? "신설 수업" : `${original}에서 변경`,
+          type: isNewChange(change) ? "new" : "change",
         });
       }
       if (selected.has(normalizedSubject(original)) && isWallpaperSubjectAllowed(settings, original, className)) {
@@ -1182,7 +1202,7 @@
     if (event) return { title: event.title, type: "event" };
 
     const change = getChange(date, className, period);
-    if (change) return { title: change.subject, type: "change" };
+    if (change) return { title: change.subject, type: isNewChange(change) ? "new" : "change" };
 
     const baseMerge = getBaseMergesForDate(date).find((merge) => {
       return merge.classes.includes(className) && period >= merge.start && period <= merge.end;
@@ -1605,10 +1625,14 @@
             const weekdayLabel = weekdayLabelForDate(date);
             const originalSubject = getSubjectsForDate(date, className)[Number(period) - 1] || "-";
             const reason = change.memo ? escapeHtml(change.memo) : "없음";
+            const typeLabel = isNewChange(change) ? "신설 변경" : "1:1 변경";
+            const changeSummary = isNewChange(change)
+              ? `신설 -> ${escapeHtml(change.subject)}`
+              : `${escapeHtml(originalSubject)} -> ${escapeHtml(change.subject)}`;
             return `<article class="list-item">
               <div>
-                <strong>일시: ${date} ${weekdayLabel}요일 · 학급: ${className} · 교시: ${period}교시</strong>
-                <span>${escapeHtml(originalSubject)} -> ${escapeHtml(change.subject)} · 사유: ${reason}</span>
+                <strong>일시: ${date} ${weekdayLabel}요일 · 학급: ${className} · 교시: ${period}교시 · ${typeLabel}</strong>
+                <span>${changeSummary} · 사유: ${reason}</span>
               </div>
               <button class="text-button" data-revert-change="${escapeHtml(key)}" type="button">되돌리기</button>
             </article>`;
@@ -1662,10 +1686,13 @@
           .slice()
           .sort((a, b) => a.date.localeCompare(b.date))
           .map((event) => {
+            const fontLabel = event.useCustomSlideFontScale === true
+              ? ` · 슬라이드 글자 ${eventSlideFontScale(event)}%`
+              : " · 슬라이드 글자 공통 설정";
             return `<article class="list-item event-list-item${event.id === selectedEventId ? " is-active" : ""}">
               <div>
                 <strong>${event.date} · ${escapeHtml(event.title)}</strong>
-                <span>${escapeHtml(event.classes.join(", "))} · ${formatPeriodRange(event.start, event.end)}${event.memo ? ` · ${escapeHtml(event.memo)}` : ""}</span>
+                <span>${escapeHtml(event.classes.join(", "))} · ${formatPeriodRange(event.start, event.end)}${event.memo ? ` · ${escapeHtml(event.memo)}` : ""}${fontLabel}</span>
               </div>
               <div class="list-actions">
                 <button class="text-button neutral" data-edit-event="${event.id}" type="button">수정</button>
@@ -1677,10 +1704,24 @@
       : `<p class="empty">등록된 행사가 없습니다.</p>`;
   }
 
+  function syncEventCustomFontControls() {
+    const enabled = Boolean(els.eventCustomFontEnabled && els.eventCustomFontEnabled.checked);
+    const scale = clamp(Number(els.eventCustomFontScale && els.eventCustomFontScale.value) || 100, 70, 150);
+    if (els.eventCustomFontControls) {
+      els.eventCustomFontControls.classList.toggle("is-hidden", !enabled);
+    }
+    if (els.eventCustomFontScaleLabel) {
+      els.eventCustomFontScaleLabel.textContent = `이 행사 ${scale}%`;
+    }
+  }
+
   function resetEventForm() {
     selectedEventId = "";
     els.eventTitle.value = "";
     els.eventMemo.value = "";
+    els.eventCustomFontEnabled.checked = false;
+    els.eventCustomFontScale.value = String(clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150));
+    syncEventCustomFontControls();
     $$("#eventClassChecks input").forEach((input) => {
       input.checked = true;
     });
@@ -1701,6 +1742,9 @@
     els.eventEnd.value = String(item.end);
     els.eventTitle.value = item.title || "";
     els.eventMemo.value = item.memo || "";
+    els.eventCustomFontEnabled.checked = item.useCustomSlideFontScale === true;
+    els.eventCustomFontScale.value = String(eventSlideFontScale(item));
+    syncEventCustomFontControls();
     $$("#eventClassChecks input").forEach((input) => {
       input.checked = item.classes.includes(input.value);
     });
@@ -2183,6 +2227,7 @@
       els.viewClass.value = classes.includes(savedBoardClass) ? savedBoardClass : classes[0];
     }
     els.changeDate.value = today;
+    els.changeType.value = "swap";
     changeFilterWeekday = weekdayForDate(today).key;
     els.specialDate.value = today;
     els.eventDate.value = today;
@@ -2197,6 +2242,8 @@
     els.slidePeriodHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170);
     els.slideEventFontScale.value = clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
     els.slideEventFontScaleLabel.textContent = `행사 ${els.slideEventFontScale.value}%`;
+    els.eventCustomFontScale.value = String(els.slideEventFontScale.value);
+    syncEventCustomFontControls();
     els.noticeTitleFontSize.value = "72";
     els.noticeFontSize.value = "42";
     renderChangeDateHint();
@@ -2408,6 +2455,17 @@
       renderChangeWeekdayFilter();
       renderChangeList();
     });
+
+    els.eventCustomFontEnabled.addEventListener("change", () => {
+      if (!canRole("update_slide_typography")) {
+        const selectedEvent = state.events.find((item) => item.id === selectedEventId);
+        els.eventCustomFontEnabled.checked = Boolean(selectedEvent && selectedEvent.useCustomSlideFontScale === true);
+        showMessage(els.adminMessage, "행사별 글자 크기는 manager 이상만 수정할 수 있습니다.");
+      }
+      syncEventCustomFontControls();
+    });
+
+    els.eventCustomFontScale.addEventListener("input", syncEventCustomFontControls);
 
     els.loginButton.addEventListener("click", async () => {
       const result = await verifyAdminPassword(els.adminUsername.value, els.adminPassword.value);
@@ -2664,9 +2722,14 @@
         return;
       }
       const key = changeKey(els.changeDate.value, els.changeClass.value, els.changePeriod.value);
-      state.changes[key] = { subject, memo: els.changeMemo.value.trim() };
+      state.changes[key] = {
+        subject,
+        memo: els.changeMemo.value.trim(),
+        type: els.changeType.value === "new" ? "new" : "swap",
+      };
       els.changeSubject.value = "";
       els.changeMemo.value = "";
+      els.changeType.value = "swap";
       saveState("단일교과 변경을 저장했습니다.", "update_change");
     });
 
@@ -2701,6 +2764,14 @@
         showMessage(els.adminMessage, "행사 날짜, 이름, 학급, 교시 범위를 확인하세요.");
         return;
       }
+      const currentEvent = state.events.find((item) => item.id === selectedEventId) || null;
+      const canEditTypography = canRole("update_slide_typography");
+      const useCustomSlideFontScale = canEditTypography
+        ? els.eventCustomFontEnabled.checked
+        : Boolean(currentEvent && currentEvent.useCustomSlideFontScale === true);
+      const slideFontScale = canEditTypography
+        ? clamp(Number(els.eventCustomFontScale.value) || 100, 70, 150)
+        : eventSlideFontScale(currentEvent);
       const nextEvent = {
         id: selectedEventId || `${Date.now()}`,
         date: els.eventDate.value,
@@ -2709,6 +2780,7 @@
         end,
         classes: eventClasses,
         memo: els.eventMemo.value.trim(),
+        ...(useCustomSlideFontScale ? { useCustomSlideFontScale: true, slideFontScale } : {}),
       };
       if (selectedEventId) {
         state.events = state.events.map((item) => (item.id === selectedEventId ? nextEvent : item));

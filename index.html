@@ -480,7 +480,7 @@
         </section>
 
         <section id="changePanel" class="admin-panel">
-          <div class="form-grid">
+          <div class="form-grid change-form-grid">
             <div class="field">
               <label for="changeDate">날짜</label>
               <input id="changeDate" type="date" />
@@ -497,6 +497,14 @@
             <div class="field">
               <label for="changeSubject">변경 교과</label>
               <input id="changeSubject" type="text" placeholder="예: 과학" />
+            </div>
+            <div class="field">
+              <label for="changeType">변경 유형</label>
+              <select id="changeType">
+                <option value="swap">1:1 변경</option>
+                <option value="new">신설 변경</option>
+              </select>
+              <p class="message">신설 변경은 붉은색으로 강조됩니다.</p>
             </div>
           </div>
           <div class="field">
@@ -537,6 +545,20 @@
           <div class="field">
             <label for="eventMemo">메모</label>
             <input id="eventMemo" type="text" placeholder="예: 전 학년 강당 이동" />
+          </div>
+          <div class="event-font-settings">
+            <label class="check-item event-font-toggle" for="eventCustomFontEnabled">
+              <input id="eventCustomFontEnabled" type="checkbox" />
+              <span>
+                <strong>행사별 슬라이드 글자 크기</strong>
+                <small>이 행사만 공통 행사 글자 크기와 다르게 표시합니다.</small>
+              </span>
+            </label>
+            <div id="eventCustomFontControls" class="field is-hidden">
+              <label for="eventCustomFontScale">이 행사 글자 크기</label>
+              <input id="eventCustomFontScale" type="range" min="70" max="150" step="5" value="100" />
+              <p id="eventCustomFontScaleLabel" class="message">이 행사 100%</p>
+            </div>
           </div>
           <div class="button-row">
             <button id="saveEventButton" class="primary-button" type="button">행사 저장</button>
