@@ -648,7 +648,8 @@
             <div class="form-grid">
               <div class="field">
                 <label for="slideReloadPassword">현재 로그인 비밀번호</label>
-                <input id="slideReloadPassword" type="password" placeholder="비밀번호 입력" />
+                <input id="slideReloadPassword" type="password" autocomplete="current-password" placeholder="비밀번호 입력" />
+                <p id="forceSlideReloadPermission" class="message"></p>
               </div>
             </div>
             <button id="forceSlideReloadButton" class="danger-button" type="button">슬라이드쇼 강제 새로고침</button>

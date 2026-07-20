@@ -161,6 +161,7 @@
     slideScheduleDate: $("#slideScheduleDate"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
+    forceSlideReloadPermission: $("#forceSlideReloadPermission"),
     forceSlideReloadButton: $("#forceSlideReloadButton"),
     refreshAuditLogsButton: $("#refreshAuditLogsButton"),
     accountUsername: $("#accountUsername"),
@@ -586,7 +587,12 @@
       els.eventCustomFontEnabled,
       els.eventCustomFontScale,
     ].forEach((control) => setControlDisabled(control, !canSlideTypography));
-    [els.slideReloadPassword, els.forceSlideReloadButton].forEach((control) => setControlDisabled(control, !canForceReload));
+    [els.slideReloadPassword, els.forceSlideReloadButton].forEach((control) => setControlDisabled(control, false));
+    if (els.forceSlideReloadPermission) {
+      els.forceSlideReloadPermission.textContent = canForceReload
+        ? "현재 dev 계정에서 사용할 수 있습니다."
+        : "강제 새로고침 실행은 dev 계정만 가능합니다.";
+    }
 
     const canManageAccounts = canRole("manage_accounts");
     [els.accountDisplayName, els.accountRole, els.accountPassword, els.accountActive, els.saveAccountButton, els.newAccountButton].forEach((control) =>
@@ -2987,6 +2993,11 @@
       els.slideReloadPassword.value = "";
       state.slideshow.reloadToken = `${Date.now()}`;
       saveState("슬라이드쇼 화면에 강제 새로고침 명령을 보냈습니다.", "force_reload");
+    });
+
+    els.slideReloadPassword.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      els.forceSlideReloadButton.click();
     });
   }
 
