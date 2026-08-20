@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.public-api]
 verify_jwt = false
+
+[functions.api-key-apply]
+verify_jwt = false

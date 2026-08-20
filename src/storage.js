@@ -299,6 +299,10 @@
     return invokeFunction("api-keys-admin", body, { accessToken });
   }
 
+  async function apiApplicationRequest(body) {
+    return invokeFunction("api-key-apply", body);
+  }
+
   async function verifyAdminPassword(username, password) {
     if (!isSupabaseEnabled()) {
       const safeUsername = String(username || "").trim() || "admin";
@@ -390,6 +394,7 @@
     verifyAdminPassword,
     adminAccountsRequest,
     apiKeysRequest,
+    apiApplicationRequest,
     clearAdminPassword,
     getAdminProfile,
     hasAdminSession,

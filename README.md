@@ -84,7 +84,9 @@ npx supabase functions deploy save-state --project-ref YOUR_PROJECT_REF
 
 ## 읽기 전용 REST API
 
-`dev` 관리자는 `/admin`의 `API key` 탭에서 사용처 이름, 분당 요청 한도, 만료일을 지정해 key를 발급하거나 폐기할 수 있습니다. 원본 key는 발급 직후 한 번만 표시되며 DB에는 SHA-256 hash만 저장됩니다.
+누구나 `https://schedule.yjms.kr/api`에서 사용처, 이메일, 국내 전화번호를 입력하고 Resend 이메일 인증을 마치면 key를 즉시 발급받을 수 있습니다. 인증번호는 10분 동안 유효하며 원본 key는 발급 직후 한 번만 표시됩니다. DB에는 SHA-256 hash만 저장됩니다.
+
+`dev` 관리자는 `/admin`의 `API key` 탭에서 이메일 인증 신청 연락처와 사용량을 확인하고 key를 폐기할 수 있습니다. 직접 발급도 `dev`만 가능합니다.
 
 ```bash
 curl -H "X-API-Key: yj_live_..." \

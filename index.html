@@ -32,6 +32,7 @@
       <button class="nav-button" data-route="slideshow" type="button">슬라이드쇼</button>
       <button class="nav-button" data-route="wallpaper" data-dev-only type="button" hidden>배경화면</button>
       <button class="nav-button" data-route="download" type="button">다운로드</button>
+      <button class="nav-button" data-route="api" type="button">API</button>
       <button class="nav-button" data-route="admin" type="button">관리자</button>
     </nav>
   </header>
@@ -261,6 +262,86 @@
       </div>
     </section>
 
+    <section id="apiPage" class="page api-page is-hidden">
+      <header class="api-page-head">
+        <div>
+          <p class="eyebrow">읽기 전용 REST API</p>
+          <h2>시간표 데이터를 연결하세요</h2>
+          <p class="muted api-copy-lines"><span>이메일 인증 후 key를 즉시 발급합니다.</span><span>모든 API는 읽기 전용입니다.</span></p>
+        </div>
+        <a class="ghost-button api-link-button" href="https://jzcectvzwbfvbgiszjkt.supabase.co/functions/v1/public-api/v1/openapi.json" target="_blank" rel="noreferrer">OpenAPI JSON</a>
+      </header>
+
+      <div class="api-public-layout">
+        <form id="apiApplyForm" class="admin-account-form">
+          <div>
+            <h3>API key 신청</h3>
+            <p class="muted api-copy-lines"><span>관리자 계정 없이 신청할 수 있습니다.</span><span>이메일을 인증합니다.</span><span>연락 가능한 국내 번호를 입력하세요.</span></p>
+          </div>
+          <div class="field">
+            <label for="apiApplyName">사용처 이름</label>
+            <input id="apiApplyName" type="text" minlength="2" maxlength="80" autocomplete="organization" placeholder="예: 학생회 앱" required />
+          </div>
+          <div class="field">
+            <label for="apiApplyEmail">이메일</label>
+            <input id="apiApplyEmail" type="email" maxlength="254" autocomplete="email" placeholder="name@example.com" required />
+          </div>
+          <div class="field">
+            <label for="apiApplyPhone">전화번호</label>
+            <input id="apiApplyPhone" type="tel" maxlength="24" autocomplete="tel" inputmode="tel" placeholder="010-1234-5678" required />
+          </div>
+          <button id="sendApiCodeButton" class="primary-button" type="submit">인증번호 받기</button>
+          <p id="apiApplyMessage" class="message" aria-live="polite"></p>
+        </form>
+
+        <form id="apiVerifyForm" class="admin-account-form is-hidden">
+          <div>
+            <h3>이메일 인증</h3>
+            <p class="muted"><strong id="apiVerifyEmail"></strong>로 보낸 6자리 번호를 10분 안에 입력하세요.</p>
+          </div>
+          <div class="field">
+            <label for="apiVerificationCode">인증번호</label>
+            <input id="apiVerificationCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required />
+          </div>
+          <button id="verifyApiCodeButton" class="primary-button" type="submit">인증하고 key 발급</button>
+          <p id="apiVerifyMessage" class="message" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div id="publicApiKeyResult" class="api-key-result is-hidden" aria-live="polite">
+        <strong>발급 완료. 지금 복사하세요. 이 key는 다시 표시되지 않습니다.</strong>
+        <code id="publicApiKeyValue" class="api-key-secret"></code>
+        <button id="copyPublicApiKeyButton" class="ghost-button" type="button">API key 복사</button>
+      </div>
+
+      <div class="subsection api-docs public-api-docs">
+        <div>
+          <h3>빠른 사용법</h3>
+          <p class="muted">Base URL 아래 경로를 GET으로 호출하고, 헤더에 발급받은 key를 넣습니다. 기본 한도는 분당 60회입니다.</p>
+        </div>
+        <pre><code>curl -H "X-API-Key: yj_live_..." \
+  "https://jzcectvzwbfvbgiszjkt.supabase.co/functions/v1/public-api/v1/timetable?date=2026-08-20&amp;class=1-1"</code></pre>
+        <div class="api-endpoint-list">
+          <article><code>GET /v1/timetable?date=YYYY-MM-DD</code><span>전체 6개 학급 시간표</span></article>
+          <article><code>GET /v1/timetable?date=YYYY-MM-DD&amp;class=1-1</code><span>선택 학급 시간표</span></article>
+          <article><code>GET /v1/events?date=YYYY-MM-DD&amp;class=1-1</code><span>선택 학급 행사만</span></article>
+          <article><code>GET /v1/changes?date=YYYY-MM-DD&amp;class=1-1</code><span>선택 학급 교과 변경만</span></article>
+          <article><code>GET /v1/notices</code><span>안내사항</span></article>
+          <article><code>GET /v1/classes</code><span>학급 목록</span></article>
+        </div>
+      </div>
+
+      <div class="subsection api-docs">
+        <h3>Postman에서 호출하기</h3>
+        <ol class="api-steps">
+          <li><strong>GET</strong>을 선택하고 원하는 전체 URL을 붙여넣습니다.</li>
+          <li><strong>Headers</strong> 탭에서 Key에 <code>X-API-Key</code>, Value에 발급받은 key를 넣습니다.</li>
+          <li><strong>Send</strong>를 누르면 아래 응답 영역에 JSON 데이터가 표시됩니다.</li>
+        </ol>
+        <p class="muted">key가 외부에 노출되면 dev 관리자에게 폐기를 요청하세요. 브라우저 공개 코드나 GitHub 저장소에 key를 넣지 마세요.</p>
+      </div>
+    </section>
+
     <section id="privacyPage" class="page privacy-page is-hidden">
       <div class="privacy-head">
         <div>
@@ -268,7 +349,7 @@
           <h2>개인정보처리방침</h2>
           <p class="muted">용정 시간표 서비스는 시간표 제공에 필요한 범위에서 최소한의 정보를 처리합니다.</p>
         </div>
-        <div class="privacy-badge">시행일 2026.07.01</div>
+        <div class="privacy-badge">시행일 2026.08.20</div>
       </div>
 
       <div class="privacy-summary">
@@ -289,7 +370,7 @@
       <div class="privacy-content">
         <article>
           <h3><span>01</span>개인정보 처리 목적</h3>
-          <p>서비스는 전자시간표 조회, 슬라이드쇼 표시, 관리자 입력 데이터 저장 및 동기화, 오류 확인, 이용 통계 분석을 위해 필요한 정보를 처리합니다.</p>
+          <p>서비스는 전자시간표 조회, API key 발급, 슬라이드쇼 표시, 관리자 입력 데이터 저장 및 동기화, 오류 확인, 이용 통계 분석을 위해 필요한 정보를 처리합니다.</p>
           <p>시간표, 행사, 안내사항에는 학생 이름, 연락처, 주민등록번호 등 개인을 직접 식별할 수 있는 정보를 입력하지 않는 것을 원칙으로 합니다.</p>
         </article>
 
@@ -297,6 +378,7 @@
           <h3><span>02</span>처리하는 개인정보 항목</h3>
           <ul>
             <li>관리자 입력 정보: 시간표, 단일교과 변경, 행사, 안내사항, 슬라이드쇼 설정</li>
+            <li>API 신청 정보: 사용처 이름, 이메일 주소, 전화번호, 이메일 인증 및 발급 기록</li>
             <li>자동 생성 정보: 접속 기록, 페이지 이용 기록, 브라우저 및 기기 정보, 대략적인 지역 정보, 쿠키 또는 유사 식별자</li>
             <li>브라우저 저장 정보: 선택 학급, 화면 테마, 마지막 저장 시각, 관리자 로그인 세션 정보</li>
           </ul>
@@ -305,6 +387,7 @@
         <article>
           <h3><span>03</span>처리 및 보유 기간</h3>
           <p>시간표, 행사, 안내사항 등 운영 데이터는 서비스 제공에 필요한 기간 동안 보관하며, 더 이상 필요하지 않으면 관리자 기능 또는 내부 정리 기준에 따라 삭제합니다.</p>
+          <p>API 신청 연락처와 발급 기록은 API key 운영, 오용 대응 및 문의 처리를 위해 key 폐기 후에도 필요한 기간 동안 보관하며, 삭제 요청이 확인되면 관련 법령상 보관 의무가 없는 범위에서 삭제합니다.</p>
           <p>브라우저에 저장되는 설정 값은 사용자가 브라우저 데이터 삭제 기능으로 직접 삭제할 수 있습니다. Google Analytics 4의 이용 통계 정보는 Google의 보관 설정 및 정책에 따라
             보관됩니다.</p>
         </article>
@@ -319,10 +402,11 @@
           <h3><span>05</span>처리 위탁 및 국외 이전</h3>
           <ul>
             <li>Supabase Inc.: 시간표 데이터 저장, 동기화, 관리자 저장 기능 제공</li>
+            <li>Resend Inc.: API 신청 이메일 인증번호 발송</li>
             <li>Google LLC: Google Analytics 4를 통한 이용 통계 분석</li>
             <li>Netlify Inc.: 정적 웹사이트 호스팅 및 배포</li>
           </ul>
-          <p>위 서비스는 미국 등 국외에 위치한 인프라를 사용할 수 있으며, 서비스 제공에 필요한 범위에서 접속 정보, 이용 통계 정보, 관리자 입력 데이터가 전송 또는 보관될 수 있습니다.</p>
+          <p>위 서비스는 미국 등 국외에 위치한 인프라를 사용할 수 있으며, 서비스 제공에 필요한 범위에서 접속 정보, 이용 통계 정보, 관리자 입력 데이터, API 신청 이메일이 전송 또는 보관될 수 있습니다.</p>
         </article>
 
         <article>

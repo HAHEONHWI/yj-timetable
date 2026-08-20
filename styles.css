@@ -1448,6 +1448,8 @@ body.board-mode.board-light .board-lesson.is-merge {
 .privacy-content li {
   color: var(--muted);
   line-height: 1.7;
+  overflow-wrap: break-word;
+  word-break: keep-all;
 }
 
 .privacy-content ul {
@@ -1777,6 +1779,103 @@ textarea {
   grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
   gap: 18px;
   align-items: start;
+}
+
+.api-page {
+  display: grid;
+  gap: 24px;
+}
+
+.api-page-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 18px;
+}
+
+.api-page-head h2 {
+  margin: 4px 0 8px;
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.api-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.api-public-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.api-public-layout #apiApplyForm {
+  width: min(100%, 720px);
+  margin: 0 auto;
+}
+
+.api-public-layout:has(#apiVerifyForm:not(.is-hidden)) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.api-public-layout:has(#apiVerifyForm:not(.is-hidden)) #apiApplyForm {
+  width: 100%;
+  margin: 0;
+}
+
+.api-page p,
+.api-steps li,
+.api-endpoint-list span {
+  overflow-wrap: break-word;
+  word-break: keep-all;
+}
+
+.api-copy-lines span {
+  display: block;
+}
+
+.public-api-docs {
+  border-top: 0;
+}
+
+.api-endpoint-list {
+  display: grid;
+  gap: 8px;
+}
+
+.api-endpoint-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(180px, 0.75fr);
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #101826;
+  padding: 12px;
+}
+
+.api-endpoint-list code {
+  overflow-wrap: anywhere;
+  color: var(--event-text);
+}
+
+.api-endpoint-list span,
+.api-steps {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.api-steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
 }
 
 .api-key-result {
@@ -2433,8 +2532,22 @@ textarea {
   }
 
   .admin-account-layout,
-  .api-key-layout {
+  .api-key-layout,
+  .api-public-layout {
     grid-template-columns: 1fr;
+  }
+
+  .api-public-layout:has(#apiVerifyForm:not(.is-hidden)) {
+    grid-template-columns: 1fr;
+  }
+
+  .api-page-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .api-link-button {
+    width: 100%;
   }
 
   .wallpaper-preview-phone {
@@ -2472,6 +2585,10 @@ textarea {
 }
 
 @media (max-width: 480px) {
+  .api-endpoint-list article {
+    grid-template-columns: 1fr;
+  }
+
   #apiKeyList .list-item {
     align-items: stretch;
     flex-direction: column;

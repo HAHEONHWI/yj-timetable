@@ -47,7 +47,10 @@ function json(data: unknown, status = 200) {
   });
 }
 
-function publicKeyRow(row: Record<string, unknown>) {
+function publicKeyRow(
+  row: Record<string, unknown>,
+  application?: Record<string, unknown>,
+) {
   return {
     id: row.id,
     name: row.name,
@@ -58,6 +61,13 @@ function publicKeyRow(row: Record<string, unknown>) {
     lastUsedAt: row.last_used_at,
     requestCount: row.request_count,
     createdAt: row.created_at,
+    application: application
+      ? {
+        email: application.email,
+        phone: application.phone,
+        verifiedAt: application.verified_at,
+      }
+      : null,
   };
 }
 
@@ -126,13 +136,37 @@ Deno.serve(async (request) => {
     const { data, error } = await admin
       .from("api_keys")
       .select(
-        "id, name, key_prefix, rate_limit_per_minute, expires_at, revoked_at, last_used_at, request_count, created_at",
+        "id, name, key_prefix, rate_limit_per_minute, expires_at, revoked_at, last_used_at, request_count, created_at, request_id",
       )
       .order("created_at", { ascending: false });
     if (error) {
       return json({ error: "API key 목록을 불러오지 못했습니다." }, 500);
     }
-    return json({ ok: true, keys: (data ?? []).map(publicKeyRow) });
+    const requestIds = (data ?? [])
+      .map((row) => row.request_id)
+      .filter((id): id is string => typeof id === "string");
+    const { data: applications, error: applicationsError } = requestIds.length
+      ? await admin.from("api_key_requests")
+        .select("id, email, phone, verified_at")
+        .in("id", requestIds)
+      : { data: [], error: null };
+    if (applicationsError) {
+      return json({ error: "API 신청 정보를 불러오지 못했습니다." }, 500);
+    }
+    const applicationById = new Map(
+      (applications ?? []).map((application) => [application.id, application]),
+    );
+    return json({
+      ok: true,
+      keys: (data ?? []).map((row) =>
+        publicKeyRow(
+          row,
+          typeof row.request_id === "string"
+            ? applicationById.get(row.request_id)
+            : undefined,
+        )
+      ),
+    });
   }
 
   if (body.data.action === "create") {

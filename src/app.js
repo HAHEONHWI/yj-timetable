@@ -10,6 +10,7 @@
     verifyAdminPassword,
     adminAccountsRequest,
     apiKeysRequest,
+    apiApplicationRequest,
     clearAdminPassword,
     getAdminProfile,
     isSupabaseEnabled,
@@ -41,6 +42,8 @@
   let adminAccountsLoading = false;
   let apiKeys = [];
   let apiKeysLoading = false;
+  let apiApplicationRequestId = "";
+  let apiApplicationEmail = "";
   let analyticsRouteTrackingReady = false;
   const gaMeasurementId = "G-TTWC1RKWGL";
   const LAST_SAVE_KEY = "timetable-last-save-at";
@@ -74,6 +77,7 @@
     slideshowPage: $("#slideshowPage"),
     wallpaperPage: $("#wallpaperPage"),
     downloadPage: $("#downloadPage"),
+    apiPage: $("#apiPage"),
     privacyPage: $("#privacyPage"),
     adminPage: $("#adminPage"),
     homeButton: $("#homeButton"),
@@ -187,6 +191,20 @@
     copyApiKeyButton: $("#copyApiKeyButton"),
     refreshApiKeysButton: $("#refreshApiKeysButton"),
     apiKeyList: $("#apiKeyList"),
+    apiApplyForm: $("#apiApplyForm"),
+    apiApplyName: $("#apiApplyName"),
+    apiApplyEmail: $("#apiApplyEmail"),
+    apiApplyPhone: $("#apiApplyPhone"),
+    sendApiCodeButton: $("#sendApiCodeButton"),
+    apiApplyMessage: $("#apiApplyMessage"),
+    apiVerifyForm: $("#apiVerifyForm"),
+    apiVerifyEmail: $("#apiVerifyEmail"),
+    apiVerificationCode: $("#apiVerificationCode"),
+    verifyApiCodeButton: $("#verifyApiCodeButton"),
+    apiVerifyMessage: $("#apiVerifyMessage"),
+    publicApiKeyResult: $("#publicApiKeyResult"),
+    publicApiKeyValue: $("#publicApiKeyValue"),
+    copyPublicApiKeyButton: $("#copyPublicApiKeyButton"),
     auditLogList: $("#auditLogList"),
   };
 
@@ -439,6 +457,7 @@
     if (path === "/slide" || path === "/slideshow") return "slideshow";
     if (path === "/wallpaper") return "wallpaper";
     if (path === "/download" || path === "/downloads") return "download";
+    if (path === "/api" || path === "/api-docs") return "api";
     if (path === "/privacy") return "privacy";
     return "view";
   }
@@ -448,6 +467,7 @@
     if (route === "slideshow") return "/slide";
     if (route === "wallpaper") return "/wallpaper";
     if (route === "download") return "/download";
+    if (route === "api") return "/api";
     if (route === "privacy") return "/privacy";
     return "/";
   }
@@ -458,6 +478,7 @@
       slideshow: "슬라이드쇼",
       wallpaper: "배경화면",
       download: "다운로드",
+      api: "API",
       admin: "관리자",
       privacy: "개인정보처리방침",
     };
@@ -659,6 +680,7 @@
     els.slideshowPage.classList.toggle("is-hidden", route !== "slideshow");
     els.wallpaperPage.classList.toggle("is-hidden", route !== "wallpaper");
     els.downloadPage.classList.toggle("is-hidden", route !== "download");
+    els.apiPage.classList.toggle("is-hidden", route !== "api");
     els.privacyPage.classList.toggle("is-hidden", route !== "privacy");
     els.adminPage.classList.toggle("is-hidden", route !== "admin");
     document.body.classList.toggle("slideshow-mode", route === "slideshow");
@@ -1943,10 +1965,12 @@
             const revoked = Boolean(key.revokedAt);
             const expired = key.expiresAt && new Date(key.expiresAt) <= new Date();
             const status = revoked ? "폐기" : expired ? "만료" : "사용 가능";
+            const application = key.application;
             return `<article class="list-item${revoked || expired ? " is-disabled" : ""}">
               <div>
                 <strong>${escapeHtml(key.name)}</strong>
                 <span>yj_live_${escapeHtml(key.keyPrefix)}_… · ${status} · 분당 ${Number(key.rateLimitPerMinute)}회</span>
+                ${application ? `<span>이메일 인증 신청 · ${escapeHtml(application.email)} · ${escapeHtml(application.phone)}</span>` : `<span>dev 직접 발급</span>`}
                 <span>요청 ${Number(key.requestCount || 0).toLocaleString()}회 · 마지막 사용 ${formatDateTime(key.lastUsedAt)} · 만료 ${formatDateTime(key.expiresAt)}</span>
               </div>
               ${revoked || expired ? "" : `<button class="danger-button" data-revoke-api-key="${escapeHtml(key.id)}" type="button">폐기</button>`}
@@ -2590,6 +2614,72 @@
     });
 
     els.refreshApiKeysButton.addEventListener("click", refreshApiKeys);
+
+    els.apiApplyForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setControlDisabled(els.sendApiCodeButton, true);
+      els.sendApiCodeButton.textContent = "보내는 중...";
+      showMessage(els.apiApplyMessage, "인증 메일을 보내고 있습니다.");
+      const result = await apiApplicationRequest({
+        action: "requestCode",
+        application: {
+          name: els.apiApplyName.value,
+          email: els.apiApplyEmail.value,
+          phone: els.apiApplyPhone.value,
+        },
+      });
+      setControlDisabled(els.sendApiCodeButton, false);
+      els.sendApiCodeButton.textContent = "인증번호 받기";
+      if (!result || !result.ok) {
+        showMessage(els.apiApplyMessage, `신청 실패: ${friendlyRemoteError(result && result.error)}`);
+        return;
+      }
+      apiApplicationRequestId = result.requestId;
+      apiApplicationEmail = els.apiApplyEmail.value.trim().toLowerCase();
+      els.apiVerifyEmail.textContent = apiApplicationEmail;
+      els.apiVerificationCode.value = "";
+      els.apiVerifyForm.classList.remove("is-hidden");
+      els.publicApiKeyValue.textContent = "";
+      els.publicApiKeyResult.classList.add("is-hidden");
+      showMessage(els.apiApplyMessage, "인증번호를 보냈습니다. 메일함을 확인하세요.");
+      els.apiVerificationCode.focus();
+    });
+
+    els.apiVerifyForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!apiApplicationRequestId || !apiApplicationEmail) return;
+      setControlDisabled(els.verifyApiCodeButton, true);
+      els.verifyApiCodeButton.textContent = "확인 중...";
+      showMessage(els.apiVerifyMessage, "인증번호를 확인하고 있습니다.");
+      const result = await apiApplicationRequest({
+        action: "verifyCode",
+        requestId: apiApplicationRequestId,
+        email: apiApplicationEmail,
+        code: els.apiVerificationCode.value,
+      });
+      setControlDisabled(els.verifyApiCodeButton, false);
+      els.verifyApiCodeButton.textContent = "인증하고 key 발급";
+      if (!result || !result.ok) {
+        showMessage(els.apiVerifyMessage, `인증 실패: ${friendlyRemoteError(result && result.error)}`);
+        return;
+      }
+      els.publicApiKeyValue.textContent = result.apiKey;
+      els.publicApiKeyResult.classList.remove("is-hidden");
+      els.apiVerifyForm.classList.add("is-hidden");
+      showMessage(els.apiApplyMessage, "이메일 인증과 API key 발급이 완료되었습니다.");
+      showGlobalStatus("API key를 발급했습니다. 지금 복사하세요.", "success", { autoHide: true });
+    });
+
+    els.copyPublicApiKeyButton.addEventListener("click", async () => {
+      const value = els.publicApiKeyValue.textContent;
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        showGlobalStatus("API key를 복사했습니다.", "success", { autoHide: true });
+      } catch {
+        showGlobalError("복사 권한이 차단되었습니다. key를 직접 선택해 복사하세요.", { autoHide: true });
+      }
+    });
 
     els.createApiKeyButton.addEventListener("click", async () => {
       if (!ensurePermission("manage_api_keys", "API key 관리")) return;
