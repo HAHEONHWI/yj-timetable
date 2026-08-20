@@ -9,6 +9,7 @@
     subscribeRemoteChanges,
     verifyAdminPassword,
     adminAccountsRequest,
+    apiKeysRequest,
     clearAdminPassword,
     getAdminProfile,
     isSupabaseEnabled,
@@ -38,6 +39,8 @@
   let adminAccounts = [];
   let auditLogs = [];
   let adminAccountsLoading = false;
+  let apiKeys = [];
+  let apiKeysLoading = false;
   let analyticsRouteTrackingReady = false;
   const gaMeasurementId = "G-TTWC1RKWGL";
   const LAST_SAVE_KEY = "timetable-last-save-at";
@@ -59,6 +62,7 @@
     update_slide_typography: ["dev", "manager"],
     force_reload: ["dev"],
     manage_accounts: ["dev", "manager"],
+    manage_api_keys: ["dev"],
     read_audit_logs: ["dev", "manager", "teacher"],
   };
 
@@ -173,6 +177,16 @@
     newAccountButton: $("#newAccountButton"),
     deactivateAccountButton: $("#deactivateAccountButton"),
     accountList: $("#accountList"),
+    apiKeysTab: $("#apiKeysTab"),
+    apiKeyName: $("#apiKeyName"),
+    apiKeyRateLimit: $("#apiKeyRateLimit"),
+    apiKeyExpiresOn: $("#apiKeyExpiresOn"),
+    createApiKeyButton: $("#createApiKeyButton"),
+    apiKeyResult: $("#apiKeyResult"),
+    newApiKeyValue: $("#newApiKeyValue"),
+    copyApiKeyButton: $("#copyApiKeyButton"),
+    refreshApiKeysButton: $("#refreshApiKeysButton"),
+    apiKeyList: $("#apiKeyList"),
     auditLogList: $("#auditLogList"),
   };
 
@@ -537,8 +551,12 @@
     } else {
       selectedAdminAccountId = "";
       adminAccounts = [];
+      apiKeys = [];
       auditLogs = [];
+      els.newApiKeyValue.textContent = "";
+      els.apiKeyResult.classList.add("is-hidden");
       renderAdminAccounts();
+      renderApiKeys();
       renderAuditLogs();
     }
     applyAdminPermissions();
@@ -565,6 +583,7 @@
     const canSlideRuntime = canRole("update_slide_runtime");
     const canSlideTypography = canRole("update_slide_typography");
     const canForceReload = canRole("force_reload");
+    const canManageApiKeys = canRole("manage_api_keys");
 
     setContainerDisabled("#baseEditor", !canBase);
     setControlDisabled(els.saveBaseButton, !canBase);
@@ -615,6 +634,13 @@
         const locked = account && account.role === "dev" && currentAdminRole() !== "dev";
         setControlDisabled(button, !canManageAccounts || locked);
       });
+    }
+    if (els.apiKeysTab) els.apiKeysTab.hidden = !canManageApiKeys;
+    [els.apiKeyName, els.apiKeyRateLimit, els.apiKeyExpiresOn, els.createApiKeyButton, els.refreshApiKeysButton].forEach(
+      (control) => setControlDisabled(control, !canManageApiKeys)
+    );
+    if (els.apiKeyList) {
+      els.apiKeyList.querySelectorAll("[data-revoke-api-key]").forEach((button) => setControlDisabled(button, !canManageApiKeys));
     }
   }
 
@@ -1827,6 +1853,8 @@
       admin_account_create: "계정 생성",
       admin_account_update: "계정 수정",
       admin_account_deactivate: "계정 비활성화",
+      api_key_create: "API key 발급",
+      api_key_revoke: "API key 폐기",
     };
     return labels[action] || action || "unknown";
   }
@@ -1899,6 +1927,51 @@
     applyAdminPermissions();
   }
 
+  function renderApiKeys() {
+    if (!els.apiKeyList) return;
+    if (apiKeysLoading) {
+      els.apiKeyList.innerHTML = `<p class="empty">API key를 불러오는 중입니다.</p>`;
+      return;
+    }
+    if (!canRole("manage_api_keys")) {
+      els.apiKeyList.innerHTML = `<p class="empty">API key 관리는 dev 권한이 필요합니다.</p>`;
+      return;
+    }
+    els.apiKeyList.innerHTML = apiKeys.length
+      ? apiKeys
+          .map((key) => {
+            const revoked = Boolean(key.revokedAt);
+            const expired = key.expiresAt && new Date(key.expiresAt) <= new Date();
+            const status = revoked ? "폐기" : expired ? "만료" : "사용 가능";
+            return `<article class="list-item${revoked || expired ? " is-disabled" : ""}">
+              <div>
+                <strong>${escapeHtml(key.name)}</strong>
+                <span>yj_live_${escapeHtml(key.keyPrefix)}_… · ${status} · 분당 ${Number(key.rateLimitPerMinute)}회</span>
+                <span>요청 ${Number(key.requestCount || 0).toLocaleString()}회 · 마지막 사용 ${formatDateTime(key.lastUsedAt)} · 만료 ${formatDateTime(key.expiresAt)}</span>
+              </div>
+              ${revoked || expired ? "" : `<button class="danger-button" data-revoke-api-key="${escapeHtml(key.id)}" type="button">폐기</button>`}
+            </article>`;
+          })
+          .join("")
+      : `<p class="empty">발급된 API key가 없습니다.</p>`;
+    applyAdminPermissions();
+  }
+
+  async function refreshApiKeys() {
+    if (!isLoggedIn() || !apiKeysRequest || !canRole("manage_api_keys")) return;
+    apiKeysLoading = true;
+    renderApiKeys();
+    const result = await apiKeysRequest({ action: "list" });
+    apiKeysLoading = false;
+    if (!result || !result.ok) {
+      renderApiKeys();
+      showMessage(els.adminMessage, `API key 목록 실패: ${friendlyRemoteError(result && result.error)}`);
+      return;
+    }
+    apiKeys = Array.isArray(result.keys) ? result.keys : [];
+    renderApiKeys();
+  }
+
   function renderAuditLogs() {
     if (!els.auditLogList) return;
     if (!canRole("read_audit_logs")) {
@@ -1935,6 +2008,7 @@
     if (!isLoggedIn() || !adminAccountsRequest) return;
     adminAccountsLoading = true;
     renderAdminAccounts();
+    renderApiKeys();
     const result = await adminAccountsRequest({ action: "list" });
     adminAccountsLoading = false;
     if (result && result.ok) {
@@ -2511,7 +2585,68 @@
         if (button.dataset.adminTab === "accounts" || button.dataset.adminTab === "auditLogs") {
           refreshAdminAccounts();
         }
+        if (button.dataset.adminTab === "apiKeys") refreshApiKeys();
       });
+    });
+
+    els.refreshApiKeysButton.addEventListener("click", refreshApiKeys);
+
+    els.createApiKeyButton.addEventListener("click", async () => {
+      if (!ensurePermission("manage_api_keys", "API key 관리")) return;
+      const name = els.apiKeyName.value.trim();
+      const rateLimitPerMinute = Number(els.apiKeyRateLimit.value);
+      if (name.length < 2) {
+        showMessage(els.adminMessage, "사용처 이름을 2자 이상 입력하세요.");
+        return;
+      }
+      if (!Number.isInteger(rateLimitPerMinute) || rateLimitPerMinute < 1 || rateLimitPerMinute > 1000) {
+        showMessage(els.adminMessage, "분당 요청 한도는 1~1000 사이 정수로 입력하세요.");
+        return;
+      }
+      setControlDisabled(els.createApiKeyButton, true);
+      const result = await apiKeysRequest({
+        action: "create",
+        name,
+        rateLimitPerMinute,
+        expiresOn: els.apiKeyExpiresOn.value || undefined,
+      });
+      setControlDisabled(els.createApiKeyButton, false);
+      if (!result || !result.ok) {
+        showMessage(els.adminMessage, `API key 발급 실패: ${friendlyRemoteError(result && result.error)}`);
+        return;
+      }
+      els.newApiKeyValue.textContent = result.apiKey;
+      els.apiKeyResult.classList.remove("is-hidden");
+      els.apiKeyName.value = "";
+      showGlobalStatus("API key를 발급했습니다. 지금 복사하세요.", "success", { autoHide: true });
+      refreshApiKeys();
+    });
+
+    els.copyApiKeyButton.addEventListener("click", async () => {
+      const value = els.newApiKeyValue.textContent;
+      if (!value) return;
+      await navigator.clipboard.writeText(value);
+      showMessage(els.adminMessage, "API key를 복사했습니다.");
+    });
+
+    els.apiKeyList.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-revoke-api-key]");
+      if (!button || !ensurePermission("manage_api_keys", "API key 관리")) return;
+      const key = apiKeys.find((item) => item.id === button.dataset.revokeApiKey);
+      if (!key || !confirmAction(`${key.name} API key를 폐기할까요? 폐기 후 복구할 수 없습니다.`)) return;
+      setControlDisabled(button, true);
+      const result = await apiKeysRequest({ action: "revoke", id: key.id });
+      if (!result || !result.ok) {
+        showMessage(els.adminMessage, `API key 폐기 실패: ${friendlyRemoteError(result && result.error)}`);
+        setControlDisabled(button, false);
+        return;
+      }
+      if (els.newApiKeyValue.textContent.includes(`yj_live_${key.keyPrefix}_`)) {
+        els.newApiKeyValue.textContent = "";
+        els.apiKeyResult.classList.add("is-hidden");
+      }
+      showGlobalStatus("API key를 폐기했습니다.", "success", { autoHide: true });
+      refreshApiKeys();
     });
 
     els.refreshAuditLogsButton.addEventListener("click", () => {

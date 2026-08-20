@@ -414,6 +414,7 @@
           <button class="admin-tab" data-admin-tab="notice" type="button">안내사항</button>
           <button class="admin-tab" data-admin-tab="slideshowSettings" type="button">슬라이드쇼 설정</button>
           <button class="admin-tab" data-admin-tab="accounts" type="button">계정 관리</button>
+          <button id="apiKeysTab" class="admin-tab" data-admin-tab="apiKeys" type="button">API key</button>
           <button class="admin-tab" data-admin-tab="auditLogs" type="button">감사 로그</button>
         </div>
 
@@ -699,6 +700,50 @@
               </div>
             </div>
             <div id="accountList" class="list"></div>
+          </div>
+        </section>
+
+        <section id="apiKeysPanel" class="admin-panel is-hidden">
+          <div>
+            <h3>읽기 전용 API key</h3>
+            <p class="muted">발급된 key는 시간표·행사·공지 조회에만 사용됩니다. 원본 key는 발급 직후 한 번만 표시됩니다.</p>
+          </div>
+          <div class="api-key-layout">
+            <div class="admin-account-form">
+              <div class="form-grid two">
+                <div class="field">
+                  <label for="apiKeyName">사용처 이름</label>
+                  <input id="apiKeyName" type="text" maxlength="80" placeholder="예: 학생회 앱" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="apiKeyRateLimit">분당 요청 한도</label>
+                  <input id="apiKeyRateLimit" type="number" min="1" max="1000" value="60" />
+                </div>
+                <div class="field">
+                  <label for="apiKeyExpiresOn">만료일</label>
+                  <input id="apiKeyExpiresOn" type="date" />
+                </div>
+              </div>
+              <button id="createApiKeyButton" class="primary-button" type="button">API key 발급</button>
+            </div>
+            <div id="apiKeyResult" class="api-key-result is-hidden" aria-live="polite">
+              <strong>지금 복사하세요. 다시 표시되지 않습니다.</strong>
+              <code id="newApiKeyValue" class="api-key-secret"></code>
+              <button id="copyApiKeyButton" class="ghost-button" type="button">key 복사</button>
+            </div>
+          </div>
+          <div class="subsection api-docs">
+            <h3>사용 예시</h3>
+            <pre><code>curl -H "X-API-Key: 발급받은_key" \
+  "https://jzcectvzwbfvbgiszjkt.supabase.co/functions/v1/public-api/v1/timetable?date=2026-08-20&amp;class=1-1"</code></pre>
+            <p class="muted">지원 경로: <code>/v1/timetable</code>, <code>/v1/events</code>, <code>/v1/notices</code>, <code>/v1/classes</code>, <code>/v1/openapi.json</code></p>
+          </div>
+          <div class="subsection">
+            <div class="audit-log-head">
+              <h3>발급 목록</h3>
+              <button id="refreshApiKeysButton" class="ghost-button" type="button">새로고침</button>
+            </div>
+            <div id="apiKeyList" class="list"></div>
           </div>
         </section>
 

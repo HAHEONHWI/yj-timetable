@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.save-state]
 verify_jwt = false
+
+[functions.public-api]
+verify_jwt = false

@@ -285,6 +285,10 @@ body.board-mode.board-light .page-view {
   display: none !important;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .nav,
 .admin-tabs,
 .button-row,
@@ -1707,6 +1711,11 @@ textarea {
   gap: 4px;
 }
 
+.list-item > .danger-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .list-item.is-disabled {
   opacity: 0.62;
 }
@@ -1761,6 +1770,47 @@ textarea {
   grid-template-columns: minmax(360px, 0.82fr) minmax(420px, 1.18fr);
   gap: 18px;
   align-items: start;
+}
+
+.api-key-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.api-key-result {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #0f766e;
+  border-radius: 8px;
+  background: #052e2b;
+  padding: 18px;
+}
+
+#apiKeysPanel .muted,
+.api-key-result strong {
+  word-break: keep-all;
+}
+
+.api-key-secret,
+.api-docs pre {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.api-key-secret {
+  color: #ccfbf1;
+  font-size: 14px;
+}
+
+.api-docs pre {
+  overflow-x: auto;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0b1220;
+  padding: 16px;
 }
 
 .admin-account-form {
@@ -2382,7 +2432,8 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .admin-account-layout {
+  .admin-account-layout,
+  .api-key-layout {
     grid-template-columns: 1fr;
   }
 
@@ -2417,5 +2468,16 @@ textarea {
   .login-panel,
   .admin-workspace {
     padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  #apiKeyList .list-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #apiKeyList .danger-button {
+    width: 100%;
   }
 }

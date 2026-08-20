@@ -82,6 +82,25 @@ npx supabase functions deploy save-state --project-ref YOUR_PROJECT_REF
 
 주의: 공개 브라우저 키는 노출되므로 RLS(행 수준 보안)를 적절히 설정하세요.
 
+## 읽기 전용 REST API
+
+`dev` 관리자는 `/admin`의 `API key` 탭에서 사용처 이름, 분당 요청 한도, 만료일을 지정해 key를 발급하거나 폐기할 수 있습니다. 원본 key는 발급 직후 한 번만 표시되며 DB에는 SHA-256 hash만 저장됩니다.
+
+```bash
+curl -H "X-API-Key: yj_live_..." \
+  "https://jzcectvzwbfvbgiszjkt.supabase.co/functions/v1/public-api/v1/timetable?date=2026-08-20&class=1-1"
+```
+
+조회 endpoint:
+
+- `GET /v1/timetable?date=YYYY-MM-DD&class=1-1`
+- `GET /v1/events?date=YYYY-MM-DD&class=1-1`
+- `GET /v1/notices`
+- `GET /v1/classes`
+- `GET /v1/openapi.json`
+
+`POST`, `PUT`, `PATCH`, `DELETE`는 허용하지 않습니다. API 안내와 OpenAPI 문서는 key 없이 조회할 수 있고, 실제 데이터 조회에는 `X-API-Key`가 필요합니다.
+
 ## 배포
 
 - Netlify(권장): 정적 파일을 배포합니다. 내부 스크립트로 불필요한 파일을 제외한 뒤 배포합니다.

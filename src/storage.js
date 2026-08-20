@@ -291,6 +291,14 @@
     return invokeFunction("admin-accounts", body, { accessToken });
   }
 
+  async function apiKeysRequest(body) {
+    const accessToken = await authAccessToken();
+    if (!accessToken) {
+      return { ok: false, error: "관리자 로그인 세션이 없습니다." };
+    }
+    return invokeFunction("api-keys-admin", body, { accessToken });
+  }
+
   async function verifyAdminPassword(username, password) {
     if (!isSupabaseEnabled()) {
       const safeUsername = String(username || "").trim() || "admin";
@@ -381,6 +389,7 @@
     subscribeRemoteChanges,
     verifyAdminPassword,
     adminAccountsRequest,
+    apiKeysRequest,
     clearAdminPassword,
     getAdminProfile,
     hasAdminSession,
