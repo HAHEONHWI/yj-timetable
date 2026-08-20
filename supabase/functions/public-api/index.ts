@@ -3,6 +3,8 @@ import { z } from "npm:zod@4.1.5";
 import { hashApiKey, parseApiKey } from "../_shared/api-key.ts";
 import {
   PublicStateSchema,
+  resolveAllTimetables,
+  resolveChanges,
   resolveTimetable,
 } from "../_shared/timetable-api.ts";
 
@@ -18,6 +20,23 @@ const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   return !Number.isNaN(date.valueOf()) && date.toISOString().startsWith(value);
 }, "유효한 날짜가 아닙니다.");
 const classSchema = z.enum(["1-1", "1-2", "2-1", "2-2", "3-1", "3-2"]);
+const dateParameter = {
+  name: "date",
+  in: "query",
+  required: true,
+  schema: { type: "string", format: "date" },
+} as const;
+const requiredClassParameter = {
+  name: "class",
+  in: "query",
+  required: true,
+  schema: { type: "string", enum: classes },
+} as const;
+const optionalClassParameter = {
+  ...requiredClassParameter,
+  required: false,
+  description: "생략하면 전체 학급을 반환합니다.",
+} as const;
 
 function json(data: unknown, status = 200, extraHeaders: HeadersInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -44,11 +63,13 @@ function docs(origin: string) {
   const baseUrl = `${origin}/functions/v1/public-api/v1`;
   return {
     name: "용정 시간표 읽기 전용 API",
-    version: "1.0.0",
+    version: "1.1.0",
     authentication: "X-API-Key 헤더",
     endpoints: {
-      timetable: `${baseUrl}/timetable?date=YYYY-MM-DD&class=1-1`,
+      allTimetables: `${baseUrl}/timetable?date=YYYY-MM-DD`,
+      classTimetable: `${baseUrl}/timetable?date=YYYY-MM-DD&class=1-1`,
       events: `${baseUrl}/events?date=YYYY-MM-DD&class=1-1`,
+      changes: `${baseUrl}/changes?date=YYYY-MM-DD&class=1-1`,
       notices: `${baseUrl}/notices`,
       classes: `${baseUrl}/classes`,
       openapi: `${origin}/functions/v1/public-api/v1/openapi.json`,
@@ -60,7 +81,7 @@ function openApi(origin: string) {
   const server = `${origin}/functions/v1/public-api`;
   return {
     openapi: "3.1.0",
-    info: { title: "용정 시간표 읽기 전용 API", version: "1.0.0" },
+    info: { title: "용정 시간표 읽기 전용 API", version: "1.1.0" },
     servers: [{ url: server }],
     components: {
       securitySchemes: {
@@ -69,8 +90,24 @@ function openApi(origin: string) {
     },
     security: [{ ApiKey: [] }],
     paths: {
-      "/v1/timetable": { get: { summary: "날짜·학급 시간표 조회" } },
-      "/v1/events": { get: { summary: "행사 조회" } },
+      "/v1/timetable": {
+        get: {
+          summary: "날짜 시간표 조회, class 생략 시 전체 학급",
+          parameters: [dateParameter, optionalClassParameter],
+        },
+      },
+      "/v1/events": {
+        get: {
+          summary: "날짜·학급 행사 조회",
+          parameters: [dateParameter, requiredClassParameter],
+        },
+      },
+      "/v1/changes": {
+        get: {
+          summary: "날짜·학급 교과 변경 조회",
+          parameters: [dateParameter, requiredClassParameter],
+        },
+      },
       "/v1/notices": { get: { summary: "공지 조회" } },
       "/v1/classes": { get: { summary: "학급 목록 조회" } },
     },
@@ -92,9 +129,13 @@ Deno.serve(async (request) => {
   if (route === "/" || route === "/v1") return json(docs(url.origin));
   if (route === "/v1/openapi.json") return json(openApi(url.origin));
   if (
-    !["/v1/timetable", "/v1/events", "/v1/notices", "/v1/classes"].includes(
-      route,
-    )
+    ![
+      "/v1/timetable",
+      "/v1/events",
+      "/v1/changes",
+      "/v1/notices",
+      "/v1/classes",
+    ].includes(route)
   ) {
     return json({ error: "존재하지 않는 API 경로입니다." }, 404);
   }
@@ -169,10 +210,24 @@ Deno.serve(async (request) => {
   }
 
   const dateResult = dateSchema.safeParse(url.searchParams.get("date"));
-  const classResult = classSchema.safeParse(url.searchParams.get("class"));
-  if (!dateResult.success || !classResult.success) {
+  if (!dateResult.success) {
     return json(
-      { error: "date=YYYY-MM-DD와 class=1-1 형식이 필요합니다." },
+      { error: "date=YYYY-MM-DD 형식이 필요합니다." },
+      400,
+      rateHeaders,
+    );
+  }
+
+  const classValue = url.searchParams.get("class");
+  if (route === "/v1/timetable" && classValue === null) {
+    const data = resolveAllTimetables(state, dateResult.data, classes);
+    return json({ data, updatedAt: row.updated_at }, 200, rateHeaders);
+  }
+
+  const classResult = classSchema.safeParse(classValue);
+  if (!classResult.success) {
+    return json(
+      { error: "class=1-1 형식이 필요합니다." },
       400,
       rateHeaders,
     );
@@ -182,6 +237,11 @@ Deno.serve(async (request) => {
     const data = state.events.filter((event) =>
       event.date === dateResult.data && event.classes.includes(classResult.data)
     );
+    return json({ data, updatedAt: row.updated_at }, 200, rateHeaders);
+  }
+
+  if (route === "/v1/changes") {
+    const data = resolveChanges(state, dateResult.data, classResult.data);
     return json({ data, updatedAt: row.updated_at }, 200, rateHeaders);
   }
 

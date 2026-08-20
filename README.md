@@ -93,11 +93,30 @@ curl -H "X-API-Key: yj_live_..." \
 
 조회 endpoint:
 
-- `GET /v1/timetable?date=YYYY-MM-DD&class=1-1`
+- `GET /v1/timetable?date=YYYY-MM-DD` — 전체 학급 시간표
+- `GET /v1/timetable?date=YYYY-MM-DD&class=1-1` — 선택 학급 시간표
 - `GET /v1/events?date=YYYY-MM-DD&class=1-1`
+- `GET /v1/changes?date=YYYY-MM-DD&class=1-1`
 - `GET /v1/notices`
 - `GET /v1/classes`
 - `GET /v1/openapi.json`
+
+전체 학급을 한 번에 조회하면 `data`가 학급별 객체로 반환됩니다.
+
+```json
+{
+  "data": {
+    "1-1": [],
+    "1-2": [],
+    "2-1": [],
+    "2-2": [],
+    "3-1": [],
+    "3-2": []
+  }
+}
+```
+
+`events`와 `changes`는 `date`와 `class`를 모두 넣어 선택한 학급의 항목만 조회합니다.
 
 `POST`, `PUT`, `PATCH`, `DELETE`는 허용하지 않습니다. API 안내와 OpenAPI 문서는 key 없이 조회할 수 있고, 실제 데이터 조회에는 `X-API-Key`가 필요합니다.
 

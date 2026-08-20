@@ -8,6 +8,13 @@ export type TimetableEntry = {
   readonly memo: string;
 };
 
+export type ChangeEntry = {
+  readonly period: number;
+  readonly subject: string;
+  readonly memo: string;
+  readonly type: "change" | "new";
+};
+
 const ChangeSchema = z.object({
   subject: z.string(),
   memo: z.string().optional().default(""),
@@ -71,6 +78,14 @@ export function resolveTimetable(
   className: string,
 ): readonly TimetableEntry[] {
   const state = PublicStateSchema.parse(stateValue);
+  return resolveParsedTimetable(state, date, className);
+}
+
+function resolveParsedTimetable(
+  state: PublicState,
+  date: string,
+  className: string,
+): readonly TimetableEntry[] {
   const weekday = weekdayForDate(date);
   const subjects = state.specialSchedules[date]?.[className] ??
     state.base[className]?.[weekday] ?? [];
@@ -124,4 +139,42 @@ export function resolveTimetable(
       memo: "",
     };
   });
+}
+
+export function resolveAllTimetables(
+  stateValue: unknown,
+  date: string,
+  classNames: readonly string[],
+): Readonly<Record<string, readonly TimetableEntry[]>> {
+  const state = PublicStateSchema.parse(stateValue);
+  return Object.fromEntries(
+    classNames.map((className) => [
+      className,
+      resolveParsedTimetable(state, date, className),
+    ]),
+  );
+}
+
+export function resolveChanges(
+  stateValue: unknown,
+  date: string,
+  className: string,
+): readonly ChangeEntry[] {
+  const state = PublicStateSchema.parse(stateValue);
+  const prefix = `${date}__${className}__`;
+  return Object.entries(state.changes)
+    .flatMap(([key, change]) => {
+      if (!key.startsWith(prefix)) return [];
+      const period = Number(key.slice(prefix.length));
+      if (!Number.isInteger(period) || period < 1 || period > 9) return [];
+      return [
+        {
+          period,
+          subject: change.subject,
+          memo: change.memo,
+          type: change.type === "new" ? "new" : "change",
+        } satisfies ChangeEntry,
+      ];
+    })
+    .sort((first, second) => first.period - second.period);
 }

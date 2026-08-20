@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 
 import { hashApiKey, parseApiKey } from "./api-key.ts";
-import { resolveTimetable } from "./timetable-api.ts";
+import {
+  resolveAllTimetables,
+  resolveChanges,
+  resolveTimetable,
+} from "./timetable-api.ts";
 
 Deno.test("API key에서 조회 prefix를 분리한다", () => {
   const parsed = parseApiKey(
@@ -91,4 +95,54 @@ Deno.test("특별시간표가 해당 날짜 기본 시간표를 대체한다", (
   const timetable = resolveTimetable(state, "2026-08-17", "1-1");
 
   assert.equal(timetable[0]?.subject, "특별수업");
+});
+
+Deno.test("학급을 생략하면 전체 학급 시간표를 반환한다", () => {
+  // Given
+  const state = {
+    base: {
+      "1-1": { mon: ["국어"] },
+      "1-2": { mon: ["수학"] },
+    },
+    baseMerges: [],
+    specialSchedules: {},
+    changes: {},
+    events: [],
+    notices: [],
+  };
+
+  // When
+  const timetables = resolveAllTimetables(state, "2026-08-17", ["1-1", "1-2"]);
+
+  // Then
+  assert.equal(timetables["1-1"]?.[0]?.subject, "국어");
+  assert.equal(timetables["1-2"]?.[0]?.subject, "수학");
+});
+
+Deno.test("선택한 날짜와 학급의 교과 변경만 반환한다", () => {
+  // Given
+  const state = {
+    base: {},
+    baseMerges: [],
+    specialSchedules: {},
+    changes: {
+      "2026-08-17__1-1__2": { subject: "과학", memo: "교체", type: "swap" },
+      "2026-08-17__1-2__2": {
+        subject: "영어",
+        memo: "다른 학급",
+        type: "swap",
+      },
+      "2026-08-18__1-1__1": { subject: "음악", memo: "다른 날짜", type: "new" },
+    },
+    events: [],
+    notices: [],
+  };
+
+  // When
+  const changes = resolveChanges(state, "2026-08-17", "1-1");
+
+  // Then
+  assert.deepEqual(changes, [
+    { period: 2, subject: "과학", memo: "교체", type: "change" },
+  ]);
 });
