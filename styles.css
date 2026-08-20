@@ -378,6 +378,29 @@ body.board-mode.board-light .page-view {
   background: #2a1111;
 }
 
+.instant-apply-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  border: 1px solid var(--event-bg);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--event-bg) 24%, var(--panel));
+  color: #cbd5e1;
+  padding: 12px 14px;
+  line-height: 1.5;
+}
+
+.instant-apply-notice strong {
+  color: var(--event-text);
+  white-space: nowrap;
+}
+
+.instant-apply-notice span {
+  white-space: nowrap;
+}
+
 .field {
   display: grid;
   gap: 8px;
