@@ -13,6 +13,7 @@
     apiApplicationRequest,
     clearAdminPassword,
     getAdminProfile,
+    restoreAdminSession,
     isSupabaseEnabled,
     changeKey,
   } = window.TimetableStore;
@@ -104,6 +105,7 @@
     adminWorkspace: $("#adminWorkspace"),
     adminUsername: $("#adminUsername"),
     adminPassword: $("#adminPassword"),
+    adminRememberMe: $("#adminRememberMe"),
     loginButton: $("#loginButton"),
     logoutButton: $("#logoutButton"),
     loginMessage: $("#loginMessage"),
@@ -435,7 +437,10 @@
   }
 
   function isLoggedIn() {
-    return sessionStorage.getItem("timetable-admin") === "true";
+    return (
+      sessionStorage.getItem("timetable-admin") === "true" ||
+      Boolean(getAdminProfile())
+    );
   }
 
   function currentAdminRole() {
@@ -2651,7 +2656,10 @@
     els.eventCustomFontScale.addEventListener("input", syncEventCustomFontControls);
 
     els.loginButton.addEventListener("click", async () => {
-      const result = await verifyAdminPassword(els.adminUsername.value, els.adminPassword.value);
+      setControlDisabled(els.loginButton, true);
+      const rememberMe = els.adminRememberMe ? els.adminRememberMe.checked : true;
+      const result = await verifyAdminPassword(els.adminUsername.value, els.adminPassword.value, rememberMe);
+      setControlDisabled(els.loginButton, false);
       if (result.ok) {
         sessionStorage.setItem("timetable-admin", "true");
         els.adminPassword.value = "";
@@ -3308,13 +3316,25 @@
     });
   }
 
-  function init() {
+  async function init() {
     document.body.classList.toggle("board-mode", isBoardMode);
     currentRoute = isBoardMode ? "view" : routeFromPath();
     applyDeveloperMode();
     initControls();
     applyBoardTheme();
     bindEvents();
+
+    if (typeof restoreAdminSession === "function") {
+      try {
+        const sessionRes = await restoreAdminSession();
+        if (sessionRes && sessionRes.ok) {
+          sessionStorage.setItem("timetable-admin", "true");
+        }
+      } catch (e) {
+        console.warn("Auto session restore error:", e);
+      }
+    }
+
     refreshAdminAuth();
     renderView();
     renderAdmin();
