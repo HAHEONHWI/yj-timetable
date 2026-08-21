@@ -1482,12 +1482,12 @@
       </div>`;
     }
 
-    const { label, formattedDate, menu, calories } = mealDataCache;
+    const { mealTypeLabel, formattedDate, menu, calories } = mealDataCache;
     const hasMenu = Array.isArray(menu) && menu.length > 0;
 
     return `<div class="notice-meal-card">
       <div class="notice-meal-header">
-        <h4>${escapeHtml(label || "급식 식단")}</h4>
+        <h4>${escapeHtml(mealTypeLabel || "급식 식단")}</h4>
         ${formattedDate ? `<span class="notice-meal-date">${escapeHtml(formattedDate)}</span>` : ""}
       </div>
       ${
