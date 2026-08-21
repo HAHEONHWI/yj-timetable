@@ -356,6 +356,24 @@ body.board-mode.board-light .page-view {
   justify-content: flex-end;
 }
 
+.admin-user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #5eead4;
+}
+
+.admin-user-badge:empty {
+  display: none;
+}
+
 .admin-save-status {
   margin: 0;
   min-height: 34px;

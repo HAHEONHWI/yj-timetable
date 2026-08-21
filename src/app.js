@@ -110,6 +110,7 @@
     logoutButton: $("#logoutButton"),
     loginMessage: $("#loginMessage"),
     adminMessage: $("#adminMessage"),
+    adminUserBadge: $("#adminUserBadge"),
     lastSaveStatus: $("#lastSaveStatus"),
     baseWeekday: $("#baseWeekday"),
     baseEditor: $("#baseEditor"),
@@ -571,10 +572,24 @@
     if (panel) panel.classList.remove("is-hidden");
   }
 
+  function renderAdminUserBadge() {
+    if (!els.adminUserBadge) return;
+    const profile = getAdminProfile();
+    if (!profile) {
+      els.adminUserBadge.innerHTML = "";
+      return;
+    }
+    const role = profile.role || "teacher";
+    const name = profile.displayName || profile.username || "관리자";
+    const username = profile.username ? `(${escapeHtml(profile.username)})` : "";
+    els.adminUserBadge.innerHTML = `<span class="admin-user-name">${escapeHtml(name)} ${username}</span><span class="role-badge is-${escapeHtml(role)}">${escapeHtml(role)}</span>`;
+  }
+
   function refreshAdminAuth() {
     const loggedIn = isLoggedIn();
     els.loginPanel.classList.toggle("is-hidden", loggedIn);
     els.adminWorkspace.classList.toggle("is-hidden", !loggedIn);
+    renderAdminUserBadge();
     if (loggedIn) {
       selectAdminTab("change");
       refreshAdminAccounts();
@@ -608,6 +623,7 @@
 
   function applyAdminPermissions() {
     if (!els.adminWorkspace || els.adminWorkspace.classList.contains("is-hidden")) return;
+    renderAdminUserBadge();
     const canBase = canRole("update_base");
     const canBaseMerge = canRole("update_base_merge");
     const canSlideRuntime = canRole("update_slide_runtime");
@@ -636,10 +652,11 @@
       els.eventCustomFontEnabled,
       els.eventCustomFontScale,
     ].forEach((control) => setControlDisabled(control, !canSlideTypography));
-    [els.slideReloadPassword, els.forceSlideReloadButton].forEach((control) => setControlDisabled(control, false));
+    setControlDisabled(els.slideReloadPassword, !canForceReload);
+    setControlDisabled(els.forceSlideReloadButton, !canForceReload);
     if (els.forceSlideReloadPermission) {
       els.forceSlideReloadPermission.textContent = canForceReload
-        ? "현재 dev 계정에서 사용할 수 있습니다."
+        ? "현재 dev 계정으로 즉시 실행할 수 있습니다."
         : "강제 새로고침 실행은 dev 계정만 가능합니다.";
     }
 
@@ -3293,21 +3310,26 @@
 
     els.forceSlideReloadButton.addEventListener("click", async () => {
       if (!ensurePermission("force_reload", "슬라이드쇼 강제 새로고침")) return;
-      const password = els.slideReloadPassword.value;
-      if (!password) {
-        showMessage(els.adminMessage, "관리자 비밀번호를 입력하세요.");
-        return;
-      }
       const profile = getAdminProfile();
-      const username = profile && profile.username ? profile.username : els.adminUsername.value;
-      const result = await verifyAdminPassword(username, password);
-      if (!result.ok) {
-        showMessage(els.adminMessage, "비밀번호가 맞지 않습니다.");
+      if (!profile || profile.role !== "dev") {
+        showMessage(els.adminMessage, "강제 새로고침 실행은 dev 계정만 가능합니다.");
         return;
       }
-      els.slideReloadPassword.value = "";
+      const password = els.slideReloadPassword ? els.slideReloadPassword.value.trim() : "";
+      if (password) {
+        const keepSession = localStorage.getItem("timetable-admin-keep-session") === "true";
+        const result = await verifyAdminPassword(profile.username, password, keepSession);
+        if (!result.ok) {
+          showMessage(els.adminMessage, "비밀번호가 맞지 않습니다.");
+          return;
+        }
+      }
+      if (els.slideReloadPassword) {
+        els.slideReloadPassword.value = "";
+      }
       state.slideshow.reloadToken = `${Date.now()}`;
-      saveState("슬라이드쇼 화면에 강제 새로고침 명령을 보냈습니다.", "force_reload");
+      await saveState("슬라이드쇼 화면에 강제 새로고침 명령을 보냈습니다.", "force_reload");
+      applyAdminPermissions();
     });
 
     els.slideReloadPassword.addEventListener("keydown", (event) => {
