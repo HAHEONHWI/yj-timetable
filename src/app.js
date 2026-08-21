@@ -170,6 +170,7 @@
     slideInterval: $("#slideInterval"),
     slideRefreshInterval: $("#slideRefreshInterval"),
     slideScheduleDate: $("#slideScheduleDate"),
+    slideShowMeal: $("#slideShowMeal"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
     forceSlideReloadPermission: $("#forceSlideReloadPermission"),
@@ -1514,21 +1515,26 @@
     }
 
     const notices = state.notices.filter((notice) => notice.title || notice.body);
+    const showMeal = state.slideshow && state.slideshow.showMeal !== false;
 
     notices.forEach((notice, index) => {
       slides.push({
         type: "notice",
         title: "안내사항",
         meta: `${index + 1} / ${notices.length}`,
-        html: `<article class="notice-slide" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
+        html: `<article class="notice-slide ${showMeal ? "has-meal" : "no-meal"}" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
           <h3>${escapeHtml(notice.title)}</h3>
           <div class="notice-main-content">
             <div class="notice-body-text">
               <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
             </div>
-            <div class="notice-meal-container">
-              ${renderMealCard()}
-            </div>
+            ${
+              showMeal
+                ? `<div class="notice-meal-container">
+                    ${renderMealCard()}
+                  </div>`
+                : ""
+            }
           </div>
         </article>`,
       });
@@ -2157,6 +2163,9 @@
     renderSlideScheduleDateOptions();
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
+    if (els.slideShowMeal) {
+      els.slideShowMeal.value = state.slideshow.showMeal !== false ? "true" : "false";
+    }
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
     els.slideClassHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170);
     els.slidePeriodHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170);
@@ -3251,6 +3260,9 @@
       state.slideshow.refreshSeconds = refreshInterval;
       state.slideshow.scheduleDate = scheduleDate;
       state.slideshow.scheduleDateExpiresOn = scheduleDate ? nextDateIso(scheduleDate) : "";
+      if (els.slideShowMeal) {
+        state.slideshow.showMeal = els.slideShowMeal.value !== "false";
+      }
       if (canRole("update_slide_typography")) {
         state.slideshow.lessonFontScale = nextLessonFontScale;
         state.slideshow.classHeaderFontScale = nextClassHeaderFontScale;

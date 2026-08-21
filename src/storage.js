@@ -59,6 +59,7 @@
         reloadToken: "",
         scheduleDate: "",
         scheduleDateExpiresOn: "",
+        showMeal: true,
       },
     };
   }
@@ -99,6 +100,7 @@
           scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
           scheduleDateExpiresOn:
             parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
+          showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
         },
       };
     } catch {
@@ -145,6 +147,7 @@
         scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
         scheduleDateExpiresOn:
           parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
+        showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
       },
     };
   }
