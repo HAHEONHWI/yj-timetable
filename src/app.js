@@ -2242,7 +2242,17 @@
     const nextSlideSeconds = Number(state.slideshow.intervalSeconds) || 8;
     const nextRefreshSeconds = Number(state.slideshow.refreshSeconds) || 60;
     if (currentRoute === "slideshow" && nextReloadToken && nextReloadToken !== previousReloadToken) {
-      window.location.reload();
+      if ("caches" in window) {
+        try {
+          caches.keys().then((names) => {
+            names.forEach((name) => caches.delete(name));
+          });
+        } catch {}
+      }
+      mealDataCache = null;
+      const url = new URL(window.location.href);
+      url.searchParams.set("_t", nextReloadToken);
+      window.location.replace(url.toString());
       return;
     }
     if (!keepNoticeSelection || !state.notices.some((notice) => notice.id === selectedNoticeId)) {
