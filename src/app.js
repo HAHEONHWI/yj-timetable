@@ -32,6 +32,9 @@
   let mainEggLogoClicks = 0;
   let mainEggTodayClicks = 0;
   let mainEggSequence = "";
+  let mealDataCache = null;
+  let mealDataFetchedAt = 0;
+  let isMealLoading = false;
   let boardRefreshTimer = null;
   let remoteUnsubscribe = null;
   let pendingRetryMessage = "";
@@ -1438,6 +1441,65 @@
     els.viewSchedule.innerHTML = renderScheduleGrid(selectedDate, visibleClasses);
   }
 
+  async function fetchSlideshowMeal(force = false) {
+    const now = Date.now();
+    if (!force && mealDataCache && now - mealDataFetchedAt < 10 * 60 * 1000) {
+      return mealDataCache;
+    }
+    if (isMealLoading) return mealDataCache;
+    isMealLoading = true;
+    try {
+      const res = await fetch("/api/meal");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.ok) {
+          mealDataCache = data;
+          mealDataFetchedAt = now;
+          if (currentRoute === "slideshow") {
+            renderSlideshow();
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch school meal data:", e);
+    } finally {
+      isMealLoading = false;
+    }
+    return mealDataCache;
+  }
+
+  function renderMealCard() {
+    if (!mealDataCache) {
+      fetchSlideshowMeal();
+      return `<div class="notice-meal-card">
+        <div class="notice-meal-header">
+          <h4>급식 식단</h4>
+        </div>
+        <div class="notice-meal-loading">
+          <p>급식 정보 불러오는 중...</p>
+        </div>
+      </div>`;
+    }
+
+    const { label, formattedDate, menu, calories } = mealDataCache;
+    const hasMenu = Array.isArray(menu) && menu.length > 0;
+
+    return `<div class="notice-meal-card">
+      <div class="notice-meal-header">
+        <h4>${escapeHtml(label || "급식 식단")}</h4>
+        ${formattedDate ? `<span class="notice-meal-date">${escapeHtml(formattedDate)}</span>` : ""}
+      </div>
+      ${
+        hasMenu
+          ? `<ul class="notice-meal-list">
+              ${menu.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+            </ul>`
+          : `<div class="notice-meal-empty"><p>등록된 급식 식단이 없습니다.</p></div>`
+      }
+      ${calories ? `<div class="notice-meal-cal">${escapeHtml(calories)}</div>` : ""}
+    </div>`;
+  }
+
   function slideshowSlides() {
     const day = currentSchoolDay();
     const slides = [];
@@ -1460,7 +1522,14 @@
         meta: `${index + 1} / ${notices.length}`,
         html: `<article class="notice-slide" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
           <h3>${escapeHtml(notice.title)}</h3>
-          <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
+          <div class="notice-main-content">
+            <div class="notice-body-text">
+              <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
+            </div>
+            <div class="notice-meal-container">
+              ${renderMealCard()}
+            </div>
+          </div>
         </article>`,
       });
     });
@@ -1540,6 +1609,7 @@
 
   function startSlideshow() {
     stopSlideshow();
+    fetchSlideshowMeal();
     renderSlideshow();
     const seconds = Math.max(3, Number(state.slideshow.intervalSeconds) || 8);
     if (slideshowSlides().length > 1) {
