@@ -1,8 +1,8 @@
 // netlify/functions/meal.js
 const https = require("https");
 
-const ATPT_OFCDC_SC_CODE = "M10"; // 전라남도교육청
-const SD_SCHUL_CODE = "8601016";   // 용정중학교
+const ATPT_OFCDC_SC_CODE = "Q10"; // 전남광주통합특별시교육청(전남)
+const SD_SCHUL_CODE = "8602013";   // 용정중학교
 
 function pad(n) {
   return String(n).padStart(2, "0");
