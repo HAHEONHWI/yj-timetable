@@ -59,6 +59,7 @@
         reloadToken: "",
         scheduleDate: "",
         scheduleDateExpiresOn: "",
+        showMeal: true,
       },
     };
   }
@@ -99,6 +100,7 @@
           scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
           scheduleDateExpiresOn:
             parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
+          showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
         },
       };
     } catch {
@@ -145,6 +147,7 @@
         scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
         scheduleDateExpiresOn:
           parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
+        showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
       },
     };
   }
@@ -303,17 +306,28 @@
     return invokeFunction("api-key-apply", body);
   }
 
-  async function verifyAdminPassword(username, password) {
+  const KEEP_SESSION_KEY = "timetable-admin-keep-session";
+
+  async function verifyAdminPassword(username, password, rememberMe = true) {
+    if (rememberMe) {
+      localStorage.setItem(KEEP_SESSION_KEY, "true");
+    } else {
+      localStorage.removeItem(KEEP_SESSION_KEY);
+      localStorage.removeItem(ADMIN_PROFILE_KEY);
+    }
+
     if (!isSupabaseEnabled()) {
       const safeUsername = String(username || "").trim() || "admin";
       const ok = safeUsername === "admin" && password === read().adminPassword;
       if (ok) {
-        sessionStorage.setItem(
-          ADMIN_PROFILE_KEY,
-          JSON.stringify({ username: "admin", displayName: "로컬 관리자", role: "dev" })
-        );
+        const localProfile = { username: "admin", displayName: "로컬 관리자", role: "dev" };
+        sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(localProfile));
+        if (rememberMe) {
+          localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(localProfile));
+        }
+        return { ok: true, profile: localProfile };
       }
-      return { ok };
+      return { ok: false };
     }
 
     let email = "";
@@ -339,6 +353,11 @@
         };
         sessionStorage.removeItem(LEGACY_ADMIN_PASSWORD_KEY);
         sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(adminProfile));
+        if (rememberMe) {
+          localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(adminProfile));
+        } else {
+          localStorage.removeItem(ADMIN_PROFILE_KEY);
+        }
         return { ok: true, profile: adminProfile };
       }
 
@@ -350,6 +369,9 @@
       const legacyProfile = { username: "legacy-admin", displayName: "Legacy Admin", role: "manager" };
       sessionStorage.setItem(LEGACY_ADMIN_PASSWORD_KEY, password);
       sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(legacyProfile));
+      if (rememberMe) {
+        localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(legacyProfile));
+      }
       return { ok: true, profile: legacyProfile };
     }
 
@@ -359,6 +381,8 @@
   function clearAdminPassword() {
     sessionStorage.removeItem(ADMIN_PROFILE_KEY);
     sessionStorage.removeItem(LEGACY_ADMIN_PASSWORD_KEY);
+    localStorage.removeItem(ADMIN_PROFILE_KEY);
+    localStorage.removeItem(KEEP_SESSION_KEY);
     if (isSupabaseEnabled()) {
       client().auth.signOut();
     }
@@ -366,15 +390,74 @@
 
   function getAdminProfile() {
     try {
-      return JSON.parse(sessionStorage.getItem(ADMIN_PROFILE_KEY) || "null");
+      const sessionData = sessionStorage.getItem(ADMIN_PROFILE_KEY);
+      if (sessionData) return JSON.parse(sessionData);
+      if (localStorage.getItem(KEEP_SESSION_KEY) === "true") {
+        const localData = localStorage.getItem(ADMIN_PROFILE_KEY);
+        if (localData) {
+          const profile = JSON.parse(localData);
+          sessionStorage.setItem(ADMIN_PROFILE_KEY, localData);
+          return profile;
+        }
+      }
+      return null;
     } catch {
       return null;
     }
   }
 
+  async function restoreAdminSession() {
+    if (!isSupabaseEnabled()) {
+      const profile = getAdminProfile();
+      return { ok: Boolean(profile), profile };
+    }
+
+    try {
+      const { data, error } = await client().auth.getSession();
+      if (error || !data || !data.session || !data.session.user) {
+        const legacyPassword = sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY);
+        if (legacyPassword) {
+          return { ok: true, profile: getAdminProfile() };
+        }
+        if (localStorage.getItem(KEEP_SESSION_KEY) !== "true") {
+          clearAdminPassword();
+        }
+        return { ok: false };
+      }
+
+      // Supabase 유효 세션 존재 -> admin_profiles 조회
+      const { data: profile, error: profileError } = await client()
+        .from("admin_profiles")
+        .select("username, display_name, role, is_active")
+        .eq("user_id", data.session.user.id)
+        .single();
+
+      if (!profileError && profile && profile.is_active === true) {
+        const adminProfile = {
+          username: profile.username,
+          displayName: profile.display_name || profile.username,
+          role: profile.role || "teacher",
+        };
+        sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(adminProfile));
+        if (localStorage.getItem(KEEP_SESSION_KEY) === "true") {
+          localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(adminProfile));
+        }
+        return { ok: true, profile: adminProfile };
+      }
+
+      // 비활성 계정이거나 프로필 조회 불가
+      await client().auth.signOut();
+      clearAdminPassword();
+      return { ok: false, error: "비활성화된 계정입니다." };
+    } catch (e) {
+      console.warn("restoreAdminSession failed:", e);
+      return { ok: false, error: e.message };
+    }
+  }
+
   async function hasAdminSession() {
     if (!isSupabaseEnabled()) {
-      return Boolean(sessionStorage.getItem(ADMIN_PROFILE_KEY));
+      return Boolean(getAdminProfile());
     }
     return Boolean((await authAccessToken()) || sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY));
   }
@@ -397,6 +480,7 @@
     apiApplicationRequest,
     clearAdminPassword,
     getAdminProfile,
+    restoreAdminSession,
     hasAdminSession,
     isSupabaseEnabled,
     changeKey,

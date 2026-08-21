@@ -474,6 +474,12 @@
           <label for="adminPassword">비밀번호</label>
           <input id="adminPassword" type="password" autocomplete="current-password" placeholder="비밀번호 입력" />
         </div>
+        <div class="field" style="margin-top: -6px; margin-bottom: 8px;">
+          <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: #cbd5e1; font-weight: 700; user-select: none;">
+            <input id="adminRememberMe" type="checkbox" checked style="width: 17px; height: 17px; accent-color: #2dd4bf; cursor: pointer;" />
+            <span>로그인 세션 유지</span>
+          </label>
+        </div>
         <button id="loginButton" class="primary-button" type="button">로그인</button>
         <p id="loginMessage" class="message"></p>
       </div>
@@ -485,6 +491,7 @@
             <p class="muted">기본 시간표와 특정 날짜 변경 사항을 관리합니다.</p>
           </div>
           <div class="admin-head-actions">
+            <div id="adminUserBadge" class="admin-user-badge"></div>
             <p id="lastSaveStatus" class="admin-save-status">마지막 저장: 아직 없음</p>
             <button id="logoutButton" class="ghost-button" type="button">로그아웃</button>
           </div>
@@ -687,6 +694,14 @@
               <label for="slideScheduleDate">시간표 표시 날짜</label>
               <select id="slideScheduleDate"></select>
               <p class="message">특정 날짜를 선택하면 다음날 00시에 자동 표시로 돌아갑니다.</p>
+            </div>
+            <div class="field">
+              <label for="slideShowMeal">안내사항에 급식 식단 표시</label>
+              <select id="slideShowMeal">
+                <option value="true">표시함 (우측 하단)</option>
+                <option value="false">숨김 (안내사항만 전체 표시)</option>
+              </select>
+              <p class="message">안내사항 슬라이드 우측 하단에 나이스 급식 식단 카드를 띄웁니다.</p>
             </div>
           </div>
           <div class="subsection">

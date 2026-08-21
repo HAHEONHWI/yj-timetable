@@ -13,6 +13,7 @@
     apiApplicationRequest,
     clearAdminPassword,
     getAdminProfile,
+    restoreAdminSession,
     isSupabaseEnabled,
     changeKey,
   } = window.TimetableStore;
@@ -32,6 +33,9 @@
   let mainEggLogoClicks = 0;
   let mainEggTodayClicks = 0;
   let mainEggSequence = "";
+  let mealDataCache = null;
+  let mealDataFetchedAt = 0;
+  let isMealLoading = false;
   let boardRefreshTimer = null;
   let remoteUnsubscribe = null;
   let pendingRetryMessage = "";
@@ -101,10 +105,12 @@
     adminWorkspace: $("#adminWorkspace"),
     adminUsername: $("#adminUsername"),
     adminPassword: $("#adminPassword"),
+    adminRememberMe: $("#adminRememberMe"),
     loginButton: $("#loginButton"),
     logoutButton: $("#logoutButton"),
     loginMessage: $("#loginMessage"),
     adminMessage: $("#adminMessage"),
+    adminUserBadge: $("#adminUserBadge"),
     lastSaveStatus: $("#lastSaveStatus"),
     baseWeekday: $("#baseWeekday"),
     baseEditor: $("#baseEditor"),
@@ -167,6 +173,7 @@
     slideInterval: $("#slideInterval"),
     slideRefreshInterval: $("#slideRefreshInterval"),
     slideScheduleDate: $("#slideScheduleDate"),
+    slideShowMeal: $("#slideShowMeal"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
     forceSlideReloadPermission: $("#forceSlideReloadPermission"),
@@ -431,7 +438,10 @@
   }
 
   function isLoggedIn() {
-    return sessionStorage.getItem("timetable-admin") === "true";
+    return (
+      sessionStorage.getItem("timetable-admin") === "true" ||
+      Boolean(getAdminProfile())
+    );
   }
 
   function currentAdminRole() {
@@ -562,10 +572,24 @@
     if (panel) panel.classList.remove("is-hidden");
   }
 
+  function renderAdminUserBadge() {
+    if (!els.adminUserBadge) return;
+    const profile = getAdminProfile();
+    if (!profile) {
+      els.adminUserBadge.innerHTML = "";
+      return;
+    }
+    const role = profile.role || "teacher";
+    const name = profile.displayName || profile.username || "관리자";
+    const username = profile.username ? `(${escapeHtml(profile.username)})` : "";
+    els.adminUserBadge.innerHTML = `<span class="admin-user-name">${escapeHtml(name)} ${username}</span><span class="role-badge is-${escapeHtml(role)}">${escapeHtml(role)}</span>`;
+  }
+
   function refreshAdminAuth() {
     const loggedIn = isLoggedIn();
     els.loginPanel.classList.toggle("is-hidden", loggedIn);
     els.adminWorkspace.classList.toggle("is-hidden", !loggedIn);
+    renderAdminUserBadge();
     if (loggedIn) {
       selectAdminTab("change");
       refreshAdminAccounts();
@@ -599,6 +623,7 @@
 
   function applyAdminPermissions() {
     if (!els.adminWorkspace || els.adminWorkspace.classList.contains("is-hidden")) return;
+    renderAdminUserBadge();
     const canBase = canRole("update_base");
     const canBaseMerge = canRole("update_base_merge");
     const canSlideRuntime = canRole("update_slide_runtime");
@@ -627,10 +652,11 @@
       els.eventCustomFontEnabled,
       els.eventCustomFontScale,
     ].forEach((control) => setControlDisabled(control, !canSlideTypography));
-    [els.slideReloadPassword, els.forceSlideReloadButton].forEach((control) => setControlDisabled(control, false));
+    setControlDisabled(els.slideReloadPassword, !canForceReload);
+    setControlDisabled(els.forceSlideReloadButton, !canForceReload);
     if (els.forceSlideReloadPermission) {
       els.forceSlideReloadPermission.textContent = canForceReload
-        ? "현재 dev 계정에서 사용할 수 있습니다."
+        ? "현재 dev 계정으로 즉시 실행할 수 있습니다."
         : "강제 새로고침 실행은 dev 계정만 가능합니다.";
     }
 
@@ -1438,6 +1464,65 @@
     els.viewSchedule.innerHTML = renderScheduleGrid(selectedDate, visibleClasses);
   }
 
+  async function fetchSlideshowMeal(force = false) {
+    const now = Date.now();
+    if (!force && mealDataCache && now - mealDataFetchedAt < 10 * 60 * 1000) {
+      return mealDataCache;
+    }
+    if (isMealLoading) return mealDataCache;
+    isMealLoading = true;
+    try {
+      const res = await fetch("/api/meal");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.ok) {
+          mealDataCache = data;
+          mealDataFetchedAt = now;
+          if (currentRoute === "slideshow") {
+            renderSlideshow();
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch school meal data:", e);
+    } finally {
+      isMealLoading = false;
+    }
+    return mealDataCache;
+  }
+
+  function renderMealCard() {
+    if (!mealDataCache) {
+      fetchSlideshowMeal();
+      return `<div class="notice-meal-card">
+        <div class="notice-meal-header">
+          <h4>급식 식단</h4>
+        </div>
+        <div class="notice-meal-loading">
+          <p>급식 정보 불러오는 중...</p>
+        </div>
+      </div>`;
+    }
+
+    const { mealTypeLabel, formattedDate, menu, calories } = mealDataCache;
+    const hasMenu = Array.isArray(menu) && menu.length > 0;
+
+    return `<div class="notice-meal-card">
+      <div class="notice-meal-header">
+        <h4>${escapeHtml(mealTypeLabel || "급식 식단")}</h4>
+        ${formattedDate ? `<span class="notice-meal-date">${escapeHtml(formattedDate)}</span>` : ""}
+      </div>
+      ${
+        hasMenu
+          ? `<ul class="notice-meal-list">
+              ${menu.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+            </ul>`
+          : `<div class="notice-meal-empty"><p>등록된 급식 식단이 없습니다.</p></div>`
+      }
+      ${calories ? `<div class="notice-meal-cal">${escapeHtml(calories)}</div>` : ""}
+    </div>`;
+  }
+
   function slideshowSlides() {
     const day = currentSchoolDay();
     const slides = [];
@@ -1452,15 +1537,27 @@
     }
 
     const notices = state.notices.filter((notice) => notice.title || notice.body);
+    const showMeal = state.slideshow && state.slideshow.showMeal !== false;
 
     notices.forEach((notice, index) => {
       slides.push({
         type: "notice",
         title: "안내사항",
         meta: `${index + 1} / ${notices.length}`,
-        html: `<article class="notice-slide" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
+        html: `<article class="notice-slide ${showMeal ? "has-meal" : "no-meal"}" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
           <h3>${escapeHtml(notice.title)}</h3>
-          <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
+          <div class="notice-main-content">
+            <div class="notice-body-text">
+              <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
+            </div>
+            ${
+              showMeal
+                ? `<div class="notice-meal-container">
+                    ${renderMealCard()}
+                  </div>`
+                : ""
+            }
+          </div>
         </article>`,
       });
     });
@@ -1540,6 +1637,7 @@
 
   function startSlideshow() {
     stopSlideshow();
+    fetchSlideshowMeal();
     renderSlideshow();
     const seconds = Math.max(3, Number(state.slideshow.intervalSeconds) || 8);
     if (slideshowSlides().length > 1) {
@@ -2087,6 +2185,9 @@
     renderSlideScheduleDateOptions();
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
+    if (els.slideShowMeal) {
+      els.slideShowMeal.value = state.slideshow.showMeal !== false ? "true" : "false";
+    }
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
     els.slideClassHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170);
     els.slidePeriodHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170);
@@ -2141,7 +2242,17 @@
     const nextSlideSeconds = Number(state.slideshow.intervalSeconds) || 8;
     const nextRefreshSeconds = Number(state.slideshow.refreshSeconds) || 60;
     if (currentRoute === "slideshow" && nextReloadToken && nextReloadToken !== previousReloadToken) {
-      window.location.reload();
+      if ("caches" in window) {
+        try {
+          caches.keys().then((names) => {
+            names.forEach((name) => caches.delete(name));
+          });
+        } catch {}
+      }
+      mealDataCache = null;
+      const url = new URL(window.location.href);
+      url.searchParams.set("_t", nextReloadToken);
+      window.location.replace(url.toString());
       return;
     }
     if (!keepNoticeSelection || !state.notices.some((notice) => notice.id === selectedNoticeId)) {
@@ -2572,7 +2683,10 @@
     els.eventCustomFontScale.addEventListener("input", syncEventCustomFontControls);
 
     els.loginButton.addEventListener("click", async () => {
-      const result = await verifyAdminPassword(els.adminUsername.value, els.adminPassword.value);
+      setControlDisabled(els.loginButton, true);
+      const rememberMe = els.adminRememberMe ? els.adminRememberMe.checked : true;
+      const result = await verifyAdminPassword(els.adminUsername.value, els.adminPassword.value, rememberMe);
+      setControlDisabled(els.loginButton, false);
       if (result.ok) {
         sessionStorage.setItem("timetable-admin", "true");
         els.adminPassword.value = "";
@@ -3181,6 +3295,9 @@
       state.slideshow.refreshSeconds = refreshInterval;
       state.slideshow.scheduleDate = scheduleDate;
       state.slideshow.scheduleDateExpiresOn = scheduleDate ? nextDateIso(scheduleDate) : "";
+      if (els.slideShowMeal) {
+        state.slideshow.showMeal = els.slideShowMeal.value !== "false";
+      }
       if (canRole("update_slide_typography")) {
         state.slideshow.lessonFontScale = nextLessonFontScale;
         state.slideshow.classHeaderFontScale = nextClassHeaderFontScale;
@@ -3203,21 +3320,26 @@
 
     els.forceSlideReloadButton.addEventListener("click", async () => {
       if (!ensurePermission("force_reload", "슬라이드쇼 강제 새로고침")) return;
-      const password = els.slideReloadPassword.value;
-      if (!password) {
-        showMessage(els.adminMessage, "관리자 비밀번호를 입력하세요.");
-        return;
-      }
       const profile = getAdminProfile();
-      const username = profile && profile.username ? profile.username : els.adminUsername.value;
-      const result = await verifyAdminPassword(username, password);
-      if (!result.ok) {
-        showMessage(els.adminMessage, "비밀번호가 맞지 않습니다.");
+      if (!profile || profile.role !== "dev") {
+        showMessage(els.adminMessage, "강제 새로고침 실행은 dev 계정만 가능합니다.");
         return;
       }
-      els.slideReloadPassword.value = "";
+      const password = els.slideReloadPassword ? els.slideReloadPassword.value.trim() : "";
+      if (password) {
+        const keepSession = localStorage.getItem("timetable-admin-keep-session") === "true";
+        const result = await verifyAdminPassword(profile.username, password, keepSession);
+        if (!result.ok) {
+          showMessage(els.adminMessage, "비밀번호가 맞지 않습니다.");
+          return;
+        }
+      }
+      if (els.slideReloadPassword) {
+        els.slideReloadPassword.value = "";
+      }
       state.slideshow.reloadToken = `${Date.now()}`;
-      saveState("슬라이드쇼 화면에 강제 새로고침 명령을 보냈습니다.", "force_reload");
+      await saveState("슬라이드쇼 화면에 강제 새로고침 명령을 보냈습니다.", "force_reload");
+      applyAdminPermissions();
     });
 
     els.slideReloadPassword.addEventListener("keydown", (event) => {
@@ -3226,13 +3348,25 @@
     });
   }
 
-  function init() {
+  async function init() {
     document.body.classList.toggle("board-mode", isBoardMode);
     currentRoute = isBoardMode ? "view" : routeFromPath();
     applyDeveloperMode();
     initControls();
     applyBoardTheme();
     bindEvents();
+
+    if (typeof restoreAdminSession === "function") {
+      try {
+        const sessionRes = await restoreAdminSession();
+        if (sessionRes && sessionRes.ok) {
+          sessionStorage.setItem("timetable-admin", "true");
+        }
+      } catch (e) {
+        console.warn("Auto session restore error:", e);
+      }
+    }
+
     refreshAdminAuth();
     renderView();
     renderAdmin();
