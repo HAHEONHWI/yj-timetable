@@ -70,7 +70,7 @@
 
 ### Toggle & Slide Indicator
 
-- 테마·보기 방식·재생·급식 토글은 현재 상태를 `aria-pressed`로 노출한다.
+- 테마·보기 방식·재생 토글은 현재 상태를 `aria-pressed`로 노출한다.
 - 슬라이드 표시기는 기본 12×3px, 활성 28×3px 선을 사용하되 실제 버튼 hit area는 최소 44×44px로 둔다.
 - 현재 슬라이드는 `aria-current="page"`, `aria-selected="true"`, `tabindex="0"`을 함께 사용한다.
 - 비활성 슬라이드는 `tabindex="-1"`로 두고 명칭은 `슬라이드 N로 이동` 형식을 사용한다.

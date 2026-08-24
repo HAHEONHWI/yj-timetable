@@ -28,8 +28,6 @@
   let slideshowRefreshTimer = null;
   let slideshowToastTimer = null;
   let slideshowPaused = false;
-  // null follows the admin-managed setting; true/false override it for this screen only
-  let slideshowMealOverride = null;
   let globalStatusTimer = null;
   let mainEggToastTimer = null;
   let mainEggResetTimer = null;
@@ -106,7 +104,6 @@
     slideshowStage: $("#slideshowStage"),
     slideshowDots: $("#slideshowDots"),
     slideshowPlayButton: $("#slideshowPlayButton"),
-    slideshowMealButton: $("#slideshowMealButton"),
     exitSlideshowButton: $("#exitSlideshowButton"),
     wallpaperName: $("#wallpaperName"),
     wallpaperSubjects: $("#wallpaperSubjects"),
@@ -1646,7 +1643,6 @@
   }
 
   function slideshowMealVisible() {
-    if (slideshowMealOverride !== null) return slideshowMealOverride;
     return Boolean(state.slideshow && state.slideshow.showMeal !== false);
   }
 
@@ -1724,10 +1720,6 @@
     if (els.slideshowPlayButton) {
       els.slideshowPlayButton.textContent = slideshowPaused ? "재생" : "일시정지";
       els.slideshowPlayButton.setAttribute("aria-pressed", String(slideshowPaused));
-    }
-    if (els.slideshowMealButton) {
-      els.slideshowMealButton.textContent = slideshowMealVisible() ? "급식 숨기기" : "급식 표시";
-      els.slideshowMealButton.setAttribute("aria-pressed", String(slideshowMealVisible()));
     }
   }
 
@@ -2814,12 +2806,6 @@
       els.slideshowPlayButton.addEventListener("click", () => {
         slideshowPaused = !slideshowPaused;
         startSlideshow();
-      });
-    }
-    if (els.slideshowMealButton) {
-      els.slideshowMealButton.addEventListener("click", () => {
-        slideshowMealOverride = !slideshowMealVisible();
-        renderSlideshow();
       });
     }
     if (els.slideshowDots) {
