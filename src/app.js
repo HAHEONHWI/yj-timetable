@@ -1131,7 +1131,7 @@
   }
 
   function homeVariant() {
-    return localStorage.getItem(HOME_VARIANT_KEY) === "shade" ? "shade" : "line";
+    return localStorage.getItem(HOME_VARIANT_KEY) === "line" ? "line" : "shade";
   }
 
   function applyHomeVariant(variant = homeVariant()) {
