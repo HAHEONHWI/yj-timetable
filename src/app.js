@@ -715,7 +715,9 @@
       (control) => setControlDisabled(control, !canManageApiKeys)
     );
     if (els.apiKeyList) {
-      els.apiKeyList.querySelectorAll("[data-revoke-api-key]").forEach((button) => setControlDisabled(button, !canManageApiKeys));
+      els.apiKeyList
+        .querySelectorAll("[data-revoke-api-key], [data-delete-api-key]")
+        .forEach((button) => setControlDisabled(button, !canManageApiKeys));
     }
   }
 
@@ -1791,6 +1793,10 @@
     const refreshSeconds = Math.max(10, Number(state.slideshow.refreshSeconds) || 60);
     slideshowRefreshTimer = window.setInterval(() => {
       refreshFromRemote({ keepNoticeSelection: true, restartSlideshow: false });
+      // Forces a real re-fetch so a meal-window boundary (07:45/12:20/18:10)
+      // that passes while the slideshow is left running gets picked up
+      // within one refresh tick instead of only on the next page load.
+      fetchSlideshowMeal(true);
     }, refreshSeconds * 1000);
   }
 
@@ -2125,6 +2131,7 @@
       admin_account_deactivate: "계정 비활성화",
       api_key_create: "API key 발급",
       api_key_revoke: "API key 폐기",
+      api_key_delete: "API key 삭제",
     };
     return labels[action] || action || "unknown";
   }
@@ -2221,7 +2228,11 @@
                 ${application ? `<span>이메일 인증 신청 · ${escapeHtml(application.email)} · ${escapeHtml(application.phone)}</span>` : `<span>dev 직접 발급</span>`}
                 <span>요청 ${Number(key.requestCount || 0).toLocaleString()}회 · 마지막 사용 ${formatDateTime(key.lastUsedAt)} · 만료 ${formatDateTime(key.expiresAt)}</span>
               </div>
-              ${revoked || expired ? "" : `<button class="danger-button" data-revoke-api-key="${escapeHtml(key.id)}" type="button">폐기</button>`}
+              ${
+                revoked || expired
+                  ? `<button class="danger-button" data-delete-api-key="${escapeHtml(key.id)}" type="button">삭제</button>`
+                  : `<button class="danger-button" data-revoke-api-key="${escapeHtml(key.id)}" type="button">폐기</button>`
+              }
             </article>`;
           })
           .join("")
@@ -3090,22 +3101,40 @@
     });
 
     els.apiKeyList.addEventListener("click", async (event) => {
-      const button = event.target.closest("[data-revoke-api-key]");
-      if (!button || !ensurePermission("manage_api_keys", "API key 관리")) return;
-      const key = apiKeys.find((item) => item.id === button.dataset.revokeApiKey);
-      if (!key || !(await confirmAction(`${key.name} API key를 폐기할까요? 폐기 후 복구할 수 없습니다.`))) return;
-      setControlDisabled(button, true);
-      const result = await apiKeysRequest({ action: "revoke", id: key.id });
-      if (!result || !result.ok) {
-        showMessage(els.adminMessage, `API key 폐기 실패: ${friendlyRemoteError(result && result.error)}`);
-        setControlDisabled(button, false);
+      const revokeButton = event.target.closest("[data-revoke-api-key]");
+      if (revokeButton) {
+        if (!ensurePermission("manage_api_keys", "API key 관리")) return;
+        const key = apiKeys.find((item) => item.id === revokeButton.dataset.revokeApiKey);
+        if (!key || !(await confirmAction(`${key.name} API key를 폐기할까요? 폐기 후 복구할 수 없습니다.`))) return;
+        setControlDisabled(revokeButton, true);
+        const result = await apiKeysRequest({ action: "revoke", id: key.id });
+        if (!result || !result.ok) {
+          showMessage(els.adminMessage, `API key 폐기 실패: ${friendlyRemoteError(result && result.error)}`);
+          setControlDisabled(revokeButton, false);
+          return;
+        }
+        if (els.newApiKeyValue.textContent.includes(`yj_live_${key.keyPrefix}_`)) {
+          els.newApiKeyValue.textContent = "";
+          els.apiKeyResult.classList.add("is-hidden");
+        }
+        showGlobalStatus("API key를 폐기했습니다.", "success", { autoHide: true });
+        refreshApiKeys();
         return;
       }
-      if (els.newApiKeyValue.textContent.includes(`yj_live_${key.keyPrefix}_`)) {
-        els.newApiKeyValue.textContent = "";
-        els.apiKeyResult.classList.add("is-hidden");
+
+      const deleteButton = event.target.closest("[data-delete-api-key]");
+      if (!deleteButton) return;
+      if (!ensurePermission("manage_api_keys", "API key 관리")) return;
+      const key = apiKeys.find((item) => item.id === deleteButton.dataset.deleteApiKey);
+      if (!key || !(await confirmAction(`${key.name} API key를 목록에서 완전히 삭제할까요? 되돌릴 수 없습니다.`))) return;
+      setControlDisabled(deleteButton, true);
+      const result = await apiKeysRequest({ action: "delete", id: key.id });
+      if (!result || !result.ok) {
+        showMessage(els.adminMessage, `API key 삭제 실패: ${friendlyRemoteError(result && result.error)}`);
+        setControlDisabled(deleteButton, false);
+        return;
       }
-      showGlobalStatus("API key를 폐기했습니다.", "success", { autoHide: true });
+      showGlobalStatus("API key를 삭제했습니다.", "success", { autoHide: true });
       refreshApiKeys();
     });
 

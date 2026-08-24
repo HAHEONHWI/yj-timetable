@@ -25,13 +25,14 @@ const actionSchema = z.discriminatedUnion("action", [
     expiresOn: dateSchema.optional(),
   }),
   z.object({ action: z.literal("revoke"), id: z.string().uuid() }),
+  z.object({ action: z.literal("delete"), id: z.string().uuid() }),
 ]);
 
 type AuditEntry = {
   actorId: string;
   actorUsername: string;
   actorName: string;
-  action: "api_key_create" | "api_key_revoke";
+  action: "api_key_create" | "api_key_revoke" | "api_key_delete";
   targetId: string | null;
   afterData: Record<string, unknown>;
   success: boolean;
@@ -222,30 +223,71 @@ Deno.serve(async (request) => {
     );
   }
 
-  const { data, error } = await admin.from("api_keys")
-    .update({ revoked_at: new Date().toISOString() })
-    .eq("id", body.data.id)
-    .is("revoked_at", null)
-    .select(
-      "id, name, key_prefix, rate_limit_per_minute, expires_at, revoked_at, last_used_at, request_count, created_at",
-    )
-    .maybeSingle();
-  if (error || !data) {
-    return json({ error: "API key를 찾지 못했거나 이미 폐기되었습니다." }, 404);
+  if (body.data.action === "revoke") {
+    const { data, error } = await admin.from("api_keys")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", body.data.id)
+      .is("revoked_at", null)
+      .select(
+        "id, name, key_prefix, rate_limit_per_minute, expires_at, revoked_at, last_used_at, request_count, created_at",
+      )
+      .maybeSingle();
+    if (error || !data) {
+      return json({ error: "API key를 찾지 못했거나 이미 폐기되었습니다." }, 404);
+    }
+
+    await audit({
+      actorId: authData.user.id,
+      actorUsername: profile.username,
+      actorName: profile.display_name,
+      action: "api_key_revoke",
+      targetId: data.id,
+      afterData: {
+        name: data.name,
+        keyPrefix: data.key_prefix,
+        revokedAt: data.revoked_at,
+      },
+      success: true,
+    });
+    return json({ ok: true, key: publicKeyRow(data) });
   }
 
+  // action === "delete" — only revoked or expired keys can be hard-deleted,
+  // so a live key always leaves a revoke audit trail before it disappears.
+  const { data: existing, error: findError } = await admin.from("api_keys")
+    .select("id, name, key_prefix, revoked_at, expires_at")
+    .eq("id", body.data.id)
+    .maybeSingle();
+  if (findError || !existing) {
+    return json({ error: "API key를 찾지 못했습니다." }, 404);
+  }
+  const isRevoked = Boolean(existing.revoked_at);
+  const isExpired = Boolean(
+    existing.expires_at && new Date(existing.expires_at) <= new Date(),
+  );
+  if (!isRevoked && !isExpired) {
+    return json(
+      { error: "사용 중인 key는 먼저 폐기한 뒤 삭제할 수 있습니다." },
+      409,
+    );
+  }
+
+  const { error: deleteError } = await admin.from("api_keys").delete().eq(
+    "id",
+    existing.id,
+  );
   await audit({
     actorId: authData.user.id,
     actorUsername: profile.username,
     actorName: profile.display_name,
-    action: "api_key_revoke",
-    targetId: data.id,
-    afterData: {
-      name: data.name,
-      keyPrefix: data.key_prefix,
-      revokedAt: data.revoked_at,
-    },
-    success: true,
+    action: "api_key_delete",
+    targetId: existing.id,
+    afterData: { name: existing.name, keyPrefix: existing.key_prefix },
+    success: !deleteError,
+    errorMessage: deleteError?.message,
   });
-  return json({ ok: true, key: publicKeyRow(data) });
+  if (deleteError) {
+    return json({ error: "API key를 삭제하지 못했습니다." }, 500);
+  }
+  return json({ ok: true, id: existing.id });
 });
