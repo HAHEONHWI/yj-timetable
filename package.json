@@ -9,7 +9,7 @@
     "start:widget": "electron .",
     "dist:win": "electron-builder --win nsis --x64",
     "prepare:netlify": "sh scripts/prepare-netlify-deploy.sh",
-    "deploy:netlify": "npm run prepare:netlify && npx netlify deploy --prod --dir=/private/tmp/timetable-netlify-deploy"
+    "deploy:netlify": "NETLIFY_DEPLOY_DIR=/private/tmp/timetable-netlify-deploy npm run prepare:netlify && npx netlify deploy --prod --dir=/private/tmp/timetable-netlify-deploy"
   },
   "build": {
     "appId": "kr.yjms.timetable.widget",
