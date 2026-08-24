@@ -308,7 +308,13 @@
 
   const KEEP_SESSION_KEY = "timetable-admin-keep-session";
 
-  async function verifyAdminPassword(username, password, rememberMe = true) {
+  async function verifyAdminPassword(username, password, rememberMe = true, options = {}) {
+    // Re-confirmation prompts (e.g. force-reload) pass a *known* dev
+    // username in to re-check the same account's password — never the
+    // legacy shared-password login, which has no username of its own.
+    // Falling back to it here would silently swap an active dev session
+    // for the demoted Legacy Admin/manager profile on any wrong password.
+    const { allowLegacyFallback = true } = options;
     if (rememberMe) {
       localStorage.setItem(KEEP_SESSION_KEY, "true");
     } else {
@@ -362,6 +368,10 @@
       }
 
       await client().auth.signOut();
+    }
+
+    if (!allowLegacyFallback) {
+      return { ok: false, error: error ? error.message : "비밀번호가 맞지 않습니다." };
     }
 
     const legacyResult = await invokeFunction("admin-login", { password });
