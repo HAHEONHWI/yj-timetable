@@ -25,6 +25,20 @@
 - 사용자 요청이 UI 변경이면 데스크톱/모바일/전자칠판 화면에서 글자 겹침과 숨김 상태를 우선 확인한다.
 - 배포 가능한 변경은 GitHub push와 Netlify production deploy까지 진행한다. 단, 작업트리에 무관한 변경이 있으면 해당 파일은 제외한다.
 
+## 브랜치 전략
+
+```text
+main:        배포 가능한 안정적인 코드. 직접 커밋 금지.
+develop:     개발 중인 코드가 모이는 브랜치. feature 브랜치들이 여기로 합쳐진다.
+feature/xxx: 기능 단위 브랜치. develop에서 분기, develop으로 병합.
+release/xxx: 테스트 코드.
+hotfix/xxx:  긴급 수정. main에서 분기, main + develop 양쪽에 병합.
+```
+
+- 새 기능 작업은 `develop`에서 `feature/xxx`로 분기하고, PR도 `develop`을 대상으로 연다.
+- `main`에는 직접 커밋하지 않는다. `main`으로 들어가는 경로는 `develop` 병합 또는 `hotfix/xxx` 뿐이다.
+- `hotfix/xxx`는 운영 중 긴급 오류를 고칠 때만 사용하며, 병합 후 `main`과 `develop` 양쪽에 모두 반영한다.
+
 ## 커밋 메시지 규칙
 
 커밋 메시지는 아래 형식을 사용한다.
