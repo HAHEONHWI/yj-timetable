@@ -110,53 +110,58 @@
 html[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #f7f7f8;
-  --bg-deep: #eceef1;
+  /* A cool blue-gray neutral family (not flat gray) so the accent has
+     something to harmonize with, plus a soft card shadow for lift since
+     panel and page sit close in value on a light ground. */
+  --bg: #f4f6fb;
+  --bg-deep: #e9ecf4;
   --panel: #ffffff;
-  --panel-soft: #f5f6f8;
-  --panel-strong: #f0f1f3;
+  --panel-soft: #fafbfd;
+  --panel-strong: #eef1f8;
 
-  --ink: #17181c;
+  --ink: #171a2b;
   --ink-strong: #000000;
-  --muted: #62646c;
-  --muted-soft: #8b8d95;
+  --muted: #5c6178;
+  --muted-soft: #868ba3;
 
-  --line: #d9dae0;
-  --line-soft: #e6e7eb;
-  --line-strong: #c3c4cc;
+  --line: #dfe3ee;
+  --line-soft: #eaedf5;
+  --line-strong: #c7cce0;
 
-  --blue: #2f6cae;
-  --blue-dark: #24558a;
-  --blue-soft: #4d88c9;
-  --blue-tint: rgba(47, 108, 174, 0.1);
-  --blue-tint-strong: rgba(47, 108, 174, 0.18);
+  --blue: #3b5bdb;
+  --blue-dark: #2c46b3;
+  --blue-soft: #6b83e3;
+  --blue-tint: rgba(59, 91, 219, 0.08);
+  --blue-tint-strong: rgba(59, 91, 219, 0.15);
 
-  --st-change: #8a6417;
-  --st-change-tx: #7a5710;
-  --change-bg: rgba(138, 100, 23, 0.11);
-  --change-bg-strong: rgba(138, 100, 23, 0.2);
-  --change-text: #7a5710;
+  --st-change: #9a6a00;
+  --st-change-tx: #7d5600;
+  --change-bg: rgba(154, 106, 0, 0.1);
+  --change-bg-strong: rgba(154, 106, 0, 0.19);
+  --change-text: #7d5600;
 
-  --st-new: #a63f3f;
-  --st-new-tx: #933333;
-  --new-change-bg: rgba(166, 63, 63, 0.1);
-  --new-change-bg-strong: rgba(166, 63, 63, 0.18);
-  --new-change-text: #933333;
+  --st-new: #c23b5a;
+  --st-new-tx: #a12c48;
+  --new-change-bg: rgba(194, 59, 90, 0.1);
+  --new-change-bg-strong: rgba(194, 59, 90, 0.18);
+  --new-change-text: #a12c48;
 
-  --st-event: #1f6d51;
-  --st-event-tx: #1a5e46;
-  --event-bg: rgba(31, 109, 81, 0.13);
-  --event-bg-strong: rgba(31, 109, 81, 0.22);
-  --event-text: #1a5e46;
+  --st-event: #0f8a63;
+  --st-event-tx: #0b7252;
+  --event-bg: rgba(15, 138, 99, 0.11);
+  --event-bg-strong: rgba(15, 138, 99, 0.2);
+  --event-text: #0b7252;
 
-  --green: #1f6d51;
-  --green-soft: #1a5e46;
-  --danger: #a63f3f;
-  --danger-soft: #933333;
+  --green: #0f8a63;
+  --green-soft: #0b7252;
+  --danger: #c23b5a;
+  --danger-soft: #a12c48;
 
-  --overlay: rgba(23, 24, 28, 0.45);
+  --overlay: rgba(23, 26, 43, 0.45);
 
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.14);
+  --shadow-sm: 0 1px 2px rgba(30, 41, 82, 0.06);
+  --shadow-md: 0 4px 14px rgba(30, 41, 82, 0.08);
+  --shadow-lg: 0 10px 30px rgba(30, 41, 82, 0.14);
 }
 
 * {
@@ -346,6 +351,9 @@ body.board-mode .page-view {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: clamp(var(--space-16), 3vw, var(--space-28));
+  /* --shadow-sm is "none" in dark (line-based, no lift); light defines a
+     soft one so the card reads as raised off the tinted page ground. */
+  box-shadow: var(--shadow-sm);
 }
 
 .footer {
