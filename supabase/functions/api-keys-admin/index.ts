@@ -19,7 +19,9 @@ const actionSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("create"),
     name: z.string().trim().min(2).max(80),
-    rateLimitPerMinute: z.number().int().min(1).max(1000),
+    // 0 means unlimited — reserved for dev's own internal/testing keys.
+    // Everything else (external consumers) is capped at 60/min.
+    rateLimitPerMinute: z.number().int().min(0).max(60),
     expiresOn: dateSchema.optional(),
   }),
   z.object({ action: z.literal("revoke"), id: z.string().uuid() }),

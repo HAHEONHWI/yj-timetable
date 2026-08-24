@@ -860,7 +860,8 @@
                 </div>
                 <div class="field">
                   <label for="apiKeyRateLimit">분당 요청 한도</label>
-                  <input id="apiKeyRateLimit" type="number" min="1" max="1000" value="60" />
+                  <input id="apiKeyRateLimit" type="number" min="0" max="60" value="60" />
+                  <p class="message">일반 key는 1~60, dev 전용 key는 0(무제한)으로 발급하세요.</p>
                 </div>
                 <div class="field">
                   <label for="apiKeyExpiresOn">만료일</label>

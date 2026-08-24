@@ -2212,7 +2212,7 @@
             return `<article class="list-item${revoked || expired ? " is-disabled" : ""}">
               <div>
                 <strong>${escapeHtml(key.name)}</strong>
-                <span>yj_live_${escapeHtml(key.keyPrefix)}_… · ${status} · 분당 ${Number(key.rateLimitPerMinute)}회</span>
+                <span>yj_live_${escapeHtml(key.keyPrefix)}_… · ${status} · ${Number(key.rateLimitPerMinute) > 0 ? `분당 ${Number(key.rateLimitPerMinute)}회` : "무제한 (dev 전용)"}</span>
                 ${application ? `<span>이메일 인증 신청 · ${escapeHtml(application.email)} · ${escapeHtml(application.phone)}</span>` : `<span>dev 직접 발급</span>`}
                 <span>요청 ${Number(key.requestCount || 0).toLocaleString()}회 · 마지막 사용 ${formatDateTime(key.lastUsedAt)} · 만료 ${formatDateTime(key.expiresAt)}</span>
               </div>
@@ -3022,8 +3022,8 @@
         showMessage(els.adminMessage, "사용처 이름을 2자 이상 입력하세요.");
         return;
       }
-      if (!Number.isInteger(rateLimitPerMinute) || rateLimitPerMinute < 1 || rateLimitPerMinute > 1000) {
-        showMessage(els.adminMessage, "분당 요청 한도는 1~1000 사이 정수로 입력하세요.");
+      if (!Number.isInteger(rateLimitPerMinute) || rateLimitPerMinute < 0 || rateLimitPerMinute > 60) {
+        showMessage(els.adminMessage, "분당 요청 한도는 0(무제한, dev 전용)~60 사이 정수로 입력하세요.");
         return;
       }
       setControlDisabled(els.createApiKeyButton, true);

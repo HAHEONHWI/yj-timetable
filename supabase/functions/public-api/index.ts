@@ -181,7 +181,9 @@ Deno.serve(async (request) => {
   }
 
   const rateHeaders = {
-    "X-RateLimit-Limit": String(apiKey.rate_limit_per_minute),
+    "X-RateLimit-Limit": apiKey.rate_limit_per_minute > 0
+      ? String(apiKey.rate_limit_per_minute)
+      : "unlimited",
   };
   if (route === "/v1/classes") return json({ data: classes }, 200, rateHeaders);
 
