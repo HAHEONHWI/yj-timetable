@@ -121,6 +121,11 @@
     logoutButton: $("#logoutButton"),
     loginMessage: $("#loginMessage"),
     adminMessage: $("#adminMessage"),
+    confirmDialog: $("#confirmDialog"),
+    confirmDialogTitle: $("#confirmDialogTitle"),
+    confirmDialogMessage: $("#confirmDialogMessage"),
+    confirmDialogOk: $("#confirmDialogOk"),
+    confirmDialogCancel: $("#confirmDialogCancel"),
     adminUserBadge: $("#adminUserBadge"),
     lastSaveStatus: $("#lastSaveStatus"),
     baseWeekday: $("#baseWeekday"),
@@ -2464,8 +2469,40 @@
     }
   }
 
-  function confirmAction(message) {
-    return window.confirm(message);
+  function confirmAction(message, { title = "확인", confirmLabel = "확인", cancelLabel = "취소" } = {}) {
+    const overlay = els.confirmDialog;
+    if (!overlay) return Promise.resolve(window.confirm(message));
+    return new Promise((resolve) => {
+      els.confirmDialogTitle.textContent = title;
+      els.confirmDialogMessage.textContent = message;
+      els.confirmDialogOk.textContent = confirmLabel;
+      els.confirmDialogCancel.textContent = cancelLabel;
+      const previouslyFocused = document.activeElement;
+      overlay.classList.remove("is-hidden");
+      els.confirmDialogOk.focus();
+
+      const finish = (result) => {
+        overlay.classList.add("is-hidden");
+        els.confirmDialogOk.removeEventListener("click", onOk);
+        els.confirmDialogCancel.removeEventListener("click", onCancel);
+        overlay.removeEventListener("click", onOverlayClick);
+        document.removeEventListener("keydown", onKeydown, true);
+        if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+        resolve(result);
+      };
+      const onOk = () => finish(true);
+      const onCancel = () => finish(false);
+      const onOverlayClick = (event) => {
+        if (event.target === overlay) finish(false);
+      };
+      const onKeydown = (event) => {
+        if (event.key === "Escape") finish(false);
+      };
+      els.confirmDialogOk.addEventListener("click", onOk);
+      els.confirmDialogCancel.addEventListener("click", onCancel);
+      overlay.addEventListener("click", onOverlayClick);
+      document.addEventListener("keydown", onKeydown, true);
+    });
   }
 
   function showGlobalStatus(message, type = "info", options = {}) {
@@ -3056,7 +3093,7 @@
       const button = event.target.closest("[data-revoke-api-key]");
       if (!button || !ensurePermission("manage_api_keys", "API key 관리")) return;
       const key = apiKeys.find((item) => item.id === button.dataset.revokeApiKey);
-      if (!key || !confirmAction(`${key.name} API key를 폐기할까요? 폐기 후 복구할 수 없습니다.`)) return;
+      if (!key || !(await confirmAction(`${key.name} API key를 폐기할까요? 폐기 후 복구할 수 없습니다.`))) return;
       setControlDisabled(button, true);
       const result = await apiKeysRequest({ action: "revoke", id: key.id });
       if (!result || !result.ok) {
@@ -3171,7 +3208,7 @@
         showMessage(els.adminMessage, "manager는 dev 계정을 비활성화할 수 없습니다.");
         return;
       }
-      if (!confirmAction(`${selectedAccount.username} 계정을 비활성화할까요?`)) return;
+      if (!(await confirmAction(`${selectedAccount.username} 계정을 비활성화할까요?`))) return;
       const result = await adminAccountsRequest({
         action: "deactivate",
         account: { userId: selectedAccount.user_id },
@@ -3248,14 +3285,14 @@
       saveState("특별시간표를 저장했습니다.", "update_special");
     });
 
-    els.deleteSpecialButton.addEventListener("click", () => {
+    els.deleteSpecialButton.addEventListener("click", async () => {
       if (!ensurePermission("update_special", "특별시간표 수정")) return;
       const date = els.specialDate.value;
       if (!state.specialSchedules[date]) {
         showMessage(els.adminMessage, "삭제할 특별시간표가 없습니다.");
         return;
       }
-      if (!confirmAction(`${date} 특별시간표를 삭제할까요?`)) return;
+      if (!(await confirmAction(`${date} 특별시간표를 삭제할까요?`))) return;
       delete state.specialSchedules[date];
       renderSpecialEditor();
       saveState("특별시간표를 삭제했습니다.", "update_special");
@@ -3269,11 +3306,11 @@
       renderSpecialEditor();
     });
 
-    els.baseMergeList.addEventListener("click", (event) => {
+    els.baseMergeList.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-delete-base-merge]");
       if (!button) return;
       if (!ensurePermission("update_base_merge", "기본 병합 수정")) return;
-      if (!confirmAction("기본 병합을 삭제할까요?")) return;
+      if (!(await confirmAction("기본 병합을 삭제할까요?"))) return;
       state.baseMerges = state.baseMerges.filter((merge) => merge.id !== button.dataset.deleteBaseMerge);
       saveState("기본 병합을 삭제했습니다.", "update_base_merge");
     });
@@ -3297,19 +3334,19 @@
       saveState("단일교과 변경을 저장했습니다.", "update_change");
     });
 
-    els.deleteChangeButton.addEventListener("click", () => {
+    els.deleteChangeButton.addEventListener("click", async () => {
       if (!ensurePermission("update_change", "단일교과 변경")) return;
       const key = changeKey(els.changeDate.value, els.changeClass.value, els.changePeriod.value);
       if (!state.changes[key]) {
         showMessage(els.adminMessage, "삭제할 단일 변경이 없습니다.");
         return;
       }
-      if (!confirmAction("해당 단일교과 변경을 삭제할까요?")) return;
+      if (!(await confirmAction("해당 단일교과 변경을 삭제할까요?"))) return;
       delete state.changes[key];
       saveState("해당 단일 변경을 삭제했습니다.", "update_change");
     });
 
-    els.changeList.addEventListener("click", (event) => {
+    els.changeList.addEventListener("click", async (event) => {
       const editButton = event.target.closest("[data-edit-change]");
       if (editButton) {
         const [date, className, period] = editButton.dataset.editChange.split("__");
@@ -3328,7 +3365,7 @@
       const button = event.target.closest("[data-revert-change]");
       if (!button) return;
       if (!ensurePermission("update_change", "단일교과 변경")) return;
-      if (!confirmAction("해당 교과 변경을 되돌릴까요?")) return;
+      if (!(await confirmAction("해당 교과 변경을 되돌릴까요?"))) return;
       delete state.changes[button.dataset.revertChange];
       saveState("해당 교과 변경을 되돌렸습니다.", "update_change");
     });
@@ -3377,7 +3414,7 @@
       showMessage(els.adminMessage, "행사 수정을 취소했습니다.");
     });
 
-    els.eventList.addEventListener("click", (event) => {
+    els.eventList.addEventListener("click", async (event) => {
       const editButton = event.target.closest("[data-edit-event]");
       if (editButton) {
         loadEventEditor(editButton.dataset.editEvent);
@@ -3386,7 +3423,7 @@
       const button = event.target.closest("[data-delete-event]");
       if (!button) return;
       if (!ensurePermission("update_event", "행사 수정")) return;
-      if (!confirmAction("행사를 삭제할까요?")) return;
+      if (!(await confirmAction("행사를 삭제할까요?"))) return;
       state.events = state.events.filter((item) => item.id !== button.dataset.deleteEvent);
       if (selectedEventId === button.dataset.deleteEvent) {
         resetEventForm();
@@ -3487,11 +3524,11 @@
       saveState("안내사항을 저장했습니다.", "update_notice");
     });
 
-    els.noticeList.addEventListener("click", (event) => {
+    els.noticeList.addEventListener("click", async (event) => {
       const deleteButton = event.target.closest("[data-delete-notice]");
       if (deleteButton) {
         if (!ensurePermission("update_notice", "안내사항 수정")) return;
-        if (!confirmAction("안내사항을 삭제할까요?")) return;
+        if (!(await confirmAction("안내사항을 삭제할까요?"))) return;
         state.notices = state.notices.filter((notice) => notice.id !== deleteButton.dataset.deleteNotice);
         if (selectedNoticeId === deleteButton.dataset.deleteNotice) {
           selectedNoticeId = state.notices[0] ? state.notices[0].id : "";

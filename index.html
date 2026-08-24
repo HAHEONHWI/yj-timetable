@@ -912,6 +912,19 @@
     <button class="footer-link" data-route="privacy" type="button">개인정보처리방침</button>
   </footer>
 
+  <div id="confirmDialog" class="modal-overlay is-hidden">
+    <div class="modal-content confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmDialogTitle" aria-describedby="confirmDialogMessage">
+      <div class="modal-body">
+        <h3 id="confirmDialogTitle" class="confirm-dialog-title">확인</h3>
+        <p id="confirmDialogMessage"></p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button id="confirmDialogCancel" class="ghost-button" type="button">취소</button>
+        <button id="confirmDialogOk" class="danger-button" type="button">확인</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./src/supabase-config.js"></script>
   <script src="./src/storage.js"></script>

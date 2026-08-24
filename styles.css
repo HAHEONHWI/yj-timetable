@@ -1014,6 +1014,29 @@ body.board-mode select {
   color: var(--danger);
 }
 
+.modal-content.confirm-dialog {
+  max-width: 380px;
+}
+
+.confirm-dialog-title {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.confirm-dialog #confirmDialogMessage {
+  margin: 0;
+  padding: 0;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 24px 24px;
+}
+
 .modal-body {
   padding: 24px;
   color: var(--muted);
