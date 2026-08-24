@@ -13,6 +13,7 @@ android-board/debug.keystore
 
 # Static distribution files
 downloads/
+netlify-deploy/
 
 # Local Supabase CLI state
 supabase/.branches/
