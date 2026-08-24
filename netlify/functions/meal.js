@@ -22,11 +22,11 @@ function toYmd(d) {
 
 /**
  * 시간대별로 표시할 급식 날짜 및 끼니 코드(1: 조식, 2: 중식, 3: 석식)를 결정
- * 
- * 00:00 ~ 08:30: 🌅 아침 (조식)
- * 08:30 ~ 13:40: ☀️ 점심 (중식)
- * 13:40 ~ 19:30: 🌙 저녁 (석식)
- * 19:30 이후:    🌅 다음날 아침 (조식)
+ *
+ * 00:00 ~ 07:45: 🌅 아침 (조식, 전날 저녁부터 이어지는 구간)
+ * 07:45 ~ 12:20: ☀️ 점심 (중식)
+ * 12:20 ~ 18:10: 🌙 저녁 (석식)
+ * 18:10 이후:    🌅 다음날 아침 (조식)
  */
 function resolveMealTarget(queryDate, queryMealCode) {
   const kst = getKstDate();
@@ -75,8 +75,8 @@ function resolveMealTarget(queryDate, queryMealCode) {
   }
 
   // 평일 시간대별 분기
-  if (totalMinutes < 8 * 60 + 30) {
-    // 00:00 ~ 08:30 -> 오늘 아침 (조식)
+  if (totalMinutes < 7 * 60 + 45) {
+    // 00:00 ~ 07:45 -> 오늘 아침 (조식)
     return {
       targetDate: todayYmd,
       mealCode: "1",
@@ -87,8 +87,8 @@ function resolveMealTarget(queryDate, queryMealCode) {
     };
   }
 
-  if (totalMinutes < 13 * 60 + 40) {
-    // 08:30 ~ 13:40 -> 오늘 점심 (중식)
+  if (totalMinutes < 12 * 60 + 20) {
+    // 07:45 ~ 12:20 -> 오늘 점심 (중식)
     return {
       targetDate: todayYmd,
       mealCode: "2",
@@ -99,8 +99,8 @@ function resolveMealTarget(queryDate, queryMealCode) {
     };
   }
 
-  if (totalMinutes < 19 * 60 + 30) {
-    // 13:40 ~ 19:30 -> 오늘 저녁 (석식)
+  if (totalMinutes < 18 * 60 + 10) {
+    // 12:20 ~ 18:10 -> 오늘 저녁 (석식)
     return {
       targetDate: todayYmd,
       mealCode: "3",
@@ -111,7 +111,7 @@ function resolveMealTarget(queryDate, queryMealCode) {
     };
   }
 
-  // 19:30 이후 -> 다음 학교일 아침 (조식)
+  // 18:10 이후 -> 다음 학교일 아침 (조식)
   if (day === 5) {
     // 금요일 밤 -> 다음주 월요일 아침
     const monday = new Date(kst);
