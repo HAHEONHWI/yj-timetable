@@ -103,7 +103,7 @@
             <p class="eyebrow">교사용 iPhone 화면</p>
             <h2>요일별 과목 배경화면</h2>
             <p class="muted">선택한 과목이 있는 수업만 요일별로 모아 세로 화면에 표시합니다.</p>
-            <div class="wallpaper-tool-group android-web-download" data-dev-only style="margin-bottom: 20px;" hidden>
+            <div class="wallpaper-tool-group android-web-download dev-download-group" data-dev-only hidden>
               <a href="/downloads/yj-timetable-widget.apk" class="android-download-btn" download>
                 <span class="btn-icon">🤖</span>
                 <span class="btn-text">안드로이드 위젯 모바일 앱 다운로드</span>
@@ -111,9 +111,9 @@
             </div>
             <div class="wallpaper-tool-group">
               <strong>선생님 성함</strong>
-              <div style="margin-top: 8px;">
+              <div class="wallpaper-name-wrap">
                 <input type="text" id="wallpaperName" placeholder="예: 홍길동" class="text-input"
-                  style="width: 100%; max-width: 320px;" />
+                  />
               </div>
             </div>
             <div class="wallpaper-tool-group">
@@ -130,16 +130,16 @@
             </div>
             <div id="wallpaperAutomation" class="wallpaper-automation"></div>
             <!-- iOS 자동화 가이드 팝업 열기 버튼 -->
-            <div style="margin-top: 12px;">
+            <div class="guide-trigger-wrap">
               <button id="btnOpenIosModal" class="guide-trigger-btn" type="button">
                 💡 iOS 자동화 설정 가이드
               </button>
             </div>
           </div>
+        </div>
           <div class="wallpaper-preview-wrap">
             <div id="wallpaperPreview" class="wallpaper-preview-phone"></div>
           </div>
-        </div>
       </div>
 
       <!-- iOS 자동화 가이드 모달 팝업 -->
@@ -147,7 +147,7 @@
         <div class="modal-content">
           <div class="modal-header">
             <h3>🌅 iOS 배경화면 자동화 설정 가이드</h3>
-            <button id="btnCloseIosModal" class="close-btn">&times;</button>
+            <button id="btnCloseIosModal" class="close-btn" type="button" aria-label="가이드 닫기">&times;</button>
           </div>
           <div class="modal-body">
             <p class="guide-intro">추천 골든타임 3회(일출 시각, 08:40, 14:00)에 맞춰 잠금화면 시간표가 자동으로 갱신되도록 자동화 일정을 등록하는 상세 단계입니다.</p>
@@ -155,9 +155,9 @@
             <div class="guide-step">
               <h4>1단계: 📲 단축어 다운로드 및 URL 교체 (⚠️ 필수)</h4>
               <p>배경화면 탭 하단의 <strong>[iPhone 단축어 등록]</strong> 버튼을 터치하면 이미지 URL이 자동으로 클립보드에 복사되며 단축어 다운로드 창이 열립니다.</p>
-              <div style="margin-top: 10px; padding: 12px; background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; font-size: 13px;">
-                <strong style="color: #f59e0b;">⚠️ 단축어를 추가한 후 반드시 해주세요:</strong>
-                <p style="margin: 6px 0 0 0; color: #cbd5e1; line-height: 1.5;">단축어 앱에서 다운로드된 단축어의 <strong>[설정(편집)]</strong> 화면으로 들어간 뒤, 맨 위의 <strong><code>\${YourLink}</code></strong>라고 써진 칸을 지우고, 복사되어 있는 실제 주소를 <strong>[붙여넣기]</strong> 해줍니다.</p>
+              <div class="shortcut-required">
+                <strong class="shortcut-required-title">⚠️ 단축어를 추가한 후 반드시 해주세요:</strong>
+                <p class="shortcut-required-copy">단축어 앱에서 다운로드된 단축어의 <strong>[설정(편집)]</strong> 화면으로 들어간 뒤, 맨 위의 <strong><code>${YourLink}</code></strong>라고 써진 칸을 지우고, 복사되어 있는 실제 주소를 <strong>[붙여넣기]</strong> 해줍니다.</p>
               </div>
             </div>
             
@@ -165,18 +165,18 @@
               <h4>2단계: ⚙️ 개인용 자동화 3종 추가 (단축어 앱 실행)</h4>
               <p>아이폰 <strong>[단축어 앱] ➔ 하단 [자동화] 탭 ➔ 우측 상단 [+]</strong> 버튼을 차례로 누르고 아래의 3가지 시간대를 각각 등록해 줍니다.</p>
               
-              <ul style="padding-left: 20px; margin-top: 8px;">
-                <li style="margin-bottom: 12px;">
+              <ul class="automation-times">
+                <li>
                   <strong>🌅 일출 시간 (아침 등교 전 최초 갱신)</strong>
-                  <br /><span style="font-size: 13px; color: #94a3b8;">[하루 중 특정 시간] 선택 ➔ [일출] 체크 ➔ 실행 옵션을 [확인 없이 실행]으로 스위칭 ➔ [용정시간표 배경화면] 단축어 실행으로 동작 등록</span>
+                  <br /><span class="automation-detail">[하루 중 특정 시간] 선택 ➔ [일출] 체크 ➔ 실행 옵션을 [확인 없이 실행]으로 스위칭 ➔ [용정시간표 배경화면] 단축어 실행으로 동작 등록</span>
                 </li>
-                <li style="margin-bottom: 12px;">
+                <li>
                   <strong>⏰ 오전 08:40 (조회 및 1교시 시작 전 갱신)</strong>
-                  <br /><span style="font-size: 13px; color: #94a3b8;">[하루 중 특정 시간] 선택 ➔ 시간을 [08:40]으로 기입 ➔ 실행 옵션을 [확인 없이 실행]으로 선택 ➔ 동일 단축어 실행 등록</span>
+                  <br /><span class="automation-detail">[하루 중 특정 시간] 선택 ➔ 시간을 [08:40]으로 기입 ➔ 실행 옵션을 [확인 없이 실행]으로 선택 ➔ 동일 단축어 실행 등록</span>
                 </li>
-                <li style="margin-bottom: 12px;">
+                <li>
                   <strong>🕒 오후 14:00 (오후 수업 교체 실시간 갱신)</strong>
-                  <br /><span style="font-size: 13px; color: #94a3b8;">[하루 중 특정 시간] 선택 ➔ 시간을 [14:00]으로 기입 ➔ 실행 옵션을 [확인 없이 실행]으로 선택 ➔ 동일 단축어 실행 등록</span>
+                  <br /><span class="automation-detail">[하루 중 특정 시간] 선택 ➔ 시간을 [14:00]으로 기입 ➔ 실행 옵션을 [확인 없이 실행]으로 선택 ➔ 동일 단축어 실행 등록</span>
                 </li>
               </ul>
             </div>
@@ -224,7 +224,7 @@
               <dd>2026.06.29</dd>
             </div>
           </dl>
-          <p class="download-note">보안 경고나 알 수 없는 게시자 안내가 뜨면 추가 정보에서 실행을 선택해 설치하세요.</p>
+          <p class="download-note">보안 경고나 알 수 없는 게시자 안내가 뜨면 <span class="keep-together">추가 정보에서 실행</span>을 선택해 설치하세요.</p>
           <a class="download-button" href="./downloads/yongjeong-timetable-widget-setup.exe" download>Windows 위젯
             다운로드</a>
         </article>
@@ -253,7 +253,7 @@
               <dd>2026.07.06</dd>
             </div>
           </dl>
-          <p class="download-note">설치 차단 안내가 뜨면 설정에서 이 출처의 앱 설치를 허용한 뒤 설치하세요.</p>
+          <p class="download-note">설치 차단 안내가 뜨면 설정에서 <span class="keep-together">이 출처의 앱 설치를 허용한 뒤</span> 설치하세요.</p>
           <a class="download-button" href="./downloads/yj-timetable-widget.apk" download>모바일 위젯 APK 다운로드</a>
         </article>
 
@@ -281,7 +281,7 @@
               <dd>2026.05.26</dd>
             </div>
           </dl>
-          <p class="download-note">설치 차단 안내가 뜨면 설정에서 이 출처의 앱 설치를 허용한 뒤 다시 설치하세요.</p>
+          <p class="download-note">설치 차단 안내가 뜨면 설정에서 <span class="keep-together">이 출처의 앱 설치를 허용한 뒤</span> 다시 설치하세요.</p>
           <a class="download-button" href="./downloads/yj-timetable-board.apk" download>전자칠판 APK 다운로드</a>
         </article>
       </div>
@@ -499,9 +499,9 @@
           <label for="adminPassword">비밀번호</label>
           <input id="adminPassword" type="password" autocomplete="current-password" placeholder="비밀번호 입력" />
         </div>
-        <div class="field" style="margin-top: -6px; margin-bottom: 8px;">
-          <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: #cbd5e1; font-weight: 700; user-select: none;">
-            <input id="adminRememberMe" type="checkbox" checked style="width: 17px; height: 17px; accent-color: #2dd4bf; cursor: pointer;" />
+        <div class="field remember-field">
+          <label class="remember-label">
+            <input id="adminRememberMe" type="checkbox" checked />
             <span>로그인 세션 유지</span>
           </label>
         </div>
@@ -526,19 +526,19 @@
           </div>
         </div>
 
-        <div class="admin-tabs" role="tablist">
-          <button class="admin-tab" data-admin-tab="base" type="button">기본 시간표</button>
-          <button class="admin-tab" data-admin-tab="special" type="button">특별시간표</button>
-          <button class="admin-tab is-active" data-admin-tab="change" type="button">단일교과 변경</button>
-          <button class="admin-tab" data-admin-tab="event" type="button">행사 변경</button>
-          <button class="admin-tab" data-admin-tab="notice" type="button">안내사항</button>
-          <button class="admin-tab" data-admin-tab="slideshowSettings" type="button">슬라이드쇼 설정</button>
-          <button class="admin-tab" data-admin-tab="accounts" type="button">계정 관리</button>
-          <button id="apiKeysTab" class="admin-tab" data-admin-tab="apiKeys" type="button">API key</button>
-          <button class="admin-tab" data-admin-tab="auditLogs" type="button">감사 로그</button>
+        <div class="admin-tabs" role="tablist" aria-label="관리자 기능">
+          <button id="baseTab" class="admin-tab" data-admin-tab="base" type="button" role="tab" aria-controls="basePanel" aria-selected="false" tabindex="-1">기본 시간표</button>
+          <button id="specialTab" class="admin-tab" data-admin-tab="special" type="button" role="tab" aria-controls="specialPanel" aria-selected="false" tabindex="-1">특별시간표</button>
+          <button id="changeTab" class="admin-tab is-active" data-admin-tab="change" type="button" role="tab" aria-controls="changePanel" aria-selected="true" tabindex="0">단일교과 변경</button>
+          <button id="eventTab" class="admin-tab" data-admin-tab="event" type="button" role="tab" aria-controls="eventPanel" aria-selected="false" tabindex="-1">행사 변경</button>
+          <button id="noticeTab" class="admin-tab" data-admin-tab="notice" type="button" role="tab" aria-controls="noticePanel" aria-selected="false" tabindex="-1">안내사항</button>
+          <button id="slideshowSettingsTab" class="admin-tab" data-admin-tab="slideshowSettings" type="button" role="tab" aria-controls="slideshowSettingsPanel" aria-selected="false" tabindex="-1">슬라이드쇼 설정</button>
+          <button id="accountsTab" class="admin-tab" data-admin-tab="accounts" type="button" role="tab" aria-controls="accountsPanel" aria-selected="false" tabindex="-1">계정 관리</button>
+          <button id="apiKeysTab" class="admin-tab" data-admin-tab="apiKeys" type="button" role="tab" aria-controls="apiKeysPanel" aria-selected="false" tabindex="-1">API key</button>
+          <button id="auditLogsTab" class="admin-tab" data-admin-tab="auditLogs" type="button" role="tab" aria-controls="auditLogsPanel" aria-selected="false" tabindex="-1">감사 로그</button>
         </div>
 
-        <section id="basePanel" class="admin-panel is-hidden">
+        <section id="basePanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="baseTab" aria-hidden="true">
           <div class="form-grid">
             <div class="field">
               <label for="baseWeekday">요일</label>
@@ -580,7 +580,7 @@
           </div>
         </section>
 
-        <section id="specialPanel" class="admin-panel is-hidden">
+        <section id="specialPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="specialTab" aria-hidden="true">
           <div>
             <h3>특별시간표 생성</h3>
             <p class="muted">날짜 하나에 전체 학급 시간표를 한 번에 저장합니다.</p>
@@ -600,7 +600,7 @@
           <div id="specialList" class="list"></div>
         </section>
 
-        <section id="changePanel" class="admin-panel">
+        <section id="changePanel" class="admin-panel" role="tabpanel" aria-labelledby="changeTab" aria-hidden="false">
           <div class="form-grid change-form-grid">
             <div class="field">
               <label for="changeDate">날짜</label>
@@ -636,11 +636,29 @@
             <button id="saveChangeButton" class="primary-button" type="button">변경 저장</button>
             <button id="deleteChangeButton" class="danger-button" type="button">해당 변경 삭제</button>
           </div>
-          <div id="changeWeekdayFilter" class="filter-tabs" role="tablist" aria-label="교과 변경 요일 필터"></div>
-          <div id="changeList" class="list"></div>
+          <div class="list-head">
+            <h3 id="changeListCount">등록된 변경 0건</h3>
+            <div id="changeWeekdayFilter" class="filter-tabs" role="tablist" aria-label="교과 변경 요일 필터"></div>
+          </div>
+          <div class="table-shell">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>날짜</th>
+                  <th>학급</th>
+                  <th>교시</th>
+                  <th>변경 내용</th>
+                  <th>유형</th>
+                  <th>사유</th>
+                  <th class="table-actions-head">관리</th>
+                </tr>
+              </thead>
+              <tbody id="changeList"></tbody>
+            </table>
+          </div>
         </section>
 
-        <section id="eventPanel" class="admin-panel is-hidden">
+        <section id="eventPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="eventTab" aria-hidden="true">
           <div class="form-grid">
             <div class="field">
               <label for="eventDate">날짜</label>
@@ -688,7 +706,7 @@
           <div id="eventList" class="list"></div>
         </section>
 
-        <section id="noticePanel" class="admin-panel is-hidden">
+        <section id="noticePanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="noticeTab" aria-hidden="true">
           <div class="form-grid two">
             <div class="field">
               <label for="noticeTitle">제목</label>
@@ -709,7 +727,7 @@
           <div id="noticeList" class="list"></div>
         </section>
 
-        <section id="slideshowSettingsPanel" class="admin-panel is-hidden">
+        <section id="slideshowSettingsPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="slideshowSettingsTab" aria-hidden="true">
           <div class="form-grid">
             <div class="field">
               <label for="slideInterval">전환 간격</label>
@@ -786,7 +804,7 @@
           </div>
         </section>
 
-        <section id="accountsPanel" class="admin-panel is-hidden">
+        <section id="accountsPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="accountsTab" aria-hidden="true">
           <div>
             <h3>관리자 계정</h3>
             <p class="muted">manager 이상은 계정을 관리할 수 있습니다. manager는 dev 계정을 수정하거나 dev 권한을 부여할 수 없습니다.</p>
@@ -831,7 +849,7 @@
           </div>
         </section>
 
-        <section id="apiKeysPanel" class="admin-panel is-hidden">
+        <section id="apiKeysPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="apiKeysTab" aria-hidden="true">
           <div>
             <h3>읽기 전용 API key</h3>
             <p class="muted">발급된 key는 시간표·행사·공지 조회에만 사용됩니다. 원본 key는 발급 직후 한 번만 표시됩니다.</p>
@@ -875,7 +893,7 @@
           </div>
         </section>
 
-        <section id="auditLogsPanel" class="admin-panel is-hidden">
+        <section id="auditLogsPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="auditLogsTab" aria-hidden="true">
           <div class="audit-log-head">
             <div>
               <h3>감사 로그</h3>

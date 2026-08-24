@@ -153,6 +153,7 @@
     saveChangeButton: $("#saveChangeButton"),
     deleteChangeButton: $("#deleteChangeButton"),
     changeList: $("#changeList"),
+    changeListCount: $("#changeListCount"),
     eventDate: $("#eventDate"),
     eventStart: $("#eventStart"),
     eventEnd: $("#eventEnd"),
@@ -580,10 +581,21 @@
   }
 
   function selectAdminTab(tabName) {
-    $$(".admin-tab").forEach((tab) => tab.classList.toggle("is-active", tab.dataset.adminTab === tabName));
-    $$(".admin-panel").forEach((panel) => panel.classList.add("is-hidden"));
+    $$(".admin-tab").forEach((tab) => {
+      const active = tab.dataset.adminTab === tabName;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+    });
+    $$(".admin-panel").forEach((panel) => {
+      panel.classList.add("is-hidden");
+      panel.setAttribute("aria-hidden", "true");
+    });
     const panel = $(`#${tabName}Panel`);
-    if (panel) panel.classList.remove("is-hidden");
+    if (panel) {
+      panel.classList.remove("is-hidden");
+      panel.setAttribute("aria-hidden", "false");
+    }
   }
 
   function renderAdminUserBadge() {
@@ -725,7 +737,10 @@
     els.adminPage.classList.toggle("is-hidden", route !== "admin");
     document.body.classList.toggle("slideshow-mode", route === "slideshow");
     $$(".nav-button").forEach((button) => {
-      button.classList.toggle("is-active", button.dataset.route === route);
+      const active = button.dataset.route === route;
+      button.classList.toggle("is-active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
     });
 
     if (route === "slideshow") {
@@ -804,8 +819,8 @@
   function renderDayTabs(days) {
     els.dayTabs.innerHTML = days
       .map((day) => {
-        const active = day.iso === selectedDate ? " is-active" : "";
-        return `<button class="day-tab${active}" data-date="${day.iso}" type="button">
+        const active = day.iso === selectedDate;
+        return `<button class="day-tab${active ? " is-active" : ""}" data-date="${day.iso}" type="button" role="tab" aria-selected="${active}" tabindex="${active ? 0 : -1}">
           <span>${day.weekLabel}</span>
           <strong>${formatDate(day.iso)} ${day.weekday.label}</strong>
         </button>`;
@@ -1104,7 +1119,9 @@
     }
     if (els.adminNavToggle) {
       els.adminNavToggle.querySelectorAll("[data-admin-nav]").forEach((button) => {
-        button.classList.toggle("is-active", button.dataset.adminNav === (sidebar ? "sidebar" : "tabs"));
+        const active = button.dataset.adminNav === (sidebar ? "sidebar" : "tabs");
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
       });
     }
   }
@@ -1118,7 +1135,9 @@
     localStorage.setItem(HOME_VARIANT_KEY, shade ? "shade" : "line");
     if (els.homeVariantToggle) {
       els.homeVariantToggle.querySelectorAll("[data-variant]").forEach((button) => {
-        button.classList.toggle("is-active", button.dataset.variant === (shade ? "shade" : "line"));
+        const active = button.dataset.variant === (shade ? "shade" : "line");
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
       });
     }
     if (els.variantNote) {
@@ -1142,6 +1161,7 @@
       if (!button) return;
       button.textContent = light ? "☀" : "☾";
       button.setAttribute("aria-label", hint);
+      button.setAttribute("aria-pressed", String(light));
       button.title = label;
     });
   }
@@ -1417,8 +1437,8 @@
         <span>이미지 URL</span>
         <input value="${escapeHtml(url)}" readonly />
       </label>
-      <div class="button-row" style="display: flex; flex-wrap: wrap; gap: 8px;">
-        <button class="primary-button" data-setup-ios-shortcut type="button" style="background: linear-gradient(135deg, #a855f7, #7c3aed); border: none; color: white; font-weight: 800;">
+      <div class="button-row wallpaper-automation-actions">
+        <button class="primary-button ios-shortcut-button" data-setup-ios-shortcut type="button">
           📱 iPhone 단축어 등록
         </button>
         <button class="ghost-button" data-copy-wallpaper-url type="button">URL 복사</button>
@@ -1429,11 +1449,11 @@
         <img src="${escapeHtml(url)}" alt="선택한 과목 배경화면 이미지 미리보기" loading="lazy" />
         <figcaption>단축어에서 가져갈 실제 이미지입니다.</figcaption>
       </figure>
-      <ol style="margin-top: 14px;">
+      <ol class="wallpaper-automation-steps">
         <li>위의 <strong>[iPhone 단축어 등록]</strong> 버튼을 누르면 이미지 URL이 클립보드에 자동 복사되며 단축어 추가 화면이 열립니다.</li>
-        <li style="color: #f59e0b; font-weight: 800; margin-top: 4px; margin-bottom: 4px;">⚠️ 매우 중요: 단축어를 추가한 후, 단축어 앱 내 편집 화면으로 진입하여 1번째 줄의 <code>\${YourLink}</code> 라고 써진 부분에 복사된 실제 URL을 꼭 [붙여넣기] 해주세요!</li>
+        <li class="wallpaper-important-step">⚠️ 매우 중요: 단축어를 추가한 후, 단축어 앱 내 편집 화면으로 진입하여 1번째 줄의 <code>\${YourLink}</code> 라고 써진 부분에 복사된 실제 URL을 꼭 [붙여넣기] 해주세요!</li>
         <li>등록을 마친 후, 아래 <strong>[iOS 자동화 설정 가이드]</strong> 버튼을 눌러 일출, 08:40, 14:00 시간에 자동 갱신되도록 예약하면 세팅이 끝납니다!</li>
-        <li style="color: #94a3b8; font-size: 13px; margin-top: 4px;">(최초 1회 실행 시 배경화면 접근 권한을 '항상 허용'해 주시면 됩니다.)</li>
+        <li class="wallpaper-permission-step">(최초 1회 실행 시 배경화면 접근 권한을 '항상 허용'해 주시면 됩니다.)</li>
       </ol>
     </article>`;
   }
@@ -1694,14 +1714,16 @@
     if (els.slideshowDots) {
       els.slideshowDots.innerHTML = Array.from({ length: slideCount }, (_, index) => {
         const active = index === slideshowIndex;
-        return `<button class="slideshow-dot${active ? " is-active" : ""}" data-slide-index="${index}" type="button" role="tab" aria-selected="${active}" aria-label="${index + 1}번째 슬라이드"></button>`;
+        return `<button class="slideshow-dot${active ? " is-active" : ""}" data-slide-index="${index}" type="button" role="tab" aria-selected="${active}"${active ? ' aria-current="page"' : ""} aria-label="슬라이드 ${index + 1}로 이동" tabindex="${active ? 0 : -1}"></button>`;
       }).join("");
     }
     if (els.slideshowPlayButton) {
       els.slideshowPlayButton.textContent = slideshowPaused ? "재생" : "일시정지";
+      els.slideshowPlayButton.setAttribute("aria-pressed", String(slideshowPaused));
     }
     if (els.slideshowMealButton) {
       els.slideshowMealButton.textContent = slideshowMealVisible() ? "급식 숨기기" : "급식 표시";
+      els.slideshowMealButton.setAttribute("aria-pressed", String(slideshowMealVisible()));
     }
   }
 
@@ -1885,6 +1907,9 @@
         return weekdayForDate(date).key === changeFilterWeekday;
       })
       .sort(([a], [b]) => a.localeCompare(b));
+    if (els.changeListCount) {
+      els.changeListCount.textContent = `등록된 변경 ${entries.length}건`;
+    }
     const emptyLabel =
       changeFilterWeekday === "all"
         ? "등록된 단일 변경이 없습니다."
@@ -1894,22 +1919,27 @@
           .map(([key, change]) => {
             const [date, className, period] = key.split("__");
             const weekdayLabel = weekdayLabelForDate(date);
-            const originalSubject = getSubjectsForDate(date, className)[Number(period) - 1] || "-";
-            const reason = change.memo ? escapeHtml(change.memo) : "없음";
-            const typeLabel = isNewChange(change) ? "신설 변경" : "1:1 변경";
-            const changeSummary = isNewChange(change)
-              ? `신설 -> ${escapeHtml(change.subject)}`
-              : `${escapeHtml(originalSubject)} -> ${escapeHtml(change.subject)}`;
-            return `<article class="list-item">
-              <div>
-                <strong>일시: ${date} ${weekdayLabel}요일 · 학급: ${className} · 교시: ${period}교시 · ${typeLabel}</strong>
-                <span>${changeSummary} · 사유: ${reason}</span>
-              </div>
-              <button class="text-button" data-revert-change="${escapeHtml(key)}" type="button">되돌리기</button>
-            </article>`;
+            const isNew = isNewChange(change);
+            const typeLabel = isNew ? "신설" : "1:1";
+            const typeClass = isNew ? "is-new" : "is-swap";
+            const reason = change.memo ? escapeHtml(change.memo) : "";
+            return `<tr>
+              <td>${date} ${weekdayLabel}</td>
+              <td>${escapeHtml(className)}</td>
+              <td>${period}교시</td>
+              <td class="table-strong">${escapeHtml(change.subject)}</td>
+              <td class="table-type ${typeClass}">${typeLabel}</td>
+              <td>${reason}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="table-action-button" data-edit-change="${escapeHtml(key)}" type="button">수정</button>
+                  <button class="table-action-button is-danger" data-revert-change="${escapeHtml(key)}" type="button">삭제</button>
+                </div>
+              </td>
+            </tr>`;
           })
           .join("")
-      : `<p class="empty">${emptyLabel}</p>`;
+      : `<tr><td colspan="7" class="table-empty">${emptyLabel}</td></tr>`;
   }
 
   function renderEventClassChecks() {
@@ -2717,6 +2747,22 @@
       selectedDate = button.dataset.date;
       renderView();
     });
+    els.dayTabs.addEventListener("keydown", (event) => {
+      const tab = event.target.closest("[data-date]");
+      if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const tabs = [...els.dayTabs.querySelectorAll("[data-date]")];
+      const currentIndex = tabs.indexOf(tab);
+      const nextIndex =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? tabs.length - 1
+            : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+      selectedDate = tabs[nextIndex].dataset.date;
+      renderView();
+      els.dayTabs.querySelector(`[data-date="${selectedDate}"]`)?.focus();
+    });
 
     els.todayLabel.addEventListener("click", () => {
       if (currentRoute !== "view") return;
@@ -2777,6 +2823,21 @@
         const dot = event.target.closest("[data-slide-index]");
         if (!dot) return;
         jumpSlideshow(Number(dot.dataset.slideIndex));
+      });
+      els.slideshowDots.addEventListener("keydown", (event) => {
+        const dot = event.target.closest("[data-slide-index]");
+        if (!dot || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const slideCount = slideshowSlides().length;
+        const currentIndex = Number(dot.dataset.slideIndex);
+        const nextIndex =
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? slideCount - 1
+              : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + slideCount) % slideCount;
+        jumpSlideshow(nextIndex);
+        els.slideshowDots.querySelector(`[data-slide-index="${nextIndex}"]`)?.focus();
       });
     }
     if (els.wallpaperName) {
@@ -2874,6 +2935,20 @@
           refreshAdminAccounts();
         }
         if (button.dataset.adminTab === "apiKeys") refreshApiKeys();
+      });
+      button.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        const tabs = $$(".admin-tab").filter((tab) => !tab.hidden && !tab.disabled);
+        const currentIndex = tabs.indexOf(button);
+        if (currentIndex < 0) return;
+        event.preventDefault();
+        let nextIndex = currentIndex;
+        if (event.key === "Home") nextIndex = 0;
+        else if (event.key === "End") nextIndex = tabs.length - 1;
+        else if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabs.length;
+        else nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        tabs[nextIndex].click();
+        tabs[nextIndex].focus();
       });
     });
 
@@ -3241,6 +3316,21 @@
     });
 
     els.changeList.addEventListener("click", (event) => {
+      const editButton = event.target.closest("[data-edit-change]");
+      if (editButton) {
+        const [date, className, period] = editButton.dataset.editChange.split("__");
+        const change = state.changes[editButton.dataset.editChange];
+        if (!change) return;
+        els.changeDate.value = date;
+        els.changeClass.value = className;
+        els.changePeriod.value = period;
+        els.changeSubject.value = change.subject;
+        els.changeMemo.value = change.memo || "";
+        els.changeType.value = isNewChange(change) ? "new" : "swap";
+        renderChangeDateHint();
+        els.changeSubject.focus();
+        return;
+      }
       const button = event.target.closest("[data-revert-change]");
       if (!button) return;
       if (!ensurePermission("update_change", "단일교과 변경")) return;
