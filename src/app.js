@@ -1117,6 +1117,10 @@
     if (els.adminWorkspace) {
       els.adminWorkspace.classList.toggle("is-sidebar", sidebar);
     }
+    const tabList = document.querySelector(".admin-tabs");
+    if (tabList) {
+      tabList.setAttribute("aria-orientation", sidebar ? "vertical" : "horizontal");
+    }
     if (els.adminNavToggle) {
       els.adminNavToggle.querySelectorAll("[data-admin-nav]").forEach((button) => {
         const active = button.dataset.adminNav === (sidebar ? "sidebar" : "tabs");
@@ -2937,7 +2941,11 @@
         if (button.dataset.adminTab === "apiKeys") refreshApiKeys();
       });
       button.addEventListener("keydown", (event) => {
-        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        // Sidebar mode stacks tabs vertically, so Up/Down feels native there;
+        // Left/Right keeps working everywhere (including top-tabs mode).
+        const forward = ["ArrowRight", "ArrowDown"];
+        const backward = ["ArrowLeft", "ArrowUp"];
+        if (![...forward, ...backward, "Home", "End"].includes(event.key)) return;
         const tabs = $$(".admin-tab").filter((tab) => !tab.hidden && !tab.disabled);
         const currentIndex = tabs.indexOf(button);
         if (currentIndex < 0) return;
@@ -2945,7 +2953,7 @@
         let nextIndex = currentIndex;
         if (event.key === "Home") nextIndex = 0;
         else if (event.key === "End") nextIndex = tabs.length - 1;
-        else if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabs.length;
+        else if (forward.includes(event.key)) nextIndex = (currentIndex + 1) % tabs.length;
         else nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
         tabs[nextIndex].click();
         tabs[nextIndex].focus();

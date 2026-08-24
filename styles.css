@@ -211,12 +211,19 @@ button {
 }
 
 .brand-logo {
-  width: auto;
-  height: var(--space-26);
+  width: 22px;
+  height: 23px;
   object-fit: contain;
-  object-position: left center;
   flex: 0 0 auto;
   opacity: 0.9;
+}
+
+.brand-name {
+  font-size: var(--text-15);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  white-space: nowrap;
 }
 
 .theme-button {
@@ -239,15 +246,6 @@ button {
 .theme-button:hover {
   border-color: var(--blue);
   color: var(--ink);
-}
-
-.brand-copy {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 .eyebrow,
@@ -2072,33 +2070,67 @@ body.board-mode .schedule-shell {
 .admin-workspace.is-sidebar .admin-tabs {
   grid-column: 1;
   grid-row: 2;
+  align-self: start;
+  /* Stays put while a long panel (e.g. audit log) scrolls past it. */
+  position: sticky;
+  top: var(--space-16);
   flex-direction: column;
   align-content: flex-start;
-  gap: 0;
+  gap: 1px;
   border-bottom: 0;
   border-right: 1px solid var(--line);
-  padding: 0 16px 0 0;
+  padding: 0 14px 0 0;
+}
+
+.admin-nav-divider {
+  display: none;
+}
+
+.admin-workspace.is-sidebar .admin-nav-divider {
+  display: block;
+  height: 1px;
+  margin: var(--space-8) 0;
+  background: var(--line);
 }
 
 .admin-workspace.is-sidebar .admin-tab {
-  min-height: 0;
+  min-height: var(--space-32);
   border: 0;
   border-left: 2px solid transparent;
-  border-radius: 0;
-  padding: 7px 10px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0 var(--space-10) 0 var(--space-8);
   text-align: left;
   font-size: 13px;
+  color: var(--muted);
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease,
+    border-left-color var(--motion-fast) ease;
+}
+
+.admin-workspace.is-sidebar .admin-tab:hover {
+  background: var(--panel-strong);
+  color: var(--ink);
+}
+
+.admin-workspace.is-sidebar .admin-tab:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
 }
 
 .admin-workspace.is-sidebar .admin-tab.is-active {
   border-left-color: var(--blue);
+  background: var(--blue-tint);
   color: var(--ink);
   font-weight: 600;
+}
+
+.admin-workspace.is-sidebar .admin-tab.is-active:hover {
+  background: var(--blue-tint-strong);
 }
 
 .admin-workspace.is-sidebar .admin-panel {
   grid-column: 2;
   grid-row: 2;
+  min-width: 0;
 }
 
 .admin-panel {
