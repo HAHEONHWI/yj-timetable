@@ -6,7 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>용정시간표 - 조회</title>
   <link rel="icon" href="./assets/logo.png" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <link rel="stylesheet" href="./styles.css" />
+  <script>
+    // set before first paint so the themed tokens never flash the wrong palette
+    document.documentElement.setAttribute(
+      "data-theme",
+      localStorage.getItem("timetable-theme") === "light" ? "light" : "dark"
+    );
+  </script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-TTWC1RKWGL"></script>
   <script>
@@ -35,6 +45,7 @@
       <button class="nav-button" data-route="api" type="button">API</button>
       <button class="nav-button" data-route="admin" type="button">관리자</button>
     </nav>
+    <button id="themeButton" class="theme-button" type="button" aria-label="화면 모드 전환"></button>
   </header>
 
   <main>
@@ -49,10 +60,21 @@
           <label for="viewClass">학급</label>
           <select id="viewClass"></select>
         </div>
+        <div id="homeVariantToggle" class="segmented" role="group" aria-label="변경 표시 방식">
+          <button class="segmented-option is-active" data-variant="line" type="button">표식</button>
+          <button class="segmented-option" data-variant="shade" type="button">음영</button>
+        </div>
         <button id="boardThemeButton" class="board-theme-button" type="button" aria-label="화면 모드 전환"></button>
       </div>
       <div id="dayTabs" class="day-tabs" role="tablist"></div>
       <div id="viewSchedule" class="schedule-shell"></div>
+      <div id="mobileSchedule" class="mobile-schedule"></div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch" data-kind="change"></span>교과 변경</span>
+        <span class="legend-item"><span class="legend-swatch" data-kind="new"></span>신설 수업</span>
+        <span class="legend-item"><span class="legend-swatch" data-kind="event"></span>행사</span>
+        <span id="variantNote" class="legend-note"></span>
+      </div>
     </section>
 
     <section id="slideshowPage" class="page slideshow-page is-hidden">
@@ -64,10 +86,13 @@
           </div>
           <div class="slideshow-actions">
             <div id="slideshowMeta" class="slideshow-meta"></div>
+            <button id="slideshowPlayButton" class="ghost-button" type="button">일시정지</button>
+            <button id="slideshowMealButton" class="ghost-button" type="button">급식 숨기기</button>
             <button id="exitSlideshowButton" class="ghost-button" type="button">슬라이드쇼 종료</button>
           </div>
         </div>
         <div id="slideshowStage" class="slideshow-stage"></div>
+        <div id="slideshowDots" class="slideshow-dots" role="tablist" aria-label="슬라이드 이동"></div>
       </div>
     </section>
 
@@ -493,6 +518,10 @@
           <div class="admin-head-actions">
             <div id="adminUserBadge" class="admin-user-badge"></div>
             <p id="lastSaveStatus" class="admin-save-status">마지막 저장: 아직 없음</p>
+            <div id="adminNavToggle" class="segmented" role="group" aria-label="관리자 메뉴 배치">
+              <button class="segmented-option is-active" data-admin-nav="sidebar" type="button">사이드바</button>
+              <button class="segmented-option" data-admin-nav="tabs" type="button">상단 탭</button>
+            </div>
             <button id="logoutButton" class="ghost-button" type="button">로그아웃</button>
           </div>
         </div>

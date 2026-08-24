@@ -27,6 +27,9 @@
   let slideshowTimer = null;
   let slideshowRefreshTimer = null;
   let slideshowToastTimer = null;
+  let slideshowPaused = false;
+  // null follows the admin-managed setting; true/false override it for this screen only
+  let slideshowMealOverride = null;
   let globalStatusTimer = null;
   let mainEggToastTimer = null;
   let mainEggResetTimer = null;
@@ -56,6 +59,9 @@
   const WALLPAPER_DAYS_KEY = "wallpaper-days";
   const WALLPAPER_GRADES_KEY = "wallpaper-grades";
   const DEV_MODE_KEY = "timetable-dev-mode";
+  const THEME_KEY = "timetable-theme";
+  const HOME_VARIANT_KEY = "timetable-home-variant";
+  const ADMIN_NAV_KEY = "timetable-admin-nav";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
   const ROLE_PERMISSIONS = {
     save_state: ["dev", "manager", "teacher"],
@@ -89,11 +95,18 @@
     rangeLabel: $("#rangeLabel"),
     viewClass: $("#viewClass"),
     boardThemeButton: $("#boardThemeButton"),
+    themeButton: $("#themeButton"),
+    homeVariantToggle: $("#homeVariantToggle"),
+    variantNote: $("#variantNote"),
+    mobileSchedule: $("#mobileSchedule"),
     dayTabs: $("#dayTabs"),
     viewSchedule: $("#viewSchedule"),
     slideshowTitle: $("#slideshowTitle"),
     slideshowMeta: $("#slideshowMeta"),
     slideshowStage: $("#slideshowStage"),
+    slideshowDots: $("#slideshowDots"),
+    slideshowPlayButton: $("#slideshowPlayButton"),
+    slideshowMealButton: $("#slideshowMealButton"),
     exitSlideshowButton: $("#exitSlideshowButton"),
     wallpaperName: $("#wallpaperName"),
     wallpaperSubjects: $("#wallpaperSubjects"),
@@ -103,6 +116,7 @@
     wallpaperAutomation: $("#wallpaperAutomation"),
     loginPanel: $("#loginPanel"),
     adminWorkspace: $("#adminWorkspace"),
+    adminNavToggle: $("#adminNavToggle"),
     adminUsername: $("#adminUsername"),
     adminPassword: $("#adminPassword"),
     adminRememberMe: $("#adminRememberMe"),
@@ -974,7 +988,7 @@
       variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170) / 100 : 1;
     const periodHeaderScale =
       variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170) / 100 : 1;
-    return `<div class="schedule-grid class-columns ${variant}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale};--class-head-font-scale:${classHeaderScale};--period-head-font-scale:${periodHeaderScale}">
+    return `<div class="schedule-grid class-columns ${variant} variant-${homeVariant()}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale};--class-head-font-scale:${classHeaderScale};--period-head-font-scale:${periodHeaderScale}">
       <div class="corner-cell" style="grid-column:1;grid-row:1">교시</div>
       ${classColumns}
       ${periodRows}
@@ -1078,20 +1092,62 @@
     els.viewSchedule.innerHTML = renderBoardWeekGrid(className);
   }
 
-  function boardTheme() {
-    return localStorage.getItem("board-theme") === "light" ? "light" : "dark";
+  function adminNavLayout() {
+    return localStorage.getItem(ADMIN_NAV_KEY) === "tabs" ? "tabs" : "sidebar";
   }
 
-  function applyBoardTheme(theme = boardTheme()) {
-    if (!isBoardMode) return;
-    const light = theme === "light";
-    document.body.classList.toggle("board-light", light);
-    localStorage.setItem("board-theme", light ? "light" : "dark");
-    if (els.boardThemeButton) {
-      els.boardThemeButton.textContent = light ? "☀" : "☾";
-      els.boardThemeButton.setAttribute("aria-label", light ? "라이트 모드 사용 중, 다크 모드로 전환" : "다크 모드 사용 중, 라이트 모드로 전환");
-      els.boardThemeButton.title = light ? "라이트 모드" : "다크 모드";
+  function applyAdminNavLayout(layout = adminNavLayout()) {
+    const sidebar = layout !== "tabs";
+    localStorage.setItem(ADMIN_NAV_KEY, sidebar ? "sidebar" : "tabs");
+    if (els.adminWorkspace) {
+      els.adminWorkspace.classList.toggle("is-sidebar", sidebar);
     }
+    if (els.adminNavToggle) {
+      els.adminNavToggle.querySelectorAll("[data-admin-nav]").forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.adminNav === (sidebar ? "sidebar" : "tabs"));
+      });
+    }
+  }
+
+  function homeVariant() {
+    return localStorage.getItem(HOME_VARIANT_KEY) === "shade" ? "shade" : "line";
+  }
+
+  function applyHomeVariant(variant = homeVariant()) {
+    const shade = variant === "shade";
+    localStorage.setItem(HOME_VARIANT_KEY, shade ? "shade" : "line");
+    if (els.homeVariantToggle) {
+      els.homeVariantToggle.querySelectorAll("[data-variant]").forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.variant === (shade ? "shade" : "line"));
+      });
+    }
+    if (els.variantNote) {
+      els.variantNote.textContent = shade
+        ? "변경 셀에 옅은 음영을 함께 넣습니다"
+        : "변경은 셀 왼쪽 선과 라벨로만 표시합니다";
+    }
+  }
+
+  function currentTheme() {
+    return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+  }
+
+  function applyTheme(theme = currentTheme()) {
+    const light = theme === "light";
+    document.documentElement.setAttribute("data-theme", light ? "light" : "dark");
+    localStorage.setItem(THEME_KEY, light ? "light" : "dark");
+    const label = light ? "라이트 모드" : "다크 모드";
+    const hint = light ? "라이트 모드 사용 중, 다크 모드로 전환" : "다크 모드 사용 중, 라이트 모드로 전환";
+    [els.boardThemeButton, els.themeButton].forEach((button) => {
+      if (!button) return;
+      button.textContent = light ? "☀" : "☾";
+      button.setAttribute("aria-label", hint);
+      button.title = label;
+    });
+  }
+
+  function toggleTheme() {
+    applyTheme(currentTheme() === "light" ? "dark" : "light");
   }
 
   function normalizedSubject(value) {
@@ -1462,6 +1518,48 @@
     )} ${days[days.length - 1].weekday.label}`;
     renderDayTabs(days);
     els.viewSchedule.innerHTML = renderScheduleGrid(selectedDate, visibleClasses);
+    if (els.mobileSchedule) {
+      els.mobileSchedule.innerHTML = renderMobileList(selectedDate, visibleClasses);
+    }
+  }
+
+  function renderMobileList(date, visibleClasses) {
+    const events = getEventsForDate(date);
+    const merges = getBaseMergesForDate(date);
+    return visibleClasses
+      .map((className) => {
+        const subjects = getSubjectsForDate(date, className);
+        const rows = periods
+          .map((period, index) => {
+            const spanning = events
+              .concat(merges)
+              .find((item) => item.classes.includes(className) && period >= item.start && period <= item.end);
+            if (spanning) {
+              if (period !== spanning.start) return "";
+              const label = spanning.start === spanning.end ? `${spanning.start}` : `${spanning.start}–${spanning.end}`;
+              return `<li class="mobile-row is-event">
+                <span class="mobile-period">${label}</span>
+                <span class="mobile-body"><strong>${escapeHtml(spanning.title || "행사")}</strong>${
+                  spanning.memo ? `<small>${escapeHtml(spanning.memo)}</small>` : ""
+                }</span>
+              </li>`;
+            }
+            const change = getChange(date, className, period);
+            const subject = change ? change.subject : subjects[index];
+            const kind = change ? (isNewChange(change) ? " is-change is-new-change" : " is-change") : "";
+            const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
+            return `<li class="mobile-row${kind}">
+              <span class="mobile-period">${period}</span>
+              <span class="mobile-body"><strong>${escapeHtml(subject || "-")}</strong>${memo}</span>
+            </li>`;
+          })
+          .join("");
+        return `<section class="mobile-class">
+          <h3 class="mobile-class-title">${escapeHtml(className)}</h3>
+          <ul class="mobile-list">${rows}</ul>
+        </section>`;
+      })
+      .join("");
   }
 
   async function fetchSlideshowMeal(force = false) {
@@ -1523,6 +1621,11 @@
     </div>`;
   }
 
+  function slideshowMealVisible() {
+    if (slideshowMealOverride !== null) return slideshowMealOverride;
+    return Boolean(state.slideshow && state.slideshow.showMeal !== false);
+  }
+
   function slideshowSlides() {
     const day = currentSchoolDay();
     const slides = [];
@@ -1537,7 +1640,7 @@
     }
 
     const notices = state.notices.filter((notice) => notice.title || notice.body);
-    const showMeal = state.slideshow && state.slideshow.showMeal !== false;
+    const showMeal = slideshowMealVisible();
 
     notices.forEach((notice, index) => {
       slides.push({
@@ -1584,6 +1687,22 @@
     els.slideshowTitle.textContent = slide.title;
     els.slideshowMeta.textContent = slide.meta;
     els.slideshowStage.innerHTML = slide.html;
+    renderSlideshowControls(slides.length);
+  }
+
+  function renderSlideshowControls(slideCount) {
+    if (els.slideshowDots) {
+      els.slideshowDots.innerHTML = Array.from({ length: slideCount }, (_, index) => {
+        const active = index === slideshowIndex;
+        return `<button class="slideshow-dot${active ? " is-active" : ""}" data-slide-index="${index}" type="button" role="tab" aria-selected="${active}" aria-label="${index + 1}번째 슬라이드"></button>`;
+      }).join("");
+    }
+    if (els.slideshowPlayButton) {
+      els.slideshowPlayButton.textContent = slideshowPaused ? "재생" : "일시정지";
+    }
+    if (els.slideshowMealButton) {
+      els.slideshowMealButton.textContent = slideshowMealVisible() ? "급식 숨기기" : "급식 표시";
+    }
   }
 
   function showSlideshowToast(message) {
@@ -1640,7 +1759,7 @@
     fetchSlideshowMeal();
     renderSlideshow();
     const seconds = Math.max(3, Number(state.slideshow.intervalSeconds) || 8);
-    if (slideshowSlides().length > 1) {
+    if (!slideshowPaused && slideshowSlides().length > 1) {
       slideshowTimer = window.setInterval(() => {
         moveSlideshow(1);
       }, seconds * 1000);
@@ -2621,14 +2740,45 @@
       }
       renderView();
     });
-    if (els.boardThemeButton) {
-      els.boardThemeButton.addEventListener("click", () => {
-        applyBoardTheme(boardTheme() === "light" ? "dark" : "light");
+    [els.boardThemeButton, els.themeButton].forEach((button) => {
+      if (button) button.addEventListener("click", toggleTheme);
+    });
+    if (els.homeVariantToggle) {
+      els.homeVariantToggle.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-variant]");
+        if (!button) return;
+        applyHomeVariant(button.dataset.variant);
+        renderView();
+      });
+    }
+    if (els.adminNavToggle) {
+      els.adminNavToggle.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-admin-nav]");
+        if (button) applyAdminNavLayout(button.dataset.adminNav);
       });
     }
     els.exitSlideshowButton.addEventListener("click", () => {
       routeTo("view");
     });
+    if (els.slideshowPlayButton) {
+      els.slideshowPlayButton.addEventListener("click", () => {
+        slideshowPaused = !slideshowPaused;
+        startSlideshow();
+      });
+    }
+    if (els.slideshowMealButton) {
+      els.slideshowMealButton.addEventListener("click", () => {
+        slideshowMealOverride = !slideshowMealVisible();
+        renderSlideshow();
+      });
+    }
+    if (els.slideshowDots) {
+      els.slideshowDots.addEventListener("click", (event) => {
+        const dot = event.target.closest("[data-slide-index]");
+        if (!dot) return;
+        jumpSlideshow(Number(dot.dataset.slideIndex));
+      });
+    }
     if (els.wallpaperName) {
       els.wallpaperName.addEventListener("input", () => {
         const settings = readWallpaperControls();
@@ -3353,7 +3503,9 @@
     currentRoute = isBoardMode ? "view" : routeFromPath();
     applyDeveloperMode();
     initControls();
-    applyBoardTheme();
+    applyTheme();
+    applyHomeVariant();
+    applyAdminNavLayout();
     bindEvents();
 
     if (typeof restoreAdminSession === "function") {
