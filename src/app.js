@@ -27,6 +27,7 @@
   let slideshowTimer = null;
   let slideshowRefreshTimer = null;
   let slideshowToastTimer = null;
+  let slideshowPaused = false;
   let globalStatusTimer = null;
   let mainEggToastTimer = null;
   let mainEggResetTimer = null;
@@ -56,6 +57,9 @@
   const WALLPAPER_DAYS_KEY = "wallpaper-days";
   const WALLPAPER_GRADES_KEY = "wallpaper-grades";
   const DEV_MODE_KEY = "timetable-dev-mode";
+  const THEME_KEY = "timetable-theme";
+  const HOME_VARIANT_KEY = "timetable-home-variant";
+  const ADMIN_NAV_KEY = "timetable-admin-nav";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
   const ROLE_PERMISSIONS = {
     save_state: ["dev", "manager", "teacher"],
@@ -89,11 +93,17 @@
     rangeLabel: $("#rangeLabel"),
     viewClass: $("#viewClass"),
     boardThemeButton: $("#boardThemeButton"),
+    themeButton: $("#themeButton"),
+    homeVariantToggle: $("#homeVariantToggle"),
+    variantNote: $("#variantNote"),
+    mobileSchedule: $("#mobileSchedule"),
     dayTabs: $("#dayTabs"),
     viewSchedule: $("#viewSchedule"),
     slideshowTitle: $("#slideshowTitle"),
     slideshowMeta: $("#slideshowMeta"),
     slideshowStage: $("#slideshowStage"),
+    slideshowDots: $("#slideshowDots"),
+    slideshowPlayButton: $("#slideshowPlayButton"),
     exitSlideshowButton: $("#exitSlideshowButton"),
     wallpaperName: $("#wallpaperName"),
     wallpaperSubjects: $("#wallpaperSubjects"),
@@ -103,6 +113,7 @@
     wallpaperAutomation: $("#wallpaperAutomation"),
     loginPanel: $("#loginPanel"),
     adminWorkspace: $("#adminWorkspace"),
+    adminNavToggle: $("#adminNavToggle"),
     adminUsername: $("#adminUsername"),
     adminPassword: $("#adminPassword"),
     adminRememberMe: $("#adminRememberMe"),
@@ -110,6 +121,11 @@
     logoutButton: $("#logoutButton"),
     loginMessage: $("#loginMessage"),
     adminMessage: $("#adminMessage"),
+    confirmDialog: $("#confirmDialog"),
+    confirmDialogTitle: $("#confirmDialogTitle"),
+    confirmDialogMessage: $("#confirmDialogMessage"),
+    confirmDialogOk: $("#confirmDialogOk"),
+    confirmDialogCancel: $("#confirmDialogCancel"),
     adminUserBadge: $("#adminUserBadge"),
     lastSaveStatus: $("#lastSaveStatus"),
     baseWeekday: $("#baseWeekday"),
@@ -139,6 +155,7 @@
     saveChangeButton: $("#saveChangeButton"),
     deleteChangeButton: $("#deleteChangeButton"),
     changeList: $("#changeList"),
+    changeListCount: $("#changeListCount"),
     eventDate: $("#eventDate"),
     eventStart: $("#eventStart"),
     eventEnd: $("#eventEnd"),
@@ -566,10 +583,21 @@
   }
 
   function selectAdminTab(tabName) {
-    $$(".admin-tab").forEach((tab) => tab.classList.toggle("is-active", tab.dataset.adminTab === tabName));
-    $$(".admin-panel").forEach((panel) => panel.classList.add("is-hidden"));
+    $$(".admin-tab").forEach((tab) => {
+      const active = tab.dataset.adminTab === tabName;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+    });
+    $$(".admin-panel").forEach((panel) => {
+      panel.classList.add("is-hidden");
+      panel.setAttribute("aria-hidden", "true");
+    });
     const panel = $(`#${tabName}Panel`);
-    if (panel) panel.classList.remove("is-hidden");
+    if (panel) {
+      panel.classList.remove("is-hidden");
+      panel.setAttribute("aria-hidden", "false");
+    }
   }
 
   function renderAdminUserBadge() {
@@ -711,7 +739,10 @@
     els.adminPage.classList.toggle("is-hidden", route !== "admin");
     document.body.classList.toggle("slideshow-mode", route === "slideshow");
     $$(".nav-button").forEach((button) => {
-      button.classList.toggle("is-active", button.dataset.route === route);
+      const active = button.dataset.route === route;
+      button.classList.toggle("is-active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
     });
 
     if (route === "slideshow") {
@@ -790,8 +821,8 @@
   function renderDayTabs(days) {
     els.dayTabs.innerHTML = days
       .map((day) => {
-        const active = day.iso === selectedDate ? " is-active" : "";
-        return `<button class="day-tab${active}" data-date="${day.iso}" type="button">
+        const active = day.iso === selectedDate;
+        return `<button class="day-tab${active ? " is-active" : ""}" data-date="${day.iso}" type="button" role="tab" aria-selected="${active}" tabindex="${active ? 0 : -1}">
           <span>${day.weekLabel}</span>
           <strong>${formatDate(day.iso)} ${day.weekday.label}</strong>
         </button>`;
@@ -974,7 +1005,7 @@
       variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170) / 100 : 1;
     const periodHeaderScale =
       variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170) / 100 : 1;
-    return `<div class="schedule-grid class-columns ${variant}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale};--class-head-font-scale:${classHeaderScale};--period-head-font-scale:${periodHeaderScale}">
+    return `<div class="schedule-grid class-columns ${variant} variant-${homeVariant()}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale};--class-head-font-scale:${classHeaderScale};--period-head-font-scale:${periodHeaderScale}">
       <div class="corner-cell" style="grid-column:1;grid-row:1">교시</div>
       ${classColumns}
       ${periodRows}
@@ -1078,20 +1109,71 @@
     els.viewSchedule.innerHTML = renderBoardWeekGrid(className);
   }
 
-  function boardTheme() {
-    return localStorage.getItem("board-theme") === "light" ? "light" : "dark";
+  function adminNavLayout() {
+    return localStorage.getItem(ADMIN_NAV_KEY) === "tabs" ? "tabs" : "sidebar";
   }
 
-  function applyBoardTheme(theme = boardTheme()) {
-    if (!isBoardMode) return;
-    const light = theme === "light";
-    document.body.classList.toggle("board-light", light);
-    localStorage.setItem("board-theme", light ? "light" : "dark");
-    if (els.boardThemeButton) {
-      els.boardThemeButton.textContent = light ? "☀" : "☾";
-      els.boardThemeButton.setAttribute("aria-label", light ? "라이트 모드 사용 중, 다크 모드로 전환" : "다크 모드 사용 중, 라이트 모드로 전환");
-      els.boardThemeButton.title = light ? "라이트 모드" : "다크 모드";
+  function applyAdminNavLayout(layout = adminNavLayout()) {
+    const sidebar = layout !== "tabs";
+    localStorage.setItem(ADMIN_NAV_KEY, sidebar ? "sidebar" : "tabs");
+    if (els.adminWorkspace) {
+      els.adminWorkspace.classList.toggle("is-sidebar", sidebar);
     }
+    const tabList = document.querySelector(".admin-tabs");
+    if (tabList) {
+      tabList.setAttribute("aria-orientation", sidebar ? "vertical" : "horizontal");
+    }
+    if (els.adminNavToggle) {
+      els.adminNavToggle.querySelectorAll("[data-admin-nav]").forEach((button) => {
+        const active = button.dataset.adminNav === (sidebar ? "sidebar" : "tabs");
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    }
+  }
+
+  function homeVariant() {
+    return localStorage.getItem(HOME_VARIANT_KEY) === "line" ? "line" : "shade";
+  }
+
+  function applyHomeVariant(variant = homeVariant()) {
+    const shade = variant === "shade";
+    localStorage.setItem(HOME_VARIANT_KEY, shade ? "shade" : "line");
+    if (els.homeVariantToggle) {
+      els.homeVariantToggle.querySelectorAll("[data-variant]").forEach((button) => {
+        const active = button.dataset.variant === (shade ? "shade" : "line");
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    }
+    if (els.variantNote) {
+      els.variantNote.textContent = shade
+        ? "변경 셀에 옅은 음영을 함께 넣습니다"
+        : "변경은 셀 왼쪽 선과 라벨로만 표시합니다";
+    }
+  }
+
+  function currentTheme() {
+    return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+  }
+
+  function applyTheme(theme = currentTheme()) {
+    const light = theme === "light";
+    document.documentElement.setAttribute("data-theme", light ? "light" : "dark");
+    localStorage.setItem(THEME_KEY, light ? "light" : "dark");
+    const label = light ? "라이트 모드" : "다크 모드";
+    const hint = light ? "라이트 모드 사용 중, 다크 모드로 전환" : "다크 모드 사용 중, 라이트 모드로 전환";
+    [els.boardThemeButton, els.themeButton].forEach((button) => {
+      if (!button) return;
+      button.textContent = light ? "☀" : "☾";
+      button.setAttribute("aria-label", hint);
+      button.setAttribute("aria-pressed", String(light));
+      button.title = label;
+    });
+  }
+
+  function toggleTheme() {
+    applyTheme(currentTheme() === "light" ? "dark" : "light");
   }
 
   function normalizedSubject(value) {
@@ -1361,8 +1443,8 @@
         <span>이미지 URL</span>
         <input value="${escapeHtml(url)}" readonly />
       </label>
-      <div class="button-row" style="display: flex; flex-wrap: wrap; gap: 8px;">
-        <button class="primary-button" data-setup-ios-shortcut type="button" style="background: linear-gradient(135deg, #a855f7, #7c3aed); border: none; color: white; font-weight: 800;">
+      <div class="button-row wallpaper-automation-actions">
+        <button class="primary-button ios-shortcut-button" data-setup-ios-shortcut type="button">
           📱 iPhone 단축어 등록
         </button>
         <button class="ghost-button" data-copy-wallpaper-url type="button">URL 복사</button>
@@ -1373,11 +1455,11 @@
         <img src="${escapeHtml(url)}" alt="선택한 과목 배경화면 이미지 미리보기" loading="lazy" />
         <figcaption>단축어에서 가져갈 실제 이미지입니다.</figcaption>
       </figure>
-      <ol style="margin-top: 14px;">
+      <ol class="wallpaper-automation-steps">
         <li>위의 <strong>[iPhone 단축어 등록]</strong> 버튼을 누르면 이미지 URL이 클립보드에 자동 복사되며 단축어 추가 화면이 열립니다.</li>
-        <li style="color: #f59e0b; font-weight: 800; margin-top: 4px; margin-bottom: 4px;">⚠️ 매우 중요: 단축어를 추가한 후, 단축어 앱 내 편집 화면으로 진입하여 1번째 줄의 <code>\${YourLink}</code> 라고 써진 부분에 복사된 실제 URL을 꼭 [붙여넣기] 해주세요!</li>
+        <li class="wallpaper-important-step">⚠️ 매우 중요: 단축어를 추가한 후, 단축어 앱 내 편집 화면으로 진입하여 1번째 줄의 <code>\${YourLink}</code> 라고 써진 부분에 복사된 실제 URL을 꼭 [붙여넣기] 해주세요!</li>
         <li>등록을 마친 후, 아래 <strong>[iOS 자동화 설정 가이드]</strong> 버튼을 눌러 일출, 08:40, 14:00 시간에 자동 갱신되도록 예약하면 세팅이 끝납니다!</li>
-        <li style="color: #94a3b8; font-size: 13px; margin-top: 4px;">(최초 1회 실행 시 배경화면 접근 권한을 '항상 허용'해 주시면 됩니다.)</li>
+        <li class="wallpaper-permission-step">(최초 1회 실행 시 배경화면 접근 권한을 '항상 허용'해 주시면 됩니다.)</li>
       </ol>
     </article>`;
   }
@@ -1462,6 +1544,48 @@
     )} ${days[days.length - 1].weekday.label}`;
     renderDayTabs(days);
     els.viewSchedule.innerHTML = renderScheduleGrid(selectedDate, visibleClasses);
+    if (els.mobileSchedule) {
+      els.mobileSchedule.innerHTML = renderMobileList(selectedDate, visibleClasses);
+    }
+  }
+
+  function renderMobileList(date, visibleClasses) {
+    const events = getEventsForDate(date);
+    const merges = getBaseMergesForDate(date);
+    return visibleClasses
+      .map((className) => {
+        const subjects = getSubjectsForDate(date, className);
+        const rows = periods
+          .map((period, index) => {
+            const spanning = events
+              .concat(merges)
+              .find((item) => item.classes.includes(className) && period >= item.start && period <= item.end);
+            if (spanning) {
+              if (period !== spanning.start) return "";
+              const label = spanning.start === spanning.end ? `${spanning.start}` : `${spanning.start}–${spanning.end}`;
+              return `<li class="mobile-row is-event">
+                <span class="mobile-period">${label}</span>
+                <span class="mobile-body"><strong>${escapeHtml(spanning.title || "행사")}</strong>${
+                  spanning.memo ? `<small>${escapeHtml(spanning.memo)}</small>` : ""
+                }</span>
+              </li>`;
+            }
+            const change = getChange(date, className, period);
+            const subject = change ? change.subject : subjects[index];
+            const kind = change ? (isNewChange(change) ? " is-change is-new-change" : " is-change") : "";
+            const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
+            return `<li class="mobile-row${kind}">
+              <span class="mobile-period">${period}</span>
+              <span class="mobile-body"><strong>${escapeHtml(subject || "-")}</strong>${memo}</span>
+            </li>`;
+          })
+          .join("");
+        return `<section class="mobile-class">
+          <h3 class="mobile-class-title">${escapeHtml(className)}</h3>
+          <ul class="mobile-list">${rows}</ul>
+        </section>`;
+      })
+      .join("");
   }
 
   async function fetchSlideshowMeal(force = false) {
@@ -1523,6 +1647,10 @@
     </div>`;
   }
 
+  function slideshowMealVisible() {
+    return Boolean(state.slideshow && state.slideshow.showMeal !== false);
+  }
+
   function slideshowSlides() {
     const day = currentSchoolDay();
     const slides = [];
@@ -1537,7 +1665,7 @@
     }
 
     const notices = state.notices.filter((notice) => notice.title || notice.body);
-    const showMeal = state.slideshow && state.slideshow.showMeal !== false;
+    const showMeal = slideshowMealVisible();
 
     notices.forEach((notice, index) => {
       slides.push({
@@ -1584,6 +1712,20 @@
     els.slideshowTitle.textContent = slide.title;
     els.slideshowMeta.textContent = slide.meta;
     els.slideshowStage.innerHTML = slide.html;
+    renderSlideshowControls(slides.length);
+  }
+
+  function renderSlideshowControls(slideCount) {
+    if (els.slideshowDots) {
+      els.slideshowDots.innerHTML = Array.from({ length: slideCount }, (_, index) => {
+        const active = index === slideshowIndex;
+        return `<button class="slideshow-dot${active ? " is-active" : ""}" data-slide-index="${index}" type="button" role="tab" aria-selected="${active}"${active ? ' aria-current="page"' : ""} aria-label="슬라이드 ${index + 1}로 이동" tabindex="${active ? 0 : -1}"></button>`;
+      }).join("");
+    }
+    if (els.slideshowPlayButton) {
+      els.slideshowPlayButton.textContent = slideshowPaused ? "재생" : "일시정지";
+      els.slideshowPlayButton.setAttribute("aria-pressed", String(slideshowPaused));
+    }
   }
 
   function showSlideshowToast(message) {
@@ -1640,7 +1782,7 @@
     fetchSlideshowMeal();
     renderSlideshow();
     const seconds = Math.max(3, Number(state.slideshow.intervalSeconds) || 8);
-    if (slideshowSlides().length > 1) {
+    if (!slideshowPaused && slideshowSlides().length > 1) {
       slideshowTimer = window.setInterval(() => {
         moveSlideshow(1);
       }, seconds * 1000);
@@ -1766,6 +1908,9 @@
         return weekdayForDate(date).key === changeFilterWeekday;
       })
       .sort(([a], [b]) => a.localeCompare(b));
+    if (els.changeListCount) {
+      els.changeListCount.textContent = `등록된 변경 ${entries.length}건`;
+    }
     const emptyLabel =
       changeFilterWeekday === "all"
         ? "등록된 단일 변경이 없습니다."
@@ -1775,22 +1920,27 @@
           .map(([key, change]) => {
             const [date, className, period] = key.split("__");
             const weekdayLabel = weekdayLabelForDate(date);
-            const originalSubject = getSubjectsForDate(date, className)[Number(period) - 1] || "-";
-            const reason = change.memo ? escapeHtml(change.memo) : "없음";
-            const typeLabel = isNewChange(change) ? "신설 변경" : "1:1 변경";
-            const changeSummary = isNewChange(change)
-              ? `신설 -> ${escapeHtml(change.subject)}`
-              : `${escapeHtml(originalSubject)} -> ${escapeHtml(change.subject)}`;
-            return `<article class="list-item">
-              <div>
-                <strong>일시: ${date} ${weekdayLabel}요일 · 학급: ${className} · 교시: ${period}교시 · ${typeLabel}</strong>
-                <span>${changeSummary} · 사유: ${reason}</span>
-              </div>
-              <button class="text-button" data-revert-change="${escapeHtml(key)}" type="button">되돌리기</button>
-            </article>`;
+            const isNew = isNewChange(change);
+            const typeLabel = isNew ? "신설" : "1:1";
+            const typeClass = isNew ? "is-new" : "is-swap";
+            const reason = change.memo ? escapeHtml(change.memo) : "";
+            return `<tr>
+              <td>${date} ${weekdayLabel}</td>
+              <td>${escapeHtml(className)}</td>
+              <td>${period}교시</td>
+              <td class="table-strong">${escapeHtml(change.subject)}</td>
+              <td class="table-type ${typeClass}">${typeLabel}</td>
+              <td>${reason}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="table-action-button" data-edit-change="${escapeHtml(key)}" type="button">수정</button>
+                  <button class="table-action-button is-danger" data-revert-change="${escapeHtml(key)}" type="button">삭제</button>
+                </div>
+              </td>
+            </tr>`;
           })
           .join("")
-      : `<p class="empty">${emptyLabel}</p>`;
+      : `<tr><td colspan="7" class="table-empty">${emptyLabel}</td></tr>`;
   }
 
   function renderEventClassChecks() {
@@ -2067,7 +2217,7 @@
             return `<article class="list-item${revoked || expired ? " is-disabled" : ""}">
               <div>
                 <strong>${escapeHtml(key.name)}</strong>
-                <span>yj_live_${escapeHtml(key.keyPrefix)}_… · ${status} · 분당 ${Number(key.rateLimitPerMinute)}회</span>
+                <span>yj_live_${escapeHtml(key.keyPrefix)}_… · ${status} · ${Number(key.rateLimitPerMinute) > 0 ? `분당 ${Number(key.rateLimitPerMinute)}회` : "무제한 (dev 전용)"}</span>
                 ${application ? `<span>이메일 인증 신청 · ${escapeHtml(application.email)} · ${escapeHtml(application.phone)}</span>` : `<span>dev 직접 발급</span>`}
                 <span>요청 ${Number(key.requestCount || 0).toLocaleString()}회 · 마지막 사용 ${formatDateTime(key.lastUsedAt)} · 만료 ${formatDateTime(key.expiresAt)}</span>
               </div>
@@ -2319,8 +2469,40 @@
     }
   }
 
-  function confirmAction(message) {
-    return window.confirm(message);
+  function confirmAction(message, { title = "확인", confirmLabel = "확인", cancelLabel = "취소" } = {}) {
+    const overlay = els.confirmDialog;
+    if (!overlay) return Promise.resolve(window.confirm(message));
+    return new Promise((resolve) => {
+      els.confirmDialogTitle.textContent = title;
+      els.confirmDialogMessage.textContent = message;
+      els.confirmDialogOk.textContent = confirmLabel;
+      els.confirmDialogCancel.textContent = cancelLabel;
+      const previouslyFocused = document.activeElement;
+      overlay.classList.remove("is-hidden");
+      els.confirmDialogOk.focus();
+
+      const finish = (result) => {
+        overlay.classList.add("is-hidden");
+        els.confirmDialogOk.removeEventListener("click", onOk);
+        els.confirmDialogCancel.removeEventListener("click", onCancel);
+        overlay.removeEventListener("click", onOverlayClick);
+        document.removeEventListener("keydown", onKeydown, true);
+        if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+        resolve(result);
+      };
+      const onOk = () => finish(true);
+      const onCancel = () => finish(false);
+      const onOverlayClick = (event) => {
+        if (event.target === overlay) finish(false);
+      };
+      const onKeydown = (event) => {
+        if (event.key === "Escape") finish(false);
+      };
+      els.confirmDialogOk.addEventListener("click", onOk);
+      els.confirmDialogCancel.addEventListener("click", onCancel);
+      overlay.addEventListener("click", onOverlayClick);
+      document.addEventListener("keydown", onKeydown, true);
+    });
   }
 
   function showGlobalStatus(message, type = "info", options = {}) {
@@ -2598,6 +2780,22 @@
       selectedDate = button.dataset.date;
       renderView();
     });
+    els.dayTabs.addEventListener("keydown", (event) => {
+      const tab = event.target.closest("[data-date]");
+      if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const tabs = [...els.dayTabs.querySelectorAll("[data-date]")];
+      const currentIndex = tabs.indexOf(tab);
+      const nextIndex =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? tabs.length - 1
+            : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+      selectedDate = tabs[nextIndex].dataset.date;
+      renderView();
+      els.dayTabs.querySelector(`[data-date="${selectedDate}"]`)?.focus();
+    });
 
     els.todayLabel.addEventListener("click", () => {
       if (currentRoute !== "view") return;
@@ -2621,14 +2819,54 @@
       }
       renderView();
     });
-    if (els.boardThemeButton) {
-      els.boardThemeButton.addEventListener("click", () => {
-        applyBoardTheme(boardTheme() === "light" ? "dark" : "light");
+    [els.boardThemeButton, els.themeButton].forEach((button) => {
+      if (button) button.addEventListener("click", toggleTheme);
+    });
+    if (els.homeVariantToggle) {
+      els.homeVariantToggle.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-variant]");
+        if (!button) return;
+        applyHomeVariant(button.dataset.variant);
+        renderView();
+      });
+    }
+    if (els.adminNavToggle) {
+      els.adminNavToggle.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-admin-nav]");
+        if (button) applyAdminNavLayout(button.dataset.adminNav);
       });
     }
     els.exitSlideshowButton.addEventListener("click", () => {
       routeTo("view");
     });
+    if (els.slideshowPlayButton) {
+      els.slideshowPlayButton.addEventListener("click", () => {
+        slideshowPaused = !slideshowPaused;
+        startSlideshow();
+      });
+    }
+    if (els.slideshowDots) {
+      els.slideshowDots.addEventListener("click", (event) => {
+        const dot = event.target.closest("[data-slide-index]");
+        if (!dot) return;
+        jumpSlideshow(Number(dot.dataset.slideIndex));
+      });
+      els.slideshowDots.addEventListener("keydown", (event) => {
+        const dot = event.target.closest("[data-slide-index]");
+        if (!dot || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const slideCount = slideshowSlides().length;
+        const currentIndex = Number(dot.dataset.slideIndex);
+        const nextIndex =
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? slideCount - 1
+              : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + slideCount) % slideCount;
+        jumpSlideshow(nextIndex);
+        els.slideshowDots.querySelector(`[data-slide-index="${nextIndex}"]`)?.focus();
+      });
+    }
     if (els.wallpaperName) {
       els.wallpaperName.addEventListener("input", () => {
         const settings = readWallpaperControls();
@@ -2725,6 +2963,24 @@
         }
         if (button.dataset.adminTab === "apiKeys") refreshApiKeys();
       });
+      button.addEventListener("keydown", (event) => {
+        // Sidebar mode stacks tabs vertically, so Up/Down feels native there;
+        // Left/Right keeps working everywhere (including top-tabs mode).
+        const forward = ["ArrowRight", "ArrowDown"];
+        const backward = ["ArrowLeft", "ArrowUp"];
+        if (![...forward, ...backward, "Home", "End"].includes(event.key)) return;
+        const tabs = $$(".admin-tab").filter((tab) => !tab.hidden && !tab.disabled);
+        const currentIndex = tabs.indexOf(button);
+        if (currentIndex < 0) return;
+        event.preventDefault();
+        let nextIndex = currentIndex;
+        if (event.key === "Home") nextIndex = 0;
+        else if (event.key === "End") nextIndex = tabs.length - 1;
+        else if (forward.includes(event.key)) nextIndex = (currentIndex + 1) % tabs.length;
+        else nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        tabs[nextIndex].click();
+        tabs[nextIndex].focus();
+      });
     });
 
     els.refreshApiKeysButton.addEventListener("click", refreshApiKeys);
@@ -2803,8 +3059,8 @@
         showMessage(els.adminMessage, "사용처 이름을 2자 이상 입력하세요.");
         return;
       }
-      if (!Number.isInteger(rateLimitPerMinute) || rateLimitPerMinute < 1 || rateLimitPerMinute > 1000) {
-        showMessage(els.adminMessage, "분당 요청 한도는 1~1000 사이 정수로 입력하세요.");
+      if (!Number.isInteger(rateLimitPerMinute) || rateLimitPerMinute < 0 || rateLimitPerMinute > 60) {
+        showMessage(els.adminMessage, "분당 요청 한도는 0(무제한, dev 전용)~60 사이 정수로 입력하세요.");
         return;
       }
       setControlDisabled(els.createApiKeyButton, true);
@@ -2837,7 +3093,7 @@
       const button = event.target.closest("[data-revoke-api-key]");
       if (!button || !ensurePermission("manage_api_keys", "API key 관리")) return;
       const key = apiKeys.find((item) => item.id === button.dataset.revokeApiKey);
-      if (!key || !confirmAction(`${key.name} API key를 폐기할까요? 폐기 후 복구할 수 없습니다.`)) return;
+      if (!key || !(await confirmAction(`${key.name} API key를 폐기할까요? 폐기 후 복구할 수 없습니다.`))) return;
       setControlDisabled(button, true);
       const result = await apiKeysRequest({ action: "revoke", id: key.id });
       if (!result || !result.ok) {
@@ -2952,7 +3208,7 @@
         showMessage(els.adminMessage, "manager는 dev 계정을 비활성화할 수 없습니다.");
         return;
       }
-      if (!confirmAction(`${selectedAccount.username} 계정을 비활성화할까요?`)) return;
+      if (!(await confirmAction(`${selectedAccount.username} 계정을 비활성화할까요?`))) return;
       const result = await adminAccountsRequest({
         action: "deactivate",
         account: { userId: selectedAccount.user_id },
@@ -3029,14 +3285,14 @@
       saveState("특별시간표를 저장했습니다.", "update_special");
     });
 
-    els.deleteSpecialButton.addEventListener("click", () => {
+    els.deleteSpecialButton.addEventListener("click", async () => {
       if (!ensurePermission("update_special", "특별시간표 수정")) return;
       const date = els.specialDate.value;
       if (!state.specialSchedules[date]) {
         showMessage(els.adminMessage, "삭제할 특별시간표가 없습니다.");
         return;
       }
-      if (!confirmAction(`${date} 특별시간표를 삭제할까요?`)) return;
+      if (!(await confirmAction(`${date} 특별시간표를 삭제할까요?`))) return;
       delete state.specialSchedules[date];
       renderSpecialEditor();
       saveState("특별시간표를 삭제했습니다.", "update_special");
@@ -3050,11 +3306,11 @@
       renderSpecialEditor();
     });
 
-    els.baseMergeList.addEventListener("click", (event) => {
+    els.baseMergeList.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-delete-base-merge]");
       if (!button) return;
       if (!ensurePermission("update_base_merge", "기본 병합 수정")) return;
-      if (!confirmAction("기본 병합을 삭제할까요?")) return;
+      if (!(await confirmAction("기본 병합을 삭제할까요?"))) return;
       state.baseMerges = state.baseMerges.filter((merge) => merge.id !== button.dataset.deleteBaseMerge);
       saveState("기본 병합을 삭제했습니다.", "update_base_merge");
     });
@@ -3078,23 +3334,38 @@
       saveState("단일교과 변경을 저장했습니다.", "update_change");
     });
 
-    els.deleteChangeButton.addEventListener("click", () => {
+    els.deleteChangeButton.addEventListener("click", async () => {
       if (!ensurePermission("update_change", "단일교과 변경")) return;
       const key = changeKey(els.changeDate.value, els.changeClass.value, els.changePeriod.value);
       if (!state.changes[key]) {
         showMessage(els.adminMessage, "삭제할 단일 변경이 없습니다.");
         return;
       }
-      if (!confirmAction("해당 단일교과 변경을 삭제할까요?")) return;
+      if (!(await confirmAction("해당 단일교과 변경을 삭제할까요?"))) return;
       delete state.changes[key];
       saveState("해당 단일 변경을 삭제했습니다.", "update_change");
     });
 
-    els.changeList.addEventListener("click", (event) => {
+    els.changeList.addEventListener("click", async (event) => {
+      const editButton = event.target.closest("[data-edit-change]");
+      if (editButton) {
+        const [date, className, period] = editButton.dataset.editChange.split("__");
+        const change = state.changes[editButton.dataset.editChange];
+        if (!change) return;
+        els.changeDate.value = date;
+        els.changeClass.value = className;
+        els.changePeriod.value = period;
+        els.changeSubject.value = change.subject;
+        els.changeMemo.value = change.memo || "";
+        els.changeType.value = isNewChange(change) ? "new" : "swap";
+        renderChangeDateHint();
+        els.changeSubject.focus();
+        return;
+      }
       const button = event.target.closest("[data-revert-change]");
       if (!button) return;
       if (!ensurePermission("update_change", "단일교과 변경")) return;
-      if (!confirmAction("해당 교과 변경을 되돌릴까요?")) return;
+      if (!(await confirmAction("해당 교과 변경을 되돌릴까요?"))) return;
       delete state.changes[button.dataset.revertChange];
       saveState("해당 교과 변경을 되돌렸습니다.", "update_change");
     });
@@ -3143,7 +3414,7 @@
       showMessage(els.adminMessage, "행사 수정을 취소했습니다.");
     });
 
-    els.eventList.addEventListener("click", (event) => {
+    els.eventList.addEventListener("click", async (event) => {
       const editButton = event.target.closest("[data-edit-event]");
       if (editButton) {
         loadEventEditor(editButton.dataset.editEvent);
@@ -3152,7 +3423,7 @@
       const button = event.target.closest("[data-delete-event]");
       if (!button) return;
       if (!ensurePermission("update_event", "행사 수정")) return;
-      if (!confirmAction("행사를 삭제할까요?")) return;
+      if (!(await confirmAction("행사를 삭제할까요?"))) return;
       state.events = state.events.filter((item) => item.id !== button.dataset.deleteEvent);
       if (selectedEventId === button.dataset.deleteEvent) {
         resetEventForm();
@@ -3253,11 +3524,11 @@
       saveState("안내사항을 저장했습니다.", "update_notice");
     });
 
-    els.noticeList.addEventListener("click", (event) => {
+    els.noticeList.addEventListener("click", async (event) => {
       const deleteButton = event.target.closest("[data-delete-notice]");
       if (deleteButton) {
         if (!ensurePermission("update_notice", "안내사항 수정")) return;
-        if (!confirmAction("안내사항을 삭제할까요?")) return;
+        if (!(await confirmAction("안내사항을 삭제할까요?"))) return;
         state.notices = state.notices.filter((notice) => notice.id !== deleteButton.dataset.deleteNotice);
         if (selectedNoticeId === deleteButton.dataset.deleteNotice) {
           selectedNoticeId = state.notices[0] ? state.notices[0].id : "";
@@ -3353,7 +3624,9 @@
     currentRoute = isBoardMode ? "view" : routeFromPath();
     applyDeveloperMode();
     initControls();
-    applyBoardTheme();
+    applyTheme();
+    applyHomeVariant();
+    applyAdminNavLayout();
     bindEvents();
 
     if (typeof restoreAdminSession === "function") {
