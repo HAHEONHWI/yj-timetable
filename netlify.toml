@@ -1,2 +1,6 @@
+[build]
+  command = "sh scripts/prepare-netlify-deploy.sh"
+  publish = "netlify-deploy"
+
 [functions]
   included_files = ["netlify/functions/fonts/**"]
