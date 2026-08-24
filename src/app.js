@@ -3628,7 +3628,7 @@
       const password = els.slideReloadPassword ? els.slideReloadPassword.value.trim() : "";
       if (password) {
         const keepSession = localStorage.getItem("timetable-admin-keep-session") === "true";
-        const result = await verifyAdminPassword(profile.username, password, keepSession);
+        const result = await verifyAdminPassword(profile.username, password, keepSession, { allowLegacyFallback: false });
         if (!result.ok) {
           showMessage(els.adminMessage, "비밀번호가 맞지 않습니다.");
           return;
