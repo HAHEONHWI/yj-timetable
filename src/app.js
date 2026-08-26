@@ -1934,13 +1934,13 @@
   function applyBaseTeacherVisibility(visible) {
     els.baseTeacherEditor.classList.toggle("is-hidden", !visible);
     els.saveBaseTeachersButton.classList.toggle("is-hidden", !visible);
+    els.baseTeacherVisibility.textContent = visible ? "표 접기" : "표 펼쳐보기";
   }
 
   function renderBaseTeacherEditor(resyncMode = false) {
     if (resyncMode) {
       els.teacherModeToggle.checked = state.teacherMode === "period";
       const visible = localStorage.getItem(BASE_TEACHER_VISIBLE_KEY) === "true";
-      els.baseTeacherVisibility.value = visible ? "true" : "false";
       applyBaseTeacherVisibility(visible);
     }
     renderSubjectTeacherGrid();
@@ -3080,8 +3080,8 @@
       state.teacherMode = els.teacherModeToggle.checked ? "period" : "subject";
       renderBaseEditor();
     });
-    els.baseTeacherVisibility.addEventListener("change", () => {
-      const visible = els.baseTeacherVisibility.value === "true";
+    els.baseTeacherVisibility.addEventListener("click", () => {
+      const visible = localStorage.getItem(BASE_TEACHER_VISIBLE_KEY) !== "true";
       localStorage.setItem(BASE_TEACHER_VISIBLE_KEY, visible ? "true" : "false");
       applyBaseTeacherVisibility(visible);
     });
