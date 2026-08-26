@@ -63,7 +63,7 @@ function docs(origin: string) {
   const baseUrl = `${origin}/functions/v1/public-api/v1`;
   return {
     name: "용정 시간표 읽기 전용 API",
-    version: "1.1.0",
+    version: "1.2.0",
     authentication: "X-API-Key 헤더",
     endpoints: {
       allTimetables: `${baseUrl}/timetable?date=YYYY-MM-DD`,
@@ -81,7 +81,7 @@ function openApi(origin: string) {
   const server = `${origin}/functions/v1/public-api`;
   return {
     openapi: "3.1.0",
-    info: { title: "용정 시간표 읽기 전용 API", version: "1.1.0" },
+    info: { title: "용정 시간표 읽기 전용 API", version: "1.2.0" },
     servers: [{ url: server }],
     components: {
       securitySchemes: {
