@@ -138,6 +138,8 @@
     importBaseButton: $("#importBaseButton"),
     baseImportMessage: $("#baseImportMessage"),
     baseTeacherSummary: $("#baseTeacherSummary"),
+    baseTeacherEditor: $("#baseTeacherEditor"),
+    saveBaseTeachersButton: $("#saveBaseTeachersButton"),
     specialDate: $("#specialDate"),
     specialDateHint: $("#specialDateHint"),
     specialEditor: $("#specialEditor"),
@@ -674,6 +676,8 @@
     setControlDisabled(els.saveBaseButton, !canBase);
     els.baseImportFiles.forEach((input) => setControlDisabled(input, !canBase));
     setControlDisabled(els.importBaseButton, !canBase);
+    setContainerDisabled("#baseTeacherEditor", !canBase);
+    setControlDisabled(els.saveBaseTeachersButton, !canBase);
     [els.baseMergeStart, els.baseMergeEnd, els.baseMergeTitle, els.baseMergeMemo, els.saveBaseMergeButton].forEach((control) =>
       setControlDisabled(control, !canBaseMerge)
     );
@@ -1853,6 +1857,67 @@
     els.baseTeacherSummary.textContent = classSummaries.join(" / ");
   }
 
+  function classSubjectList(className) {
+    const seen = new Set();
+    const list = [];
+    weekdays.forEach((weekday) => {
+      (state.base[className][weekday.key] || []).forEach((subject) => {
+        const trimmed = (subject || "").trim();
+        if (trimmed && !seen.has(trimmed)) {
+          seen.add(trimmed);
+          list.push(trimmed);
+        }
+      });
+    });
+    return list;
+  }
+
+  function renderBaseTeacherEditor() {
+    const subjectsByClass = Object.fromEntries(classes.map((className) => [className, classSubjectList(className)]));
+    const allSubjects = [];
+    const seenAll = new Set();
+    classes.forEach((className) => {
+      subjectsByClass[className].forEach((subject) => {
+        if (!seenAll.has(subject)) {
+          seenAll.add(subject);
+          allSubjects.push(subject);
+        }
+      });
+    });
+
+    if (allSubjects.length === 0) {
+      els.baseTeacherEditor.innerHTML = `<p class="muted">기본 시간표에 등록된 과목이 없습니다.</p>`;
+      return;
+    }
+
+    const headerCells = classes
+      .map((className, index) => `<div class="special-head" style="grid-column:${index + 2};grid-row:1">${escapeHtml(className)}</div>`)
+      .join("");
+    const rows = allSubjects
+      .map((subject, rowIndex) => {
+        const cells = classes
+          .map((className, classIndex) => {
+            const placement = `grid-column:${classIndex + 2};grid-row:${rowIndex + 2}`;
+            if (!subjectsByClass[className].includes(subject)) {
+              return `<div class="special-input is-disabled" style="${placement}">-</div>`;
+            }
+            const teacher = teacherForSubject(className, subject);
+            return `<div class="special-input" style="${placement}">
+              <input data-teacher-class="${escapeHtml(className)}" data-teacher-subject="${escapeHtml(subject)}" type="text" value="${escapeHtml(teacher)}" placeholder="담당 교사" aria-label="${className} ${subject} 담당 교사" />
+            </div>`;
+          })
+          .join("");
+        return `<div class="special-head" style="grid-column:1;grid-row:${rowIndex + 2}">${escapeHtml(subject)}</div>${cells}`;
+      })
+      .join("");
+
+    els.baseTeacherEditor.innerHTML = `<div class="teacher-grid" style="--class-count:${classes.length};--row-count:${allSubjects.length}">
+      <div class="special-head" style="grid-column:1;grid-row:1">과목</div>
+      ${headerCells}
+      ${rows}
+    </div>`;
+  }
+
   function loadSheetJs() {
     if (window.XLSX) return Promise.resolve(window.XLSX);
     if (sheetJsPromise) return sheetJsPromise;
@@ -2394,6 +2459,7 @@
     updateLastSaveStatus();
     renderBaseEditor();
     renderBaseTeacherSummary();
+    renderBaseTeacherEditor();
     renderSpecialDateHint();
     renderSpecialEditor();
     renderSpecialList();
@@ -3322,6 +3388,18 @@
         });
       });
       saveState("기본 시간표를 저장했습니다.", "update_base");
+    });
+
+    els.saveBaseTeachersButton.addEventListener("click", () => {
+      if (!ensurePermission("update_base", "기본 시간표 수정")) return;
+      const nextTeachers = Object.fromEntries(classes.map((className) => [className, {}]));
+      $$("#baseTeacherEditor input[data-teacher-class]").forEach((input) => {
+        const teacher = input.value.trim();
+        if (!teacher) return;
+        nextTeachers[input.dataset.teacherClass][input.dataset.teacherSubject] = teacher;
+      });
+      state.teachers = nextTeachers;
+      saveState("과목별 담당 교사를 저장했습니다.", "update_base");
     });
 
     els.importBaseButton.addEventListener("click", async () => {
