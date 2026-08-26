@@ -61,6 +61,7 @@
   const HOME_VARIANT_KEY = "timetable-home-variant";
   const ADMIN_NAV_KEY = "timetable-admin-nav";
   const TEACHER_VIEW_KEY = "timetable-teacher-view";
+  const BASE_TEACHER_VISIBLE_KEY = "timetable-base-teacher-visible";
   const SHEETJS_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
   const SHEETJS_INTEGRITY = "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
@@ -144,6 +145,7 @@
     baseImportMessage: $("#baseImportMessage"),
     baseTeacherSummary: $("#baseTeacherSummary"),
     baseTeacherEditor: $("#baseTeacherEditor"),
+    baseTeacherVisibility: $("#baseTeacherVisibility"),
     saveBaseTeachersButton: $("#saveBaseTeachersButton"),
     teacherModeToggle: $("#teacherModeToggle"),
     subjectAbbreviationEditor: $("#subjectAbbreviationEditor"),
@@ -2071,9 +2073,17 @@
     </div>`;
   }
 
+  function applyBaseTeacherVisibility(visible) {
+    els.baseTeacherEditor.classList.toggle("is-hidden", !visible);
+    els.saveBaseTeachersButton.classList.toggle("is-hidden", !visible);
+  }
+
   function renderBaseTeacherEditor(resyncMode = false) {
     if (resyncMode) {
       els.teacherModeToggle.checked = state.teacherMode === "period";
+      const visible = localStorage.getItem(BASE_TEACHER_VISIBLE_KEY) === "true";
+      els.baseTeacherVisibility.value = visible ? "true" : "false";
+      applyBaseTeacherVisibility(visible);
     }
     renderSubjectTeacherGrid();
   }
@@ -3231,6 +3241,11 @@
     els.teacherModeToggle.addEventListener("change", () => {
       state.teacherMode = els.teacherModeToggle.checked ? "period" : "subject";
       renderBaseEditor();
+    });
+    els.baseTeacherVisibility.addEventListener("change", () => {
+      const visible = els.baseTeacherVisibility.value === "true";
+      localStorage.setItem(BASE_TEACHER_VISIBLE_KEY, visible ? "true" : "false");
+      applyBaseTeacherVisibility(visible);
     });
     els.specialDate.addEventListener("change", () => {
       renderSpecialDateHint();

@@ -2328,6 +2328,13 @@ body.board-mode .schedule-shell {
   padding-top: 18px;
 }
 
+.subsection-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-18);
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(140px, 1fr));
