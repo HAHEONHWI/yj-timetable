@@ -1381,6 +1381,150 @@ body.board-mode .schedule-shell {
   opacity: 0.82;
 }
 
+.base-period-fields {
+  display: grid;
+  width: 100%;
+  gap: var(--space-5);
+}
+
+.base-period-fields.has-teacher input:last-child {
+  border-style: dashed;
+  color: var(--muted);
+  font-size: var(--text-12);
+}
+
+.subject-abbreviation-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 1fr) auto;
+  align-items: end;
+  gap: var(--space-12);
+}
+
+.teacher-view-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-18);
+}
+
+.teacher-picker {
+  width: min(100%, 360px);
+}
+
+.teacher-view-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  padding: var(--space-12);
+}
+
+.teacher-view-summary span {
+  border-radius: 999px;
+  background: var(--panel-strong);
+  color: var(--muted);
+  padding: var(--space-6) var(--space-10);
+  font-size: var(--text-14);
+}
+
+.teacher-week-shell {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+}
+
+.teacher-week-grid {
+  display: grid;
+  min-width: 880px;
+  grid-template-columns: 78px repeat(5, minmax(145px, 1fr));
+  grid-template-rows: 48px repeat(9, minmax(76px, auto));
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+.teacher-grid-corner,
+.teacher-day-head,
+.teacher-period-head,
+.teacher-week-cell {
+  min-width: 0;
+  background: var(--panel);
+}
+
+.teacher-grid-corner,
+.teacher-day-head,
+.teacher-period-head {
+  display: grid;
+  place-items: center;
+  background: var(--panel-strong);
+  color: var(--muted);
+  text-align: center;
+}
+
+.teacher-day-head {
+  grid-auto-flow: column;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.teacher-day-head strong,
+.teacher-period-head strong {
+  color: var(--ink);
+}
+
+.teacher-week-cell {
+  display: grid;
+  align-content: stretch;
+  gap: 1px;
+  padding: var(--space-4);
+}
+
+.teacher-lesson {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-height: 66px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-strong);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.teacher-lesson span {
+  color: var(--muted);
+  font-size: var(--text-12);
+}
+
+.teacher-lesson.is-change {
+  background: linear-gradient(var(--change-bg-strong), var(--change-bg-strong)), var(--panel);
+  color: var(--change-text);
+}
+
+.teacher-lesson.is-change::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: var(--st-change);
+}
+
+.teacher-lesson.is-new-change {
+  background: linear-gradient(var(--new-change-bg-strong), var(--new-change-bg-strong)), var(--panel);
+  color: var(--new-change-text);
+}
+
+.teacher-lesson.is-new-change::before {
+  background: var(--st-new);
+}
+
+.teacher-empty {
+  place-self: center;
+  color: var(--line-strong);
+}
+
 /* The grid paints its gutters with --line, so every cell needs an opaque
    ground; status tints are layered over it rather than replacing it. */
 .lesson-cell.is-change {
@@ -1493,6 +1637,14 @@ body.board-mode .schedule-shell {
 
 .slideshow-grid .lesson-cell small {
   font-size: clamp(11px, 0.9vw, 16px);
+}
+
+.slideshow-grid .lesson-cell small.lesson-teacher {
+  font-size: clamp(
+    calc(11px * var(--teacher-font-scale, 1)),
+    calc(0.9vw * var(--teacher-font-scale, 1)),
+    calc(22px * var(--teacher-font-scale, 1))
+  );
 }
 
 .slideshow-grid .event-cell,
@@ -2247,6 +2399,10 @@ textarea {
   gap: 1px;
   grid-template-columns: 76px repeat(var(--class-count), minmax(116px, 1fr));
   grid-template-rows: 42px repeat(9, 58px);
+}
+
+.special-grid.has-teacher-row {
+  grid-template-rows: 42px repeat(9, 96px);
 }
 
 .special-head,

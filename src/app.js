@@ -60,6 +60,7 @@
   const THEME_KEY = "timetable-theme";
   const HOME_VARIANT_KEY = "timetable-home-variant";
   const ADMIN_NAV_KEY = "timetable-admin-nav";
+  const TEACHER_VIEW_KEY = "timetable-teacher-view";
   const SHEETJS_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
   const SHEETJS_INTEGRITY = "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
@@ -85,6 +86,10 @@
 
   const els = {
     viewPage: $("#viewPage"),
+    teachersPage: $("#teachersPage"),
+    teacherViewSelect: $("#teacherViewSelect"),
+    teacherViewSummary: $("#teacherViewSummary"),
+    teacherWeekSchedule: $("#teacherWeekSchedule"),
     slideshowPage: $("#slideshowPage"),
     wallpaperPage: $("#wallpaperPage"),
     downloadPage: $("#downloadPage"),
@@ -140,6 +145,12 @@
     baseTeacherSummary: $("#baseTeacherSummary"),
     baseTeacherEditor: $("#baseTeacherEditor"),
     saveBaseTeachersButton: $("#saveBaseTeachersButton"),
+    teacherModeToggle: $("#teacherModeToggle"),
+    subjectAbbreviationEditor: $("#subjectAbbreviationEditor"),
+    subjectAbbreviationSubject: $("#subjectAbbreviationSubject"),
+    subjectAbbreviationValue: $("#subjectAbbreviationValue"),
+    subjectAbbreviationMessage: $("#subjectAbbreviationMessage"),
+    saveSubjectAbbreviationsButton: $("#saveSubjectAbbreviationsButton"),
     specialDate: $("#specialDate"),
     specialDateHint: $("#specialDateHint"),
     specialEditor: $("#specialEditor"),
@@ -196,10 +207,13 @@
     slideClassHeaderFontScaleLabel: $("#slideClassHeaderFontScaleLabel"),
     slidePeriodHeaderFontScale: $("#slidePeriodHeaderFontScale"),
     slidePeriodHeaderFontScaleLabel: $("#slidePeriodHeaderFontScaleLabel"),
+    slideTeacherFontScale: $("#slideTeacherFontScale"),
+    slideTeacherFontScaleLabel: $("#slideTeacherFontScaleLabel"),
     slideInterval: $("#slideInterval"),
     slideRefreshInterval: $("#slideRefreshInterval"),
     slideScheduleDate: $("#slideScheduleDate"),
     slideShowMeal: $("#slideShowMeal"),
+    slideShowTeacher: $("#slideShowTeacher"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
     forceSlideReloadPermission: $("#forceSlideReloadPermission"),
@@ -384,8 +398,33 @@
     return state.base[className][weekdayForDate(date).key] || periods.map(() => "");
   }
 
+  function canonicalSubjectName(subject) {
+    const value = String(subject || "").trim();
+    if (!value) return "";
+    const match = Object.entries(state.subjectAbbreviations || {}).find(([, abbreviation]) => abbreviation === value);
+    return match ? match[0] : value;
+  }
+
   function teacherForSubject(className, subject) {
-    return (state.teachers && state.teachers[className] && state.teachers[className][subject]) || "";
+    const canonicalSubject = canonicalSubjectName(subject);
+    return (state.teachers && state.teachers[className] && state.teachers[className][canonicalSubject]) || "";
+  }
+
+  function subjectDisplayLabel(subject) {
+    return (subject && state.subjectAbbreviations && state.subjectAbbreviations[subject]) || subject || "";
+  }
+
+  function resolveTeacherForCell(date, className, periodIndex, subject, hasOverride) {
+    if (state.teacherMode === "period" && !hasOverride) {
+      const special = state.specialSchedules[date] && state.specialSchedules[date][className];
+      if (!Array.isArray(special)) {
+        const weekdayKey = weekdayForDate(date).key;
+        const teacherRow = state.teachersByPeriod[className] && state.teachersByPeriod[className][weekdayKey];
+        const teacher = teacherRow && teacherRow[periodIndex];
+        if (teacher) return teacher;
+      }
+    }
+    return teacherForSubject(className, subject);
   }
 
   function showMessage(target, text) {
@@ -494,6 +533,7 @@
   function routeFromPath() {
     const path = location.pathname.replace(/\/+$/, "") || "/";
     if (path === "/admin") return "admin";
+    if (path === "/teachers") return "teachers";
     if (path === "/slide" || path === "/slideshow") return "slideshow";
     if (path === "/wallpaper") return "wallpaper";
     if (path === "/download" || path === "/downloads") return "download";
@@ -504,6 +544,7 @@
 
   function pathForRoute(route) {
     if (route === "admin") return "/admin";
+    if (route === "teachers") return "/teachers";
     if (route === "slideshow") return "/slide";
     if (route === "wallpaper") return "/wallpaper";
     if (route === "download") return "/download";
@@ -515,6 +556,7 @@
   function titleForRoute(route) {
     const labels = {
       view: "조회",
+      teachers: "교사 조회",
       slideshow: "슬라이드쇼",
       wallpaper: "배경화면",
       download: "다운로드",
@@ -678,6 +720,9 @@
     setControlDisabled(els.importBaseButton, !canBase);
     setContainerDisabled("#baseTeacherEditor", !canBase);
     setControlDisabled(els.saveBaseTeachersButton, !canBase);
+    setControlDisabled(els.teacherModeToggle, !canBase);
+    setContainerDisabled("#subjectAbbreviationEditor", !canBase);
+    setControlDisabled(els.saveSubjectAbbreviationsButton, !canBase);
     [els.baseMergeStart, els.baseMergeEnd, els.baseMergeTitle, els.baseMergeMemo, els.saveBaseMergeButton].forEach((control) =>
       setControlDisabled(control, !canBaseMerge)
     );
@@ -694,9 +739,11 @@
       els.slideClassHeaderFontScale,
       els.slidePeriodHeaderFontScale,
       els.slideEventFontScale,
+      els.slideTeacherFontScale,
       els.eventCustomFontEnabled,
       els.eventCustomFontScale,
     ].forEach((control) => setControlDisabled(control, !canSlideTypography));
+    setControlDisabled(els.slideTeacherFontScale, !canSlideTypography || !Boolean(state.slideshow && state.slideshow.showTeacher));
     setControlDisabled(els.slideReloadPassword, !canForceReload);
     setControlDisabled(els.forceSlideReloadButton, !canForceReload);
     if (els.forceSlideReloadPermission) {
@@ -750,6 +797,7 @@
     currentRoute = route;
     document.title = titleForRoute(route);
     els.viewPage.classList.toggle("is-hidden", route !== "view");
+    els.teachersPage.classList.toggle("is-hidden", route !== "teachers");
     els.slideshowPage.classList.toggle("is-hidden", route !== "slideshow");
     els.wallpaperPage.classList.toggle("is-hidden", route !== "wallpaper");
     els.downloadPage.classList.toggle("is-hidden", route !== "download");
@@ -763,6 +811,7 @@
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     });
+    if (route === "teachers") renderTeacherView();
 
     if (route === "slideshow") {
       startSlideshow();
@@ -1010,10 +1059,11 @@
             const subject = change ? change.subject : getSubjectsForDate(date, className)[index];
             const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
             const changeClass = change ? ` is-change${isNewChange(change) ? " is-new-change" : ""}` : "";
-            const teacher = variant === "slideshow-grid" ? "" : teacherForSubject(className, subject);
+            const showTeacher = variant !== "slideshow-grid" || Boolean(state.slideshow && state.slideshow.showTeacher);
+            const teacher = showTeacher ? resolveTeacherForCell(date, className, index, subject, Boolean(change)) : "";
             const teacherLabel = teacher ? `<small class="lesson-teacher">${escapeHtml(teacher)}</small>` : "";
             return `<div class="lesson-cell${changeClass}" style="${placement}">
-              <strong>${escapeHtml(subject || "-")}</strong>${teacherLabel}${memo}
+              <strong>${escapeHtml(subjectDisplayLabel(subject) || "-")}</strong>${teacherLabel}${memo}
             </div>`;
           })
           .join("");
@@ -1026,7 +1076,9 @@
       variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170) / 100 : 1;
     const periodHeaderScale =
       variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170) / 100 : 1;
-    return `<div class="schedule-grid class-columns ${variant} variant-${homeVariant()}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale};--class-head-font-scale:${classHeaderScale};--period-head-font-scale:${periodHeaderScale}">
+    const teacherScale =
+      variant === "slideshow-grid" ? clamp(Number(state.slideshow && state.slideshow.teacherFontScale) || 100, 60, 150) / 100 : 1;
+    return `<div class="schedule-grid class-columns ${variant} variant-${homeVariant()}" style="--class-count:${visibleClasses.length};--lesson-font-scale:${lessonScale};--class-head-font-scale:${classHeaderScale};--period-head-font-scale:${periodHeaderScale};--teacher-font-scale:${teacherScale}">
       <div class="corner-cell" style="grid-column:1;grid-row:1">교시</div>
       ${classColumns}
       ${periodRows}
@@ -1054,7 +1106,7 @@
       const changeTypeClass = isNewChange(change) ? " is-new-change" : "";
       const changeMeta = isNewChange(change) ? "신설 수업" : `${escapeHtml(original)} 변경`;
       return `<div class="board-lesson is-change${changeTypeClass}${isToday ? " is-today" : ""}">
-        <strong>${escapeHtml(change.subject)}</strong>
+        <strong>${escapeHtml(subjectDisplayLabel(change.subject))}</strong>
         <small>${changeMeta}${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
       </div>`;
     }
@@ -1071,7 +1123,7 @@
 
     const subject = getSubjectsForDate(date, className)[periodIndex] || "-";
     return `<div class="board-lesson${isToday ? " is-today" : ""}">
-      <strong>${escapeHtml(subject)}</strong>
+      <strong>${escapeHtml(subjectDisplayLabel(subject))}</strong>
     </div>`;
   }
 
@@ -1570,6 +1622,94 @@
     }
   }
 
+  function teacherNames() {
+    const names = new Set();
+    classes.forEach((className) => {
+      Object.values((state.teachers && state.teachers[className]) || {}).forEach((teacher) => {
+        if (teacher) names.add(String(teacher).trim());
+      });
+      Object.values((state.teachersByPeriod && state.teachersByPeriod[className]) || {}).forEach((teacherRow) => {
+        if (!Array.isArray(teacherRow)) return;
+        teacherRow.forEach((teacher) => {
+          if (teacher) names.add(String(teacher).trim());
+        });
+      });
+    });
+    return [...names].filter(Boolean).sort((first, second) => first.localeCompare(second, "ko"));
+  }
+
+  function currentSchoolWeek() {
+    const monday = mondayOf(new Date());
+    return weekdays.map((weekday, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      return { ...weekday, iso: toISO(date) };
+    });
+  }
+
+  function teacherLessonsForCell(teacher, date, period, periodIndex) {
+    return classes.flatMap((className) => {
+      const change = getChange(date, className, period);
+      if (hasEventCovering(date, className, period)) return [];
+      if (!change && hasBaseMergeCovering(date, className, period)) return [];
+      const subject = change ? change.subject : getSubjectsForDate(date, className)[periodIndex];
+      const resolvedTeacher = resolveTeacherForCell(date, className, periodIndex, subject, Boolean(change));
+      if (!subject || resolvedTeacher !== teacher) return [];
+      return [{ className, subject, change }];
+    });
+  }
+
+  function renderTeacherView() {
+    if (!els.teacherViewSelect || !els.teacherWeekSchedule) return;
+    const names = teacherNames();
+    const storedTeacher = localStorage.getItem(TEACHER_VIEW_KEY) || "";
+    const currentTeacher = names.includes(els.teacherViewSelect.value)
+      ? els.teacherViewSelect.value
+      : names.includes(storedTeacher)
+        ? storedTeacher
+        : names[0] || "";
+    els.teacherViewSelect.innerHTML = names.length
+      ? names.map((teacher) => `<option value="${escapeHtml(teacher)}">${escapeHtml(teacher)}</option>`).join("")
+      : `<option value="">등록된 교사 없음</option>`;
+    els.teacherViewSelect.value = currentTeacher;
+    if (!currentTeacher) {
+      els.teacherViewSummary.innerHTML = `<span>관리자 기본 시간표에서 담당 교사를 먼저 등록하세요.</span>`;
+      els.teacherWeekSchedule.innerHTML = `<p class="empty">등록된 교사가 없습니다.</p>`;
+      return;
+    }
+    localStorage.setItem(TEACHER_VIEW_KEY, currentTeacher);
+    const days = currentSchoolWeek();
+    const assignments = new Map();
+    const headerCells = days
+      .map((day, index) => `<div class="teacher-day-head" style="grid-column:${index + 2};grid-row:1"><strong>${day.label}</strong><span>${formatDate(day.iso)}</span></div>`)
+      .join("");
+    const rows = periods
+      .map((period, periodIndex) => {
+        const cells = days
+          .map((day, dayIndex) => {
+            const lessons = teacherLessonsForCell(currentTeacher, day.iso, period, periodIndex);
+            lessons.forEach((lesson) => assignments.set(`${canonicalSubjectName(lesson.subject)}__${lesson.className}`, lesson));
+            const content = lessons.length
+              ? lessons.map((lesson) => {
+                  const changeClass = lesson.change ? ` is-change${isNewChange(lesson.change) ? " is-new-change" : ""}` : "";
+                  return `<article class="teacher-lesson${changeClass}"><strong>${escapeHtml(subjectDisplayLabel(lesson.subject))}</strong><span>${escapeHtml(lesson.className)}</span></article>`;
+                }).join("")
+              : `<span class="teacher-empty">-</span>`;
+            return `<div class="teacher-week-cell" style="grid-column:${dayIndex + 2};grid-row:${periodIndex + 2}">${content}</div>`;
+          })
+          .join("");
+        return `<div class="teacher-period-head" style="grid-column:1;grid-row:${periodIndex + 2}"><strong>${period}교시</strong></div>${cells}`;
+      })
+      .join("");
+    els.teacherViewSummary.innerHTML = assignments.size
+      ? [...assignments.values()].map((lesson) => `<span>${escapeHtml(subjectDisplayLabel(lesson.subject))} (${escapeHtml(lesson.className)})</span>`).join("")
+      : `<span>이번 주 담당 수업이 없습니다.</span>`;
+    els.teacherWeekSchedule.innerHTML = `<div class="teacher-week-grid">
+      <div class="teacher-grid-corner" style="grid-column:1;grid-row:1">교시</div>
+      ${headerCells}${rows}
+    </div>`;
+  }
+
   function renderMobileList(date, visibleClasses) {
     const events = getEventsForDate(date);
     const merges = getBaseMergesForDate(date);
@@ -1595,11 +1735,11 @@
             const subject = change ? change.subject : subjects[index];
             const kind = change ? (isNewChange(change) ? " is-change is-new-change" : " is-change") : "";
             const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
-            const teacher = teacherForSubject(className, subject);
+            const teacher = resolveTeacherForCell(date, className, index, subject, Boolean(change));
             const teacherLabel = teacher ? `<small class="lesson-teacher">${escapeHtml(teacher)}</small>` : "";
             return `<li class="mobile-row${kind}">
               <span class="mobile-period">${period}</span>
-              <span class="mobile-body"><strong>${escapeHtml(subject || "-")}</strong>${teacherLabel}${memo}</span>
+              <span class="mobile-body"><strong>${escapeHtml(subjectDisplayLabel(subject) || "-")}</strong>${teacherLabel}${memo}</span>
             </li>`;
           })
           .join("");
@@ -1823,6 +1963,7 @@
 
   function renderBaseEditor() {
     const weekday = els.baseWeekday.value;
+    const periodTeacherMode = state.teacherMode === "period";
     const headerCells = classes
       .map((className, index) => {
         return `<div class="special-head" style="grid-column:${index + 2};grid-row:1">${escapeHtml(className)}</div>`;
@@ -1833,15 +1974,22 @@
         const inputs = classes
           .map((className, classIndex) => {
             const subjects = state.base[className][weekday] || [];
+            const subject = subjects[periodIndex] || "";
+            const teacherRow = (state.teachersByPeriod[className] && state.teachersByPeriod[className][weekday]) || [];
+            const hasPeriodTeacher = Object.prototype.hasOwnProperty.call(teacherRow, periodIndex);
+            const teacher = hasPeriodTeacher ? teacherRow[periodIndex] : teacherForSubject(className, subject);
             return `<div class="special-input" style="grid-column:${classIndex + 2};grid-row:${periodIndex + 2}">
-              <input data-base-class="${className}" data-period-index="${periodIndex}" type="text" value="${escapeHtml(subjects[periodIndex] || "")}" aria-label="${className} ${period}교시" />
+              <div class="base-period-fields${periodTeacherMode ? " has-teacher" : ""}">
+                <input data-base-class="${className}" data-period-index="${periodIndex}" type="text" value="${escapeHtml(subject)}" placeholder="과목" aria-label="${className} ${period}교시 과목" />
+                ${periodTeacherMode ? `<input data-base-teacher-class="${className}" data-period-index="${periodIndex}" type="text" value="${escapeHtml(teacher)}" placeholder="담당교사" aria-label="${className} ${period}교시 담당교사" />` : ""}
+              </div>
             </div>`;
           })
           .join("");
         return `<div class="special-head" style="grid-column:1;grid-row:${periodIndex + 2}">${period}교시</div>${inputs}`;
       })
       .join("");
-    els.baseEditor.innerHTML = `<div class="special-grid" style="--class-count:${classes.length}">
+    els.baseEditor.innerHTML = `<div class="special-grid${periodTeacherMode ? " has-teacher-row" : ""}" style="--class-count:${classes.length}">
       <div class="special-head" style="grid-column:1;grid-row:1">교시</div>
       ${headerCells}
       ${rows}
@@ -1872,18 +2020,23 @@
     return list;
   }
 
-  function renderBaseTeacherEditor() {
-    const subjectsByClass = Object.fromEntries(classes.map((className) => [className, classSubjectList(className)]));
-    const allSubjects = [];
-    const seenAll = new Set();
+  function allDistinctSubjects() {
+    const seen = new Set();
+    const list = [];
     classes.forEach((className) => {
-      subjectsByClass[className].forEach((subject) => {
-        if (!seenAll.has(subject)) {
-          seenAll.add(subject);
-          allSubjects.push(subject);
+      classSubjectList(className).forEach((subject) => {
+        if (!seen.has(subject)) {
+          seen.add(subject);
+          list.push(subject);
         }
       });
     });
+    return list;
+  }
+
+  function renderSubjectTeacherGrid() {
+    const subjectsByClass = Object.fromEntries(classes.map((className) => [className, classSubjectList(className)]));
+    const allSubjects = allDistinctSubjects();
 
     if (allSubjects.length === 0) {
       els.baseTeacherEditor.innerHTML = `<p class="muted">기본 시간표에 등록된 과목이 없습니다.</p>`;
@@ -1918,6 +2071,33 @@
     </div>`;
   }
 
+  function renderBaseTeacherEditor(resyncMode = false) {
+    if (resyncMode) {
+      els.teacherModeToggle.checked = state.teacherMode === "period";
+    }
+    renderSubjectTeacherGrid();
+  }
+
+  function renderSubjectAbbreviationEditor() {
+    const allSubjects = allDistinctSubjects();
+    const selectedSubject = els.subjectAbbreviationSubject.value;
+    els.subjectAbbreviationSubject.innerHTML = allSubjects.length
+      ? allSubjects.map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`).join("")
+      : `<option value="">등록된 과목 없음</option>`;
+    if (allSubjects.includes(selectedSubject)) els.subjectAbbreviationSubject.value = selectedSubject;
+    if (allSubjects.length === 0) {
+      els.subjectAbbreviationEditor.innerHTML = `<p class="muted">기본 시간표에 등록된 과목이 없습니다.</p>`;
+      return;
+    }
+    const entries = Object.entries(state.subjectAbbreviations || {}).filter(([subject]) => allSubjects.includes(subject));
+    els.subjectAbbreviationEditor.innerHTML = entries.length
+      ? entries.map(([subject, abbreviation]) => `<article class="list-item">
+          <div><strong>${escapeHtml(subject)} → ${escapeHtml(abbreviation)}</strong><span>단일교과 변경에도 ${escapeHtml(abbreviation)} 입력 가능</span></div>
+          <button class="text-button" data-delete-subject-abbreviation="${escapeHtml(subject)}" type="button">삭제</button>
+        </article>`).join("")
+      : `<p class="empty">등록된 약칭이 없습니다.</p>`;
+  }
+
   function loadSheetJs() {
     if (window.XLSX) return Promise.resolve(window.XLSX);
     if (sheetJsPromise) return sheetJsPromise;
@@ -1939,6 +2119,7 @@
   async function readBaseImportFiles(assignments) {
     if (!window.TimetableImport) throw new Error("시간표 가져오기 기능을 불러오지 못했습니다.");
     const XLSX = await loadSheetJs();
+    const strictTeacherPerSubject = state.teacherMode !== "period";
     const imports = [];
     for (const assignment of assignments) {
       const { file } = assignment;
@@ -1946,7 +2127,7 @@
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) throw new Error(`${file.name}: 시트가 없습니다.`);
       const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], { header: 1, defval: "", raw: false });
-      imports.push(window.TimetableImport.parseWorksheetRows(rows, file.name));
+      imports.push(window.TimetableImport.parseWorksheetRows(rows, file.name, { strictTeacherPerSubject }));
     }
     return window.TimetableImport.mergeGradeImports(imports);
   }
@@ -2221,9 +2402,13 @@
     const lessonScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
     const classHeaderScale = clamp(Number(els.slideClassHeaderFontScale.value) || 100, 70, 170);
     const periodHeaderScale = clamp(Number(els.slidePeriodHeaderFontScale.value) || 100, 70, 170);
+    const teacherScale = clamp(Number(els.slideTeacherFontScale.value) || 100, 60, 150);
     els.slideLessonFontScaleLabel.textContent = `시간표 ${lessonScale}%`;
     els.slideClassHeaderFontScaleLabel.textContent = `학급 ${classHeaderScale}%`;
     els.slidePeriodHeaderFontScaleLabel.textContent = `교시 ${periodHeaderScale}%`;
+    els.slideTeacherFontScaleLabel.textContent = state.slideshow.showTeacher
+      ? `담당 교사 ${teacherScale}%`
+      : "담당 교사 표시를 켜면 조절할 수 있습니다.";
     els.noticeTitleFontSizeLabel.textContent = `제목 ${titleSize}px`;
     els.noticeFontSizeLabel.textContent = `내용 ${bodySize}px`;
     els.noticePreview.innerHTML = `<article class="notice-preview-card" style="--notice-preview-title-size:${titleSize}px;--notice-preview-size:${bodySize}px">
@@ -2459,7 +2644,8 @@
     updateLastSaveStatus();
     renderBaseEditor();
     renderBaseTeacherSummary();
-    renderBaseTeacherEditor();
+    renderBaseTeacherEditor(true);
+    renderSubjectAbbreviationEditor();
     renderSpecialDateHint();
     renderSpecialEditor();
     renderSpecialList();
@@ -2475,10 +2661,17 @@
     if (els.slideShowMeal) {
       els.slideShowMeal.value = state.slideshow.showMeal !== false ? "true" : "false";
     }
+    if (els.slideShowTeacher) {
+      els.slideShowTeacher.value = state.slideshow.showTeacher ? "true" : "false";
+    }
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
     els.slideClassHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170);
     els.slidePeriodHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170);
     els.slideEventFontScale.value = clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
+    els.slideTeacherFontScale.value = clamp(Number(state.slideshow && state.slideshow.teacherFontScale) || 100, 60, 150);
+    els.slideTeacherFontScaleLabel.textContent = state.slideshow.showTeacher
+      ? `담당 교사 ${els.slideTeacherFontScale.value}%`
+      : "담당 교사 표시를 켜면 조절할 수 있습니다.";
     els.slideEventFontScaleLabel.textContent = `행사 ${els.slideEventFontScale.value}%`;
     renderNoticePreview();
     renderAdminAccounts();
@@ -2547,6 +2740,7 @@
     }
     const cleanedExpiredData = canPersistAdminCleanup() && cleanupExpiredScheduleData();
     renderView();
+    if (currentRoute === "teachers") renderTeacherView();
     if (currentRoute === "wallpaper") {
       renderWallpaper();
     }
@@ -2595,7 +2789,7 @@
   }
 
   function shouldUseRemoteSync() {
-    return isBoardMode || currentRoute === "slideshow";
+    return isBoardMode || currentRoute === "slideshow" || currentRoute === "teachers";
   }
 
   function syncRemoteForRoute() {
@@ -2956,6 +3150,10 @@
       }
       renderView();
     });
+    els.teacherViewSelect.addEventListener("change", () => {
+      localStorage.setItem(TEACHER_VIEW_KEY, els.teacherViewSelect.value);
+      renderTeacherView();
+    });
     [els.boardThemeButton, els.themeButton].forEach((button) => {
       if (button) button.addEventListener("click", toggleTheme);
     });
@@ -3026,7 +3224,14 @@
       saveWallpaperSettings(settings.subjects, settings.days, settings.grades, settings.name);
       renderWallpaper();
     });
-    els.baseWeekday.addEventListener("change", renderBaseEditor);
+    els.baseWeekday.addEventListener("change", () => {
+      renderBaseEditor();
+      renderBaseTeacherEditor();
+    });
+    els.teacherModeToggle.addEventListener("change", () => {
+      state.teacherMode = els.teacherModeToggle.checked ? "period" : "subject";
+      renderBaseEditor();
+    });
     els.specialDate.addEventListener("change", () => {
       renderSpecialDateHint();
       renderSpecialEditor();
@@ -3381,13 +3586,21 @@
     els.saveBaseButton.addEventListener("click", () => {
       if (!ensurePermission("update_base", "기본 시간표 수정")) return;
       const weekday = els.baseWeekday.value;
+      state.teacherMode = els.teacherModeToggle.checked ? "period" : "subject";
       classes.forEach((className) => {
         state.base[className][weekday] = periods.map((_, periodIndex) => {
           const input = $(`#baseEditor input[data-base-class="${className}"][data-period-index="${periodIndex}"]`);
           return input ? input.value.trim() : "";
         });
+        if (state.teacherMode === "period") {
+          if (!state.teachersByPeriod[className]) state.teachersByPeriod[className] = {};
+          state.teachersByPeriod[className][weekday] = periods.map((_, periodIndex) => {
+            const input = $(`#baseEditor input[data-base-teacher-class="${className}"][data-period-index="${periodIndex}"]`);
+            return input ? input.value.trim() : "";
+          });
+        }
       });
-      saveState("기본 시간표를 저장했습니다.", "update_base");
+      saveState(state.teacherMode === "period" ? "기본 시간표와 교시별 담당 교사를 저장했습니다." : "기본 시간표를 저장했습니다.", "update_base");
     });
 
     els.saveBaseTeachersButton.addEventListener("click", () => {
@@ -3400,6 +3613,36 @@
       });
       state.teachers = nextTeachers;
       saveState("과목별 담당 교사를 저장했습니다.", "update_base");
+    });
+
+    els.saveSubjectAbbreviationsButton.addEventListener("click", () => {
+      if (!ensurePermission("update_base", "기본 시간표 수정")) return;
+      const subject = els.subjectAbbreviationSubject.value;
+      const abbreviation = els.subjectAbbreviationValue.value.trim();
+      if (!subject || !abbreviation) {
+        showMessage(els.subjectAbbreviationMessage, "과목과 약칭을 모두 입력하세요.");
+        return;
+      }
+      const duplicateSubject = Object.entries(state.subjectAbbreviations || {}).find(
+        ([registeredSubject, registeredAbbreviation]) => registeredSubject !== subject && registeredAbbreviation === abbreviation
+      );
+      if (duplicateSubject) {
+        showMessage(els.subjectAbbreviationMessage, `${abbreviation} 약칭은 ${duplicateSubject[0]}에 이미 사용 중입니다.`);
+        return;
+      }
+      state.subjectAbbreviations[subject] = abbreviation;
+      els.subjectAbbreviationValue.value = "";
+      renderSubjectAbbreviationEditor();
+      saveState(`${subject} 약칭을 ${abbreviation}(으)로 저장했습니다.`, "update_base");
+    });
+
+    els.subjectAbbreviationEditor.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delete-subject-abbreviation]");
+      if (!button || !ensurePermission("update_base", "기본 시간표 수정")) return;
+      const subject = button.dataset.deleteSubjectAbbreviation;
+      delete state.subjectAbbreviations[subject];
+      renderSubjectAbbreviationEditor();
+      saveState(`${subject} 약칭을 삭제했습니다.`, "update_base");
     });
 
     els.importBaseButton.addEventListener("click", async () => {
@@ -3430,6 +3673,7 @@
         }
         state.base = imported.base;
         state.teachers = imported.teachers;
+        state.teachersByPeriod = imported.teachersByPeriod;
         await saveState("Excel 기본 시간표를 저장했습니다.", "update_base");
         els.baseImportFiles.forEach((input) => {
           input.value = "";
@@ -3661,6 +3905,7 @@
       els.slideLessonFontScale,
       els.slideClassHeaderFontScale,
       els.slidePeriodHeaderFontScale,
+      els.slideTeacherFontScale,
       els.noticeTitleFontSize,
       els.noticeFontSize,
     ].forEach((input) => {
@@ -3677,6 +3922,25 @@
       renderView();
       if (currentRoute === "slideshow") renderSlideshow();
       saveState("슬라이드쇼 시간표 글자 크기를 저장했습니다.", "update_slide_typography");
+    });
+
+    els.slideTeacherFontScale.addEventListener("change", () => {
+      if (!state.slideshow.showTeacher || !ensurePermission("update_slide_typography", "슬라이드쇼 교사 글자 크기 수정")) {
+        els.slideTeacherFontScale.value = clamp(Number(state.slideshow && state.slideshow.teacherFontScale) || 100, 60, 150);
+        renderNoticePreview();
+        return;
+      }
+      state.slideshow.teacherFontScale = clamp(Number(els.slideTeacherFontScale.value) || 100, 60, 150);
+      if (currentRoute === "slideshow") renderSlideshow();
+      saveState("슬라이드쇼 교사 글자 크기를 저장했습니다.", "update_slide_typography");
+    });
+
+    els.slideShowTeacher.addEventListener("change", () => {
+      const enabled = els.slideShowTeacher.value === "true";
+      setControlDisabled(els.slideTeacherFontScale, !enabled || !canRole("update_slide_typography"));
+      els.slideTeacherFontScaleLabel.textContent = enabled
+        ? `담당 교사 ${els.slideTeacherFontScale.value}%`
+        : "담당 교사 표시를 켜면 조절할 수 있습니다.";
     });
 
     els.slideClassHeaderFontScale.addEventListener("change", () => {
@@ -3761,11 +4025,13 @@
       const nextClassHeaderFontScale = clamp(Number(els.slideClassHeaderFontScale.value) || 100, 70, 170);
       const nextPeriodHeaderFontScale = clamp(Number(els.slidePeriodHeaderFontScale.value) || 100, 70, 170);
       const nextEventFontScale = clamp(Number(els.slideEventFontScale.value) || 100, 70, 150);
+      const nextTeacherFontScale = clamp(Number(els.slideTeacherFontScale.value) || 100, 60, 150);
       const typographyChanged =
         nextLessonFontScale !== clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150) ||
         nextClassHeaderFontScale !== clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170) ||
         nextPeriodHeaderFontScale !== clamp(Number(state.slideshow && state.slideshow.periodHeaderFontScale) || 100, 70, 170) ||
-        nextEventFontScale !== clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150);
+        nextEventFontScale !== clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150) ||
+        nextTeacherFontScale !== clamp(Number(state.slideshow && state.slideshow.teacherFontScale) || 100, 60, 150);
       if (typographyChanged && !ensurePermission("update_slide_typography", "슬라이드쇼 글자 크기 수정")) {
         renderAdmin();
         return;
@@ -3777,11 +4043,15 @@
       if (els.slideShowMeal) {
         state.slideshow.showMeal = els.slideShowMeal.value !== "false";
       }
+      if (els.slideShowTeacher) {
+        state.slideshow.showTeacher = els.slideShowTeacher.value === "true";
+      }
       if (canRole("update_slide_typography")) {
         state.slideshow.lessonFontScale = nextLessonFontScale;
         state.slideshow.classHeaderFontScale = nextClassHeaderFontScale;
         state.slideshow.periodHeaderFontScale = nextPeriodHeaderFontScale;
         state.slideshow.eventFontScale = nextEventFontScale;
+        state.slideshow.teacherFontScale = nextTeacherFontScale;
       }
       if (selectedNotice) {
         selectedNotice.titleFontSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);

@@ -37,6 +37,9 @@
       adminPassword: "1234",
       base: makeDefaultBase(),
       teachers: { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+      teacherMode: "subject",
+      teachersByPeriod: { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+      subjectAbbreviations: {},
       baseMerges: [],
       specialSchedules: {},
       changes: {},
@@ -57,10 +60,12 @@
         classHeaderFontScale: 100,
         periodHeaderFontScale: 100,
         eventFontScale: 100,
+        teacherFontScale: 100,
         reloadToken: "",
         scheduleDate: "",
         scheduleDateExpiresOn: "",
         showMeal: true,
+        showTeacher: false,
       },
     };
   }
@@ -80,6 +85,9 @@
         ...parsed,
         base: parsed.base || makeDefaultBase(),
         teachers: parsed.teachers || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+        teacherMode: parsed.teacherMode === "period" ? "period" : "subject",
+        teachersByPeriod: parsed.teachersByPeriod || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+        subjectAbbreviations: parsed.subjectAbbreviations || {},
         baseMerges: Array.isArray(parsed.baseMerges) ? parsed.baseMerges : [],
         specialSchedules: parsed.specialSchedules || {},
         changes: parsed.changes || {},
@@ -98,11 +106,13 @@
           classHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.classHeaderFontScale) || 100,
           periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
           eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
+          teacherFontScale: Number(parsed.slideshow && parsed.slideshow.teacherFontScale) || 100,
           reloadToken: parsed.slideshow && parsed.slideshow.reloadToken ? String(parsed.slideshow.reloadToken) : "",
           scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
           scheduleDateExpiresOn:
             parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
           showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
+          showTeacher: Boolean(parsed.slideshow && parsed.slideshow.showTeacher),
         },
       };
     } catch {
@@ -128,6 +138,9 @@
       ...parsed,
       base: parsed.base || makeDefaultBase(),
       teachers: parsed.teachers || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+      teacherMode: parsed.teacherMode === "period" ? "period" : "subject",
+      teachersByPeriod: parsed.teachersByPeriod || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+      subjectAbbreviations: parsed.subjectAbbreviations || {},
       baseMerges: Array.isArray(parsed.baseMerges) ? parsed.baseMerges : [],
       specialSchedules: parsed.specialSchedules || {},
       changes: parsed.changes || {},
@@ -146,11 +159,13 @@
         classHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.classHeaderFontScale) || 100,
         periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
         eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
+        teacherFontScale: Number(parsed.slideshow && parsed.slideshow.teacherFontScale) || 100,
         reloadToken: parsed.slideshow && parsed.slideshow.reloadToken ? String(parsed.slideshow.reloadToken) : "",
         scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
         scheduleDateExpiresOn:
           parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
         showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
+        showTeacher: Boolean(parsed.slideshow && parsed.slideshow.showTeacher),
       },
     };
   }

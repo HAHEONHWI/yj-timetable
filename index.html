@@ -36,6 +36,7 @@
     </button>
     <nav class="nav">
       <button class="nav-button is-active" data-route="view" type="button">조회</button>
+      <button class="nav-button" data-route="teachers" type="button">교사 조회</button>
       <button class="nav-button" data-route="slideshow" type="button">슬라이드쇼</button>
       <button class="nav-button" data-route="wallpaper" data-dev-only type="button" hidden>배경화면</button>
       <button class="nav-button" data-route="download" type="button">다운로드</button>
@@ -71,6 +72,26 @@
         <span class="legend-item"><span class="legend-swatch" data-kind="new"></span>신설 수업</span>
         <span class="legend-item"><span class="legend-swatch" data-kind="event"></span>행사</span>
         <span id="variantNote" class="legend-note"></span>
+      </div>
+    </section>
+
+    <section id="teachersPage" class="page teachers-page is-hidden">
+      <div class="teacher-view-head">
+        <div>
+          <p class="eyebrow">교사 시점</p>
+          <h2>교사 주간 시간표</h2>
+          <p class="muted">담당 수업과 교과 변경을 한 주 단위로 확인합니다.</p>
+        </div>
+        <div class="field teacher-picker">
+          <label for="teacherViewSelect">교사</label>
+          <select id="teacherViewSelect"></select>
+        </div>
+      </div>
+      <div id="teacherViewSummary" class="teacher-view-summary"></div>
+      <div id="teacherWeekSchedule" class="teacher-week-shell"></div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch" data-kind="change"></span>교과 변경</span>
+        <span class="legend-item"><span class="legend-swatch" data-kind="new"></span>신설 수업</span>
       </div>
     </section>
 
@@ -370,7 +391,7 @@
           <h2>개인정보처리방침</h2>
           <p class="muted">용정 시간표 서비스는 시간표 제공에 필요한 범위에서 최소한의 정보를 처리합니다.</p>
         </div>
-        <div class="privacy-badge">시행일 2026.08.20</div>
+        <div class="privacy-badge">시행일 2026.08.26</div>
       </div>
 
       <div class="privacy-summary">
@@ -392,13 +413,13 @@
         <article>
           <h3><span>01</span>개인정보 처리 목적</h3>
           <p>서비스는 전자시간표 조회, API key 발급, 슬라이드쇼 표시, 관리자 입력 데이터 저장 및 동기화, 오류 확인, 이용 통계 분석을 위해 필요한 정보를 처리합니다.</p>
-          <p>시간표, 행사, 안내사항에는 학생 이름, 연락처, 주민등록번호 등 개인을 직접 식별할 수 있는 정보를 입력하지 않는 것을 원칙으로 합니다.</p>
+          <p>시간표, 행사, 안내사항에는 학생 이름, 연락처, 주민등록번호 등 개인을 직접 식별할 수 있는 정보를 입력하지 않는 것을 원칙으로 합니다. 다만 시간표 조회 화면에는 반별 과목 담당 교사의 이름이 함께 표시될 수 있습니다.</p>
         </article>
 
         <article>
           <h3><span>02</span>처리하는 개인정보 항목</h3>
           <ul>
-            <li>관리자 입력 정보: 시간표, 단일교과 변경, 행사, 안내사항, 슬라이드쇼 설정</li>
+            <li>관리자 입력 정보: 시간표, 반별 과목 담당 교사 이름, 단일교과 변경, 행사, 안내사항, 슬라이드쇼 설정</li>
             <li>API 신청 정보: 사용처 이름, 이메일 주소, 전화번호, 이메일 인증 및 발급 기록</li>
             <li>자동 생성 정보: 접속 기록, 페이지 이용 기록, 브라우저 및 기기 정보, 대략적인 지역 정보, 쿠키 또는 유사 식별자</li>
             <li>브라우저 저장 정보: 선택 학급, 화면 테마, 마지막 저장 시각, 관리자 로그인 세션 정보</li>
@@ -556,6 +577,13 @@
             <p id="baseImportMessage" class="message" aria-live="polite"></p>
             <p id="baseTeacherSummary" class="muted"></p>
           </div>
+          <label class="check-item base-teacher-mode" for="teacherModeToggle">
+            <input id="teacherModeToggle" type="checkbox" />
+            <span>
+              <strong>교시별로 다른 교사 입력</strong>
+              <small>켜면 아래 표가 과목·담당교사 입력칸으로 바뀝니다. 기존 과목별 담당 교사가 먼저 채워지며 각 칸에서 바꿀 수 있습니다.</small>
+            </span>
+          </label>
           <div id="baseEditor" class="special-editor"></div>
           <button id="saveBaseButton" class="primary-button" type="button">기본 시간표 저장</button>
 
@@ -566,6 +594,26 @@
             </div>
             <div id="baseTeacherEditor" class="special-editor"></div>
             <button id="saveBaseTeachersButton" class="primary-button" type="button">담당 교사 저장</button>
+          </div>
+
+          <div class="subsection">
+            <div>
+              <h3>과목 약칭</h3>
+              <p class="muted">화면 표시 칸이 좁을 때 과목명 대신 보여줄 약칭을 지정합니다. 비워두면 원래 과목명이 그대로 표시됩니다.</p>
+            </div>
+            <div class="subject-abbreviation-form">
+              <div class="field">
+                <label for="subjectAbbreviationSubject">과목 선택</label>
+                <select id="subjectAbbreviationSubject"></select>
+              </div>
+              <div class="field">
+                <label for="subjectAbbreviationValue">약칭</label>
+                <input id="subjectAbbreviationValue" type="text" maxlength="12" placeholder="예: 기가" />
+              </div>
+              <button id="saveSubjectAbbreviationsButton" class="primary-button" type="button">+ 약칭 추가</button>
+            </div>
+            <p id="subjectAbbreviationMessage" class="message" aria-live="polite"></p>
+            <div id="subjectAbbreviationEditor" class="list"></div>
           </div>
 
           <div class="subsection">
@@ -770,6 +818,14 @@
               </select>
               <p class="message">안내사항 슬라이드 우측 하단에 나이스 급식 식단 카드를 띄웁니다.</p>
             </div>
+            <div class="field">
+              <label for="slideShowTeacher">시간표에 담당 교사 표시</label>
+              <select id="slideShowTeacher">
+                <option value="false">숨김 (과목명만 표시)</option>
+                <option value="true">표시함 (과목명 아래 교사명)</option>
+              </select>
+              <p class="message">슬라이드쇼 시간표 칸에 과목명과 함께 담당 교사 이름을 보여줍니다.</p>
+            </div>
           </div>
           <div class="subsection">
             <p class="instant-apply-notice"><strong>변경 즉시 반영</strong><span>글자 크기는 조정 즉시 반영됩니다.</span></p>
@@ -794,6 +850,11 @@
                 <label for="slideEventFontScale">행사 글자</label>
                 <input id="slideEventFontScale" type="range" min="70" max="150" step="5" />
                 <p id="slideEventFontScaleLabel" class="message"></p>
+              </div>
+              <div class="field">
+                <label for="slideTeacherFontScale">담당 교사 글자</label>
+                <input id="slideTeacherFontScale" type="range" min="60" max="150" step="5" />
+                <p id="slideTeacherFontScaleLabel" class="message"></p>
               </div>
               <div class="field">
                 <label for="noticeTitleFontSize">안내 제목 글자</label>
