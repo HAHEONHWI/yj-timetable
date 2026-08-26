@@ -11,6 +11,8 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@resvg/resvg-js-linux-x64-gnu@^2.6.2",
+        "npm:@resvg/resvg-js@^2.6.2",
         "npm:electron-builder@^24.13.3",
         "npm:electron@^31.7.7"
       ]

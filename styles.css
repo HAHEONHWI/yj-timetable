@@ -3298,6 +3298,48 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  .admin-workspace.is-sidebar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-workspace.is-sidebar .admin-tabs {
+    grid-column: 1;
+    grid-row: auto;
+    position: static;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 0 0 var(--space-12);
+    scrollbar-width: none;
+  }
+
+  .admin-workspace.is-sidebar .admin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-workspace.is-sidebar .admin-nav-divider {
+    display: none;
+  }
+
+  .admin-workspace.is-sidebar .admin-tab {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 0 var(--space-12);
+    text-align: center;
+  }
+
+  .admin-workspace.is-sidebar .admin-tab.is-active {
+    border-color: var(--blue);
+  }
+
+  .admin-workspace.is-sidebar .admin-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
   .page-view .schedule-shell {
     display: none;
   }

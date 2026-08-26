@@ -60,7 +60,10 @@
   const THEME_KEY = "timetable-theme";
   const HOME_VARIANT_KEY = "timetable-home-variant";
   const ADMIN_NAV_KEY = "timetable-admin-nav";
+  const SHEETJS_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+  const SHEETJS_INTEGRITY = "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
+  let sheetJsPromise = null;
   const ROLE_PERMISSIONS = {
     save_state: ["dev", "manager", "teacher"],
     update_base: ["dev", "manager"],
@@ -131,6 +134,10 @@
     baseWeekday: $("#baseWeekday"),
     baseEditor: $("#baseEditor"),
     saveBaseButton: $("#saveBaseButton"),
+    baseImportFiles: $$('[data-base-import-grade]'),
+    importBaseButton: $("#importBaseButton"),
+    baseImportMessage: $("#baseImportMessage"),
+    baseTeacherSummary: $("#baseTeacherSummary"),
     specialDate: $("#specialDate"),
     specialDateHint: $("#specialDateHint"),
     specialEditor: $("#specialEditor"),
@@ -661,6 +668,8 @@
 
     setContainerDisabled("#baseEditor", !canBase);
     setControlDisabled(els.saveBaseButton, !canBase);
+    els.baseImportFiles.forEach((input) => setControlDisabled(input, !canBase));
+    setControlDisabled(els.importBaseButton, !canBase);
     [els.baseMergeStart, els.baseMergeEnd, els.baseMergeTitle, els.baseMergeMemo, els.saveBaseMergeButton].forEach((control) =>
       setControlDisabled(control, !canBaseMerge)
     );
@@ -1827,6 +1836,48 @@
     </div>`;
   }
 
+  function renderBaseTeacherSummary() {
+    const classSummaries = classes.map((className) => {
+      const assignments = Object.entries((state.teachers && state.teachers[className]) || {});
+      const teacherCount = new Set(assignments.map(([, teacher]) => teacher).filter(Boolean)).size;
+      return `${className}: ${teacherCount ? `교사 ${teacherCount}명` : "등록된 교사 없음"}`;
+    });
+    els.baseTeacherSummary.textContent = classSummaries.join(" / ");
+  }
+
+  function loadSheetJs() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (sheetJsPromise) return sheetJsPromise;
+    sheetJsPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = SHEETJS_URL;
+      script.integrity = SHEETJS_INTEGRITY;
+      script.crossOrigin = "anonymous";
+      script.onload = () => resolve(window.XLSX);
+      script.onerror = () => {
+        sheetJsPromise = null;
+        reject(new Error("Excel 읽기 도구를 불러오지 못했습니다. 인터넷 연결을 확인하세요."));
+      };
+      document.head.appendChild(script);
+    });
+    return sheetJsPromise;
+  }
+
+  async function readBaseImportFiles(assignments) {
+    if (!window.TimetableImport) throw new Error("시간표 가져오기 기능을 불러오지 못했습니다.");
+    const XLSX = await loadSheetJs();
+    const imports = [];
+    for (const assignment of assignments) {
+      const { file } = assignment;
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) throw new Error(`${file.name}: 시트가 없습니다.`);
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], { header: 1, defval: "", raw: false });
+      imports.push(window.TimetableImport.parseWorksheetRows(rows, file.name));
+    }
+    return window.TimetableImport.mergeGradeImports(imports);
+  }
+
   function renderSpecialDateHint() {
     if (!els.specialDate.value) {
       els.specialDateHint.textContent = "";
@@ -2334,6 +2385,7 @@
   function renderAdmin() {
     updateLastSaveStatus();
     renderBaseEditor();
+    renderBaseTeacherSummary();
     renderSpecialDateHint();
     renderSpecialEditor();
     renderSpecialList();
@@ -3262,6 +3314,47 @@
         });
       });
       saveState("기본 시간표를 저장했습니다.", "update_base");
+    });
+
+    els.importBaseButton.addEventListener("click", async () => {
+      if (!ensurePermission("update_base", "기본 시간표 수정")) return;
+      const assignments = els.baseImportFiles.map((input) => ({
+        grade: input.dataset.baseImportGrade,
+        file: input.files && input.files[0],
+      }));
+      const missingGrades = assignments.filter((assignment) => !assignment.file).map((assignment) => `${assignment.grade}학년`);
+      if (missingGrades.length > 0) {
+        showMessage(els.baseImportMessage, `파일을 선택하지 않은 학년: ${missingGrades.join(", ")}`);
+        return;
+      }
+
+      const originalLabel = els.importBaseButton.textContent;
+      setControlDisabled(els.importBaseButton, true);
+      els.importBaseButton.textContent = "Excel 확인 중...";
+      showMessage(els.baseImportMessage, "학년별 파일과 교사 정보를 확인하고 있습니다.");
+      try {
+        const imported = await readBaseImportFiles(assignments);
+        const confirmed = await confirmAction(
+          "6개 학급의 월~금 1~9교시 기본 시간표를 Excel 내용으로 덮어쓸까요? 기존 기본 시간표는 저장 즉시 교체됩니다.",
+          { title: "Excel 기본 시간표 등록", confirmLabel: "전체 저장" }
+        );
+        if (!confirmed) {
+          showMessage(els.baseImportMessage, "Excel 등록을 취소했습니다.");
+          return;
+        }
+        state.base = imported.base;
+        state.teachers = imported.teachers;
+        await saveState("Excel 기본 시간표를 저장했습니다.", "update_base");
+        els.baseImportFiles.forEach((input) => {
+          input.value = "";
+        });
+        showMessage(els.baseImportMessage, "6개 학급 시간표와 학년별 과목 담당 교사를 등록했습니다.");
+      } catch (error) {
+        showMessage(els.baseImportMessage, `가져오기 실패: ${error && error.message ? error.message : "알 수 없는 오류"}`);
+      } finally {
+        els.importBaseButton.textContent = originalLabel;
+        setControlDisabled(els.importBaseButton, !canRole("update_base"));
+      }
     });
 
     els.saveBaseMergeButton.addEventListener("click", () => {

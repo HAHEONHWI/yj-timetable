@@ -36,6 +36,7 @@
     return {
       adminPassword: "1234",
       base: makeDefaultBase(),
+      teachers: { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
       baseMerges: [],
       specialSchedules: {},
       changes: {},
@@ -78,6 +79,7 @@
         ...createDefaultState(),
         ...parsed,
         base: parsed.base || makeDefaultBase(),
+        teachers: parsed.teachers || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
         baseMerges: Array.isArray(parsed.baseMerges) ? parsed.baseMerges : [],
         specialSchedules: parsed.specialSchedules || {},
         changes: parsed.changes || {},
@@ -125,6 +127,7 @@
       ...defaults,
       ...parsed,
       base: parsed.base || makeDefaultBase(),
+      teachers: parsed.teachers || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
       baseMerges: Array.isArray(parsed.baseMerges) ? parsed.baseMerges : [],
       specialSchedules: parsed.specialSchedules || {},
       changes: parsed.changes || {},

@@ -31,6 +31,9 @@ Deno.test("API key hash는 동일 입력에만 동일하다", async () => {
 Deno.test("행사가 단일 변경보다 우선하는 읽기 전용 시간표를 만든다", () => {
   const state = {
     base: { "1-1": { mon: ["국어", "수학", "영어"] } },
+    teachers: {
+      "1-1": { 국어: "송희선", 수학: "곽혜주", 영어: "최세영", 음악: "김세영" },
+    },
     baseMerges: [],
     specialSchedules: {},
     changes: {
@@ -62,6 +65,7 @@ Deno.test("행사가 단일 변경보다 우선하는 읽기 전용 시간표를
       period: 1,
       subject: "진로 특강",
       originalSubject: "국어",
+      teacher: "",
       type: "event",
       memo: "강당",
     },
@@ -69,6 +73,7 @@ Deno.test("행사가 단일 변경보다 우선하는 읽기 전용 시간표를
       period: 2,
       subject: "음악",
       originalSubject: "수학",
+      teacher: "김세영",
       type: "new",
       memo: "신설",
     },
@@ -76,6 +81,7 @@ Deno.test("행사가 단일 변경보다 우선하는 읽기 전용 시간표를
       period: 3,
       subject: "영어",
       originalSubject: "영어",
+      teacher: "최세영",
       type: "lesson",
       memo: "",
     },

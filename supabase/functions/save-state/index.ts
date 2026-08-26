@@ -92,6 +92,7 @@ function changedActions(beforeState: unknown, afterState: Record<string, unknown
   const before = beforeState as Record<string, unknown>;
   const actions = new Set<string>();
   addChangedAction(actions, before, afterState, "base", "update_base");
+  addChangedAction(actions, before, afterState, "teachers", "update_base");
   addChangedAction(actions, before, afterState, "baseMerges", "update_base_merge");
   addChangedAction(actions, before, afterState, "specialSchedules", "update_special");
   addChangedAction(actions, before, afterState, "changes", "update_change");

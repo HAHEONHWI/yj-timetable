@@ -542,6 +542,20 @@
               <select id="baseWeekday"></select>
             </div>
           </div>
+          <div class="subsection">
+            <div>
+              <h3>Excel 일괄 등록</h3>
+              <p class="muted">학년별 시간표 파일 3개를 지정하면 월~금 1~9교시와 반별 과목 담당 교사를 한 번에 저장합니다.</p>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label for="baseImportFileGrade1">1학년 파일</label><input id="baseImportFileGrade1" data-base-import-grade="1" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" /></div>
+              <div class="field"><label for="baseImportFileGrade2">2학년 파일</label><input id="baseImportFileGrade2" data-base-import-grade="2" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" /></div>
+              <div class="field"><label for="baseImportFileGrade3">3학년 파일</label><input id="baseImportFileGrade3" data-base-import-grade="3" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" /></div>
+            </div>
+            <button id="importBaseButton" class="primary-button" type="button">Excel 가져와 전체 저장</button>
+            <p id="baseImportMessage" class="message" aria-live="polite"></p>
+            <p id="baseTeacherSummary" class="muted"></p>
+          </div>
           <div id="baseEditor" class="special-editor"></div>
           <button id="saveBaseButton" class="primary-button" type="button">기본 시간표 저장</button>
 
@@ -928,6 +942,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./src/supabase-config.js"></script>
   <script src="./src/storage.js"></script>
+  <script src="./src/timetable-import.js"></script>
   <script src="./src/app.js"></script>
 </body>
 
