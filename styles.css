@@ -2996,15 +2996,6 @@ textarea {
   margin-bottom: var(--space-20);
 }
 
-.wallpaper-name-wrap {
-  margin-top: var(--space-8);
-}
-
-.wallpaper-name-wrap input {
-  width: 100%;
-  max-width: var(--field-max);
-}
-
 .guide-trigger-wrap {
   margin-top: var(--space-12);
 }
@@ -3048,49 +3039,6 @@ textarea {
   color: var(--ink);
 }
 
-.wallpaper-grade-settings {
-  display: grid;
-  gap: var(--space-8);
-}
-
-.wallpaper-grade-row {
-  display: grid;
-  gap: var(--space-8);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: var(--space-10);
-  background: var(--panel);
-}
-
-.wallpaper-grade-row strong {
-  color: var(--ink);
-  font-size: var(--text-14);
-}
-
-.wallpaper-grade-row > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-}
-
-.wallpaper-grade-option {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-6);
-  min-height: var(--space-32);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0 var(--space-10);
-  color: var(--muted);
-  font-size: var(--text-13);
-  font-weight: 500;
-}
-
-.wallpaper-grade-option:has(input:checked) {
-  border-color: var(--st-event-tx);
-  color: var(--st-event-tx);
-  background: var(--event-bg);
-}
 
 .wallpaper-automation {
   display: grid;
@@ -3404,12 +3352,6 @@ textarea {
   border-color: var(--danger);
   background: var(--st-new-tx);
   color: var(--st-new);
-}
-
-.wallpaper-class-chip.is-original {
-  border-color: var(--muted);
-  background: var(--ink);
-  color: var(--line);
 }
 
 .wallpaper-class-chip.is-event,

@@ -107,6 +107,10 @@ function makeDefaultBase() {
 function defaultState() {
   return {
     base: makeDefaultBase(),
+    teachers: Object.fromEntries(classes.map((className) => [className, {}])),
+    teacherMode: "subject",
+    teachersByPeriod: Object.fromEntries(classes.map((className) => [className, {}])),
+    subjectAbbreviations: {},
     baseMerges: [],
     specialSchedules: {},
     changes: {},
@@ -121,11 +125,64 @@ function normalizeState(value) {
     ...defaults,
     ...parsed,
     base: parsed.base || defaults.base,
+    teachers: parsed.teachers || defaults.teachers,
+    teacherMode: parsed.teacherMode === "period" ? "period" : "subject",
+    teachersByPeriod: parsed.teachersByPeriod || defaults.teachersByPeriod,
+    subjectAbbreviations: parsed.subjectAbbreviations || {},
     baseMerges: Array.isArray(parsed.baseMerges) ? parsed.baseMerges : [],
     specialSchedules: parsed.specialSchedules || {},
     changes: parsed.changes || {},
     events: Array.isArray(parsed.events) ? parsed.events : [],
   };
+}
+
+function canonicalSubjectName(state, subject) {
+  const value = String(subject || "").trim();
+  if (!value) return "";
+  const match = Object.entries(state.subjectAbbreviations || {}).find(([, abbreviation]) => abbreviation === value);
+  return match ? match[0] : value;
+}
+
+function teacherForSubject(state, className, subject) {
+  const canonical = canonicalSubjectName(state, subject);
+  return (state.teachers && state.teachers[className] && state.teachers[className][canonical]) || "";
+}
+
+function resolveTeacherForCell(state, date, className, periodIndex, subject, hasOverride) {
+  if (state.teacherMode === "period" && !hasOverride) {
+    const special = state.specialSchedules[date] && state.specialSchedules[date][className];
+    if (!Array.isArray(special)) {
+      const weekdayKey = weekdayForDate(date).key;
+      const teacherRow = state.teachersByPeriod[className] && state.teachersByPeriod[className][weekdayKey];
+      const teacher = teacherRow && teacherRow[periodIndex];
+      if (teacher) return teacher;
+    }
+  }
+  return teacherForSubject(state, className, subject);
+}
+
+function subjectDisplayLabel(state, subject) {
+  return (subject && state.subjectAbbreviations && state.subjectAbbreviations[subject]) || subject || "";
+}
+
+function teacherLessonsForCell(state, teacher, date, period, periodIndex) {
+  const matches = [];
+  for (const className of classes) {
+    const lesson = lessonFor(state, date, className, period, periodIndex);
+    if (lesson.type === "event" || lesson.type === "merge") continue;
+    const hasChange = lesson.type === "change" || lesson.type === "new";
+    const subject = lesson.title;
+    if (!subject || subject === "-") continue;
+    const resolvedTeacher = resolveTeacherForCell(state, date, className, periodIndex, subject, hasChange);
+    if (resolvedTeacher !== teacher) continue;
+    matches.push({
+      className,
+      title: subjectDisplayLabel(state, subject),
+      note: hasChange ? (lesson.type === "new" ? "신설 수업" : "변경") : "",
+      type: lesson.type === "new" ? "new" : lesson.type === "change" ? "change" : "base",
+    });
+  }
+  return matches;
 }
 
 async function readState() {
@@ -192,56 +249,6 @@ function splitParam(value) {
     .filter(Boolean);
 }
 
-function normalizedGrades(value) {
-  const grades = Array.isArray(value) ? value.map(String) : [];
-  const filtered = grades.filter((grade) => ["1", "2", "3"].includes(grade));
-  return filtered.length ? [...new Set(filtered)] : ["1", "2", "3"];
-}
-
-function parseGradesParam(value, subjects) {
-  const result = Object.fromEntries(subjects.map((subject) => [subject, ["1", "2", "3"]]));
-  String(value || "")
-    .split(";")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .forEach((entry) => {
-      const [subject, grades] = entry.split(":");
-      if (!subject) return;
-      result[subject.trim()] = normalizedGrades(String(grades || "").split("|"));
-    });
-  return result;
-}
-
-function gradeForClass(className) {
-  return String(className || "").split("-")[0];
-}
-
-function isSubjectAllowed(gradesBySubject, subject, className) {
-  return normalizedGrades(gradesBySubject[subject]).includes(gradeForClass(className));
-}
-
-function matchesForCell(state, date, className, period, periodIndex, subjects, gradesBySubject) {
-  const subjectSet = new Set(subjects);
-  const matches = [];
-  const original = getSubjectsForDate(state, date, className)[periodIndex] || "-";
-  const change = state.changes[changeKey(date, className, period)];
-
-  if (change) {
-    if (subjectSet.has(change.subject) && isSubjectAllowed(gradesBySubject, change.subject, className)) {
-      matches.push({ className, title: change.subject, note: change.type === "new" ? "신설 수업" : `${original}에서 변경`, type: change.type === "new" ? "new" : "change" });
-    }
-    if (subjectSet.has(original) && isSubjectAllowed(gradesBySubject, original, className)) {
-      matches.push({ className, title: original, note: `${change.subject}로 변경됨`, type: "original" });
-    }
-    return matches;
-  }
-
-  const lesson = lessonFor(state, date, className, period, periodIndex);
-  if (lesson.type === "event" || (subjectSet.has(lesson.title) && isSubjectAllowed(gradesBySubject, lesson.title, className))) {
-    matches.push({ className, title: lesson.title, note: "", type: lesson.type });
-  }
-  return matches;
-}
 
 function renderText(text, x, y, options = {}) {
   const size = options.size || 34;
@@ -385,43 +392,11 @@ function renderChip(match, x, y, width, height, isFullSize = false) {
 
 renderChip.sequence = 0;
 
-function mergeSameEvents(matches) {
-  const merged = [];
-  const eventGroups = {};
-
-  for (const match of matches) {
-    if (match.type === "event") {
-      if (!eventGroups[match.title]) {
-        eventGroups[match.title] = {
-          title: match.title,
-          type: "event",
-          classes: [match.className],
-        };
-      } else {
-        eventGroups[match.title].classes.push(match.className);
-      }
-    } else {
-      merged.push(match);
-    }
-  }
-
-  for (const title in eventGroups) {
-    const group = eventGroups[title];
-    group.className = "";
-    group.note = group.classes.join(", ");
-    merged.push(group);
-  }
-
-  return merged;
-}
-
 function renderWallpaperSvg(state, query) {
   renderChip.sequence = 0;
-  const name = query.name || query.n || "";
-  const titleLabel = name ? `${name} 선생님의 이번 주 시간표` : "내 과목 주간표";
-  const titleSize = name ? (name.length > 5 ? 44 : 52) : 62;
-  const subjects = splitParam(query.subjects || query.subject || query.s);
-  const gradesBySubject = parseGradesParam(query.grades || query.grade || query.g, subjects);
+  const teacher = query.teacher || query.t || "";
+  const titleLabel = teacher ? `${teacher} 선생님의 이번 주 시간표` : "담당 시간표";
+  const titleSize = teacher ? (teacher.length > 5 ? 44 : 52) : 62;
   const selectedDays = splitParam(query.days || query.day || query.d);
   const allowedDaySet = new Set(selectedDays.length ? selectedDays : weekdays.map((day) => day.key));
   const now = kstNow();
@@ -446,10 +421,7 @@ function renderWallpaperSvg(state, query) {
     for (let p = 0; p < periods.length; p++) {
       const day = days[d];
       const period = periods[p];
-      const rawMatches = classes.flatMap((className) =>
-        matchesForCell(state, day.iso, className, period, p, subjects, gradesBySubject)
-      );
-      grid[d][p] = mergeSameEvents(rawMatches);
+      grid[d][p] = teacherLessonsForCell(state, teacher, day.iso, period, p);
     }
   }
 
@@ -570,10 +542,6 @@ function renderWallpaperSvg(state, query) {
     }
   }
 
-  const subjectLabel = subjects.length ? subjects.join(", ") : "선택된 과목이 없습니다.";
-  const gradeLabel = subjects
-    .map((subject) => `${subject} ${normalizedGrades(gradesBySubject[subject]).join(",")}학년`)
-    .join(" · ");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1170" height="2532" viewBox="0 0 1170 2532">
   <defs>
@@ -589,15 +557,13 @@ function renderWallpaperSvg(state, query) {
   <g font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif">
     ${renderText("용정 시간표", 64, 670, { size: 28, fill: "#64748b", weight: 900 })}
     ${renderText(titleLabel, 64, 725, { size: titleSize, fill: "#f8fafc", weight: 900 })}
-    ${renderFittedText(subjectLabel, 64, 770, 1042, { size: 28, minSize: 15, maxLines: 1, fill: "#2dd4bf", weight: 900, anchor: "start" })}
-    ${renderFittedText(gradeLabel, 64, 803, 1042, { size: 20, minSize: 12, maxLines: 1, fill: "#64748b", weight: 800, anchor: "start" })}
     <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
     ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f8fafc", anchor: "middle", weight: 900 })}
     ${headerCells}
     ${rows}
     ${chipsMarkup}
     <rect x="46" y="2260" width="1078" height="78" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="2" rx="12" />
-    ${renderText("1:1 변경: 주황색 · 신설 변경: 붉은색 · 취소된 원래 수업: 회색 · 행사: 민트색", 585, 2306, {
+    ${renderText("1:1 변경: 주황색 · 신설 변경: 붉은색", 585, 2306, {
       size: 20,
       fill: "#94a3b8",
       anchor: "middle",
