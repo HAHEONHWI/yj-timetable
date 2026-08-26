@@ -3188,7 +3188,7 @@ textarea {
 }
 
 .wallpaper-phone-head p {
-  color: var(--st-event-tx);
+  color: var(--muted);
   font-size: 12px;
   font-weight: 600;
 }
@@ -3217,9 +3217,9 @@ textarea {
   grid-template-columns: 38px repeat(var(--wallpaper-day-count), minmax(0, 1fr));
   grid-auto-rows: minmax(34px, auto);
   min-height: 0;
-  border: 2px solid var(--ink);
-  background: var(--ink);
-  gap: 2px;
+  border: 1px solid var(--line);
+  background: var(--line);
+  gap: 1px;
   overflow: hidden;
 }
 
@@ -3229,14 +3229,15 @@ textarea {
 .wallpaper-table-cell {
   display: grid;
   min-width: 0;
-  background: var(--bg-deep);
+  background: var(--panel);
 }
 
 .wallpaper-table-corner,
 .wallpaper-table-head,
 .wallpaper-table-period {
   place-items: center;
-  color: var(--ink);
+  background: var(--panel-strong);
+  color: var(--muted);
   text-align: center;
 }
 
@@ -3246,20 +3247,22 @@ textarea {
 }
 
 .wallpaper-table-head.is-today {
-  background: var(--st-event);
+  color: var(--blue-soft);
 }
 
 .wallpaper-table-head strong {
+  color: var(--ink);
   font-size: 13px;
 }
 
 .wallpaper-table-head span {
-  color: var(--muted);
+  color: inherit;
   font-size: 9px;
   font-weight: 500;
 }
 
 .wallpaper-table-period strong {
+  color: var(--ink);
   font-size: 10px;
   line-height: 1.1;
 }
@@ -3326,15 +3329,15 @@ textarea {
 }
 
 .wallpaper-class-chip {
+  position: relative;
   display: grid;
   gap: 1px;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--panel);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   padding: 3px;
-  background: var(--ink-strong);
-  color: var(--panel);
+  background: var(--panel-strong);
+  color: var(--ink);
   font-size: 9px;
   font-weight: 600;
   line-height: 1.1;
@@ -3342,23 +3345,36 @@ textarea {
   container-type: inline-size;
 }
 
+.wallpaper-class-chip.is-change,
+.wallpaper-class-chip.is-new {
+  padding-left: 5px;
+}
+
+.wallpaper-class-chip.is-change::before,
+.wallpaper-class-chip.is-new::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
 .wallpaper-class-chip.is-change {
-  border-color: var(--st-change);
-  background: var(--st-change-tx);
-  color: var(--new-change-bg-strong);
+  background: linear-gradient(var(--change-bg-strong), var(--change-bg-strong)), var(--panel-strong);
+  color: var(--change-text);
+}
+
+.wallpaper-class-chip.is-change::before {
+  background: var(--st-change);
 }
 
 .wallpaper-class-chip.is-new {
-  border-color: var(--danger);
-  background: var(--st-new-tx);
-  color: var(--st-new);
+  background: linear-gradient(var(--new-change-bg-strong), var(--new-change-bg-strong)), var(--panel-strong);
+  color: var(--new-change-text);
 }
 
-.wallpaper-class-chip.is-event,
-.wallpaper-class-chip.is-merge {
-  border-color: var(--st-event);
-  background: var(--st-event-tx);
-  color: var(--st-event);
+.wallpaper-class-chip.is-new::before {
+  background: var(--st-new);
 }
 
 .wallpaper-class-chip strong {

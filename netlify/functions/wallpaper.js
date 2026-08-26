@@ -342,11 +342,9 @@ function renderFittedText(text, x, centerY, maxWidth, options = {}) {
 }
 
 function chipColors(type) {
-  if (type === "change") return { bg: "rgba(43, 27, 10, 0.95)", line: "#f59e0b", fg: "#fef3c7", note: "#fbbf24" };
-  if (type === "new") return { bg: "rgba(69, 10, 10, 0.96)", line: "#ef4444", fg: "#fecaca", note: "#fca5a5" };
-  if (type === "original") return { bg: "rgba(23, 29, 38, 0.15)", line: "rgba(148, 163, 184, 0.25)", fg: "rgba(203, 213, 225, 0.35)", note: "rgba(148, 163, 184, 0.35)" };
-  if (type === "event" || type === "merge") return { bg: "rgba(10, 37, 43, 0.95)", line: "#14b8a6", fg: "#ccfbf1", note: "#2dd4bf" };
-  return { bg: "rgba(15, 23, 42, 0.95)", line: "#475569", fg: "#e2e8f0", note: "#94a3b8" };
+  if (type === "change") return { bg: "rgba(194, 145, 63, 0.22)", accent: "#c2913f", fg: "#ddb46b", note: "#ddb46b" };
+  if (type === "new") return { bg: "rgba(192, 101, 101, 0.22)", accent: "#c06565", fg: "#de9595", note: "#de9595" };
+  return { bg: "#25262c", accent: "", fg: "#f2f2f2", note: "#9ea0a8" };
 }
 
 function renderChip(match, x, y, width, height, isFullSize = false) {
@@ -354,11 +352,13 @@ function renderChip(match, x, y, width, height, isFullSize = false) {
   const hasClassName = !!match.className;
   const hasNote = !!match.note;
   const compact = !isFullSize || height < 100;
-  const maxTextWidth = Math.max(24, width - 16);
+  const accentWidth = colors.accent ? 3 : 0;
+  const maxTextWidth = Math.max(24, width - 16 - accentWidth);
   const classSize = compact ? 18 : 28;
   const titleSize = compact ? 17 : 32;
   const noteSize = compact ? 10 : 14;
   const centerY = y + height / 2;
+  const textCenterX = x + accentWidth + (width - accentWidth) / 2;
 
   let classY = centerY;
   let titleY = centerY;
@@ -375,17 +375,16 @@ function renderChip(match, x, y, width, height, isFullSize = false) {
     noteY = y + height * 0.72;
   }
 
-  const dashAttr = match.type === "original" ? ' stroke-dasharray="6,4"' : '';
-  const titleDecor = match.type === "original" ? "line-through" : "";
   const clipId = `wallpaper-chip-${renderChip.sequence++}`;
 
   return `
-    <defs><clipPath id="${clipId}"><rect x="${x + 4}" y="${y + 4}" width="${Math.max(0, width - 8)}" height="${Math.max(0, height - 8)}" rx="7" /></clipPath></defs>
-    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="${colors.bg}" stroke="${colors.line}" stroke-width="2"${dashAttr} />
+    <defs><clipPath id="${clipId}"><rect x="${x + accentWidth + 4}" y="${y + 4}" width="${Math.max(0, width - accentWidth - 8)}" height="${Math.max(0, height - 8)}" rx="6" /></clipPath></defs>
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="8" fill="${colors.bg}" />
+    ${colors.accent ? `<rect x="${x}" y="${y}" width="${accentWidth}" height="${height}" rx="1.5" fill="${colors.accent}" />` : ""}
     <g clip-path="url(#${clipId})">
-      ${hasClassName ? renderFittedText(match.className, x + width / 2, classY, maxTextWidth, { size: classSize, minSize: compact ? 11 : 16, maxLines: 1, fill: colors.fg, weight: 900 }) : ""}
-      ${renderFittedText(match.title, x + width / 2, titleY, maxTextWidth, { size: titleSize, minSize: compact ? 9 : 16, maxLines: 2, fill: colors.fg, weight: 900, decoration: titleDecor })}
-      ${hasNote ? renderFittedText(match.note, x + width / 2, noteY, maxTextWidth, { size: noteSize, minSize: compact ? 7 : 9, maxLines: 2, fill: colors.note, weight: 800 }) : ""}
+      ${hasClassName ? renderFittedText(match.className, textCenterX, classY, maxTextWidth, { size: classSize, minSize: compact ? 11 : 16, maxLines: 1, fill: colors.fg, weight: 900 }) : ""}
+      ${renderFittedText(match.title, textCenterX, titleY, maxTextWidth, { size: titleSize, minSize: compact ? 9 : 16, maxLines: 2, fill: colors.fg, weight: 900 })}
+      ${hasNote ? renderFittedText(match.note, textCenterX, noteY, maxTextWidth, { size: noteSize, minSize: compact ? 7 : 9, maxLines: 2, fill: colors.note, weight: 800 }) : ""}
     </g>
   `;
 }
@@ -448,9 +447,9 @@ function renderWallpaperSvg(state, query) {
       const x = tableX + periodWidth + index * dayWidth;
       const isToday = day.iso === today;
       return `
-        <rect x="${x}" y="${tableY}" width="${dayWidth}" height="${headerHeight}" fill="${isToday ? "#1e293b" : "#0f172a"}" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
-        ${renderText(day.weekday.label, x + dayWidth / 2, tableY + 34, { size: 28, anchor: "middle", weight: 900 })}
-        ${renderText(formatDate(day.iso), x + dayWidth / 2, tableY + 62, { size: 18, fill: isToday ? "#2dd4bf" : "#64748b", anchor: "middle", weight: 800 })}
+        <rect x="${x}" y="${tableY}" width="${dayWidth}" height="${headerHeight}" fill="#25262c" stroke="#303137" stroke-width="1" />
+        ${renderText(day.weekday.label, x + dayWidth / 2, tableY + 34, { size: 28, fill: "#f2f2f2", anchor: "middle", weight: 900 })}
+        ${renderText(formatDate(day.iso), x + dayWidth / 2, tableY + 62, { size: 18, fill: isToday ? "#8fb6de" : "#9ea0a8", anchor: "middle", weight: 800 })}
       `;
     })
     .join("");
@@ -459,13 +458,13 @@ function renderWallpaperSvg(state, query) {
     .map((period, periodIndex) => {
       const y = tableY + headerHeight + periodIndex * rowHeight;
       const periodCell = `
-        <rect x="${tableX}" y="${y}" width="${periodWidth}" height="${rowHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
-        ${renderText(`${period}교시`, tableX + periodWidth / 2, y + 90, { size: 23, fill: "#f8fafc", anchor: "middle", weight: 900 })}
+        <rect x="${tableX}" y="${y}" width="${periodWidth}" height="${rowHeight}" fill="#25262c" stroke="#303137" stroke-width="1" />
+        ${renderText(`${period}교시`, tableX + periodWidth / 2, y + 90, { size: 23, fill: "#f2f2f2", anchor: "middle", weight: 900 })}
       `;
       const dayCells = days
         .map((day, dayIndex) => {
           const x = tableX + periodWidth + dayIndex * dayWidth;
-          return `<rect x="${x}" y="${y}" width="${dayWidth}" height="${rowHeight}" fill="#1e293b" fill-opacity="0.4" stroke="#334155" stroke-width="2" />`;
+          return `<rect x="${x}" y="${y}" width="${dayWidth}" height="${rowHeight}" fill="#1d1e23" stroke="#303137" stroke-width="1" />`;
         })
         .join("");
       return periodCell + dayCells;
@@ -544,32 +543,23 @@ function renderWallpaperSvg(state, query) {
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1170" height="2532" viewBox="0 0 1170 2532">
-  <defs>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="90" />
-    </filter>
-  </defs>
-  <rect width="1170" height="2532" fill="#090d16" />
-  <circle cx="120" cy="850" r="300" fill="#3b82f6" opacity="0.22" filter="url(#glow)" />
-  <circle cx="1000" cy="950" r="280" fill="#8b5cf6" opacity="0.18" filter="url(#glow)" />
-  <circle cx="1000" cy="2100" r="350" fill="#ec4899" opacity="0.15" filter="url(#glow)" />
-  <circle cx="150" cy="2000" r="320" fill="#14b8a6" opacity="0.18" filter="url(#glow)" />
+  <rect width="1170" height="2532" fill="#16171b" />
   <g font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif">
-    ${renderText("용정 시간표", 64, 670, { size: 28, fill: "#64748b", weight: 900 })}
-    ${renderText(titleLabel, 64, 725, { size: titleSize, fill: "#f8fafc", weight: 900 })}
-    <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2" />
-    ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f8fafc", anchor: "middle", weight: 900 })}
+    ${renderText("용정 시간표", 64, 670, { size: 28, fill: "#9ea0a8", weight: 900 })}
+    ${renderText(titleLabel, 64, 725, { size: titleSize, fill: "#f2f2f2", weight: 900 })}
+    <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#25262c" stroke="#303137" stroke-width="1" />
+    ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f2f2f2", anchor: "middle", weight: 900 })}
     ${headerCells}
     ${rows}
     ${chipsMarkup}
-    <rect x="46" y="2260" width="1078" height="78" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="2" rx="12" />
-    ${renderText("1:1 변경: 주황색 · 신설 변경: 붉은색", 585, 2306, {
+    <rect x="46" y="2260" width="1078" height="78" fill="#1d1e23" stroke="#303137" stroke-width="1" rx="12" />
+    ${renderText("1:1 변경: 노란색 · 신설 변경: 붉은색", 585, 2306, {
       size: 20,
-      fill: "#94a3b8",
+      fill: "#9ea0a8",
       anchor: "middle",
       weight: 800,
     })}
-    ${renderText(`업데이트 ${updateTimeStr}`, 585, 2470, { size: 24, fill: "#475569", anchor: "middle" })}
+    ${renderText(`업데이트 ${updateTimeStr}`, 585, 2470, { size: 24, fill: "#75777f", anchor: "middle" })}
   </g>
 </svg>`;
 }
