@@ -382,6 +382,10 @@
     return state.base[className][weekdayForDate(date).key] || periods.map(() => "");
   }
 
+  function teacherForSubject(className, subject) {
+    return (state.teachers && state.teachers[className] && state.teachers[className][subject]) || "";
+  }
+
   function showMessage(target, text) {
     target.textContent = text;
     window.clearTimeout(target._timer);
@@ -1002,8 +1006,10 @@
             const subject = change ? change.subject : getSubjectsForDate(date, className)[index];
             const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
             const changeClass = change ? ` is-change${isNewChange(change) ? " is-new-change" : ""}` : "";
+            const teacher = variant === "slideshow-grid" ? "" : teacherForSubject(className, subject);
+            const teacherLabel = teacher ? `<small class="lesson-teacher">${escapeHtml(teacher)}</small>` : "";
             return `<div class="lesson-cell${changeClass}" style="${placement}">
-              <strong>${escapeHtml(subject || "-")}</strong>${memo}
+              <strong>${escapeHtml(subject || "-")}</strong>${teacherLabel}${memo}
             </div>`;
           })
           .join("");
@@ -1585,9 +1591,11 @@
             const subject = change ? change.subject : subjects[index];
             const kind = change ? (isNewChange(change) ? " is-change is-new-change" : " is-change") : "";
             const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
+            const teacher = teacherForSubject(className, subject);
+            const teacherLabel = teacher ? `<small class="lesson-teacher">${escapeHtml(teacher)}</small>` : "";
             return `<li class="mobile-row${kind}">
               <span class="mobile-period">${period}</span>
-              <span class="mobile-body"><strong>${escapeHtml(subject || "-")}</strong>${memo}</span>
+              <span class="mobile-body"><strong>${escapeHtml(subject || "-")}</strong>${teacherLabel}${memo}</span>
             </li>`;
           })
           .join("");
