@@ -111,6 +111,7 @@ function defaultState() {
     teacherMode: "subject",
     teachersByPeriod: Object.fromEntries(classes.map((className) => [className, {}])),
     subjectAbbreviations: {},
+    maskTeacherNames: false,
     baseMerges: [],
     specialSchedules: {},
     changes: {},
@@ -129,6 +130,7 @@ function normalizeState(value) {
     teacherMode: parsed.teacherMode === "period" ? "period" : "subject",
     teachersByPeriod: parsed.teachersByPeriod || defaults.teachersByPeriod,
     subjectAbbreviations: parsed.subjectAbbreviations || {},
+    maskTeacherNames: Boolean(parsed.maskTeacherNames),
     baseMerges: Array.isArray(parsed.baseMerges) ? parsed.baseMerges : [],
     specialSchedules: parsed.specialSchedules || {},
     changes: parsed.changes || {},
@@ -163,6 +165,14 @@ function resolveTeacherForCell(state, date, className, periodIndex, subject, has
 
 function subjectDisplayLabel(state, subject) {
   return (subject && state.subjectAbbreviations && state.subjectAbbreviations[subject]) || subject || "";
+}
+
+function maskedTeacherName(state, name) {
+  if (!state.maskTeacherNames || !name) return name;
+  const characters = Array.from(name);
+  if (characters.length <= 1) return "*";
+  characters[characters.length - 1] = "*";
+  return characters.join("");
 }
 
 function teacherLessonsForCell(state, teacher, date, period, periodIndex) {
@@ -394,7 +404,7 @@ renderChip.sequence = 0;
 function renderWallpaperSvg(state, query) {
   renderChip.sequence = 0;
   const teacher = query.teacher || query.t || "";
-  const titleLabel = teacher ? `${teacher} 선생님의 이번 주 시간표` : "담당 시간표";
+  const titleLabel = teacher ? `${maskedTeacherName(state, teacher)} 선생님의 이번 주 시간표` : "담당 시간표";
   const titleSize = teacher ? (teacher.length > 5 ? 44 : 52) : 62;
   const selectedDays = splitParam(query.days || query.day || query.d);
   const allowedDaySet = new Set(selectedDays.length ? selectedDays : weekdays.map((day) => day.key));

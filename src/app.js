@@ -144,6 +144,7 @@
     baseTeacherVisibility: $("#baseTeacherVisibility"),
     saveBaseTeachersButton: $("#saveBaseTeachersButton"),
     teacherModeToggle: $("#teacherModeToggle"),
+    maskTeacherNamesToggle: $("#maskTeacherNamesToggle"),
     subjectAbbreviationEditor: $("#subjectAbbreviationEditor"),
     subjectAbbreviationSubject: $("#subjectAbbreviationSubject"),
     subjectAbbreviationValue: $("#subjectAbbreviationValue"),
@@ -412,6 +413,14 @@
     return (subject && state.subjectAbbreviations && state.subjectAbbreviations[subject]) || subject || "";
   }
 
+  function maskedTeacherName(name) {
+    if (!state.maskTeacherNames || !name) return name;
+    const characters = Array.from(name);
+    if (characters.length <= 1) return "*";
+    characters[characters.length - 1] = "*";
+    return characters.join("");
+  }
+
   function resolveTeacherForCell(date, className, periodIndex, subject, hasOverride) {
     if (state.teacherMode === "period" && !hasOverride) {
       const special = state.specialSchedules[date] && state.specialSchedules[date][className];
@@ -419,10 +428,10 @@
         const weekdayKey = weekdayForDate(date).key;
         const teacherRow = state.teachersByPeriod[className] && state.teachersByPeriod[className][weekdayKey];
         const teacher = teacherRow && teacherRow[periodIndex];
-        if (teacher) return teacher;
+        if (teacher) return maskedTeacherName(teacher);
       }
     }
-    return teacherForSubject(className, subject);
+    return maskedTeacherName(teacherForSubject(className, subject));
   }
 
   function showMessage(target, text) {
@@ -719,6 +728,7 @@
     setContainerDisabled("#baseTeacherEditor", !canBase);
     setControlDisabled(els.saveBaseTeachersButton, !canBase);
     setControlDisabled(els.teacherModeToggle, !canBase);
+    setControlDisabled(els.maskTeacherNamesToggle, !canBase);
     setContainerDisabled("#subjectAbbreviationEditor", !canBase);
     setControlDisabled(els.saveSubjectAbbreviationsButton, !canBase);
     [els.baseMergeStart, els.baseMergeEnd, els.baseMergeTitle, els.baseMergeMemo, els.saveBaseMergeButton].forEach((control) =>
@@ -1333,7 +1343,7 @@
   function renderWallpaperControls(settings) {
     const names = teacherNames();
     els.wallpaperTeacher.innerHTML = names.length
-      ? names.map((teacher, index) => `<option value="${escapeHtml(teacher)}">${index + 1}. ${escapeHtml(teacher)}</option>`).join("")
+      ? names.map((teacher, index) => `<option value="${escapeHtml(teacher)}">${index + 1}. ${escapeHtml(maskedTeacherName(teacher))}</option>`).join("")
       : `<option value="">등록된 교사 없음</option>`;
     els.wallpaperTeacher.value = settings.teacher;
 
@@ -1440,7 +1450,7 @@
     els.wallpaperPreview.innerHTML = `<div class="wallpaper-phone-content">
       <header class="wallpaper-phone-head">
         <p>용정 시간표</p>
-        <h3>${escapeHtml(settings.teacher)} 선생님의 이번 주 시간표</h3>
+        <h3>${escapeHtml(maskedTeacherName(settings.teacher))} 선생님의 이번 주 시간표</h3>
       </header>
       <div class="wallpaper-table" style="--wallpaper-day-count:${days.length}">
         <div class="wallpaper-table-corner">교시</div>
@@ -1520,7 +1530,7 @@
         ? storedTeacher
         : names[0] || "";
     els.teacherViewSelect.innerHTML = names.length
-      ? names.map((teacher, index) => `<option value="${escapeHtml(teacher)}">${index + 1}. ${escapeHtml(teacher)}</option>`).join("")
+      ? names.map((teacher, index) => `<option value="${escapeHtml(teacher)}">${index + 1}. ${escapeHtml(maskedTeacherName(teacher))}</option>`).join("")
       : `<option value="">등록된 교사 없음</option>`;
     els.teacherViewSelect.value = currentTeacher;
     if (!currentTeacher) {
@@ -1603,10 +1613,16 @@
             </li>`;
           })
           .join("");
-        return `<section class="mobile-class">
-          <h3 class="mobile-class-title">${escapeHtml(className)}</h3>
+        if (visibleClasses.length === 1) {
+          return `<section class="mobile-class">
+            <h3 class="mobile-class-title">${escapeHtml(className)}</h3>
+            <ul class="mobile-list">${rows}</ul>
+          </section>`;
+        }
+        return `<details class="mobile-class">
+          <summary class="mobile-class-title">${escapeHtml(className)}</summary>
           <ul class="mobile-list">${rows}</ul>
-        </section>`;
+        </details>`;
       })
       .join("");
   }
@@ -1940,6 +1956,7 @@
   function renderBaseTeacherEditor(resyncMode = false) {
     if (resyncMode) {
       els.teacherModeToggle.checked = state.teacherMode === "period";
+      els.maskTeacherNamesToggle.checked = Boolean(state.maskTeacherNames);
       const visible = localStorage.getItem(BASE_TEACHER_VISIBLE_KEY) === "true";
       applyBaseTeacherVisibility(visible);
     }
@@ -3465,6 +3482,7 @@
         nextTeachers[input.dataset.teacherClass][input.dataset.teacherSubject] = teacher;
       });
       state.teachers = nextTeachers;
+      state.maskTeacherNames = els.maskTeacherNamesToggle.checked;
       saveState("과목별 담당 교사를 저장했습니다.", "update_base");
     });
 
