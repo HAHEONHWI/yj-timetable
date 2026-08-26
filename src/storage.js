@@ -60,6 +60,7 @@
         classHeaderFontScale: 100,
         periodHeaderFontScale: 100,
         eventFontScale: 100,
+        teacherFontScale: 100,
         reloadToken: "",
         scheduleDate: "",
         scheduleDateExpiresOn: "",
@@ -105,6 +106,7 @@
           classHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.classHeaderFontScale) || 100,
           periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
           eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
+          teacherFontScale: Number(parsed.slideshow && parsed.slideshow.teacherFontScale) || 100,
           reloadToken: parsed.slideshow && parsed.slideshow.reloadToken ? String(parsed.slideshow.reloadToken) : "",
           scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
           scheduleDateExpiresOn:
@@ -157,6 +159,7 @@
         classHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.classHeaderFontScale) || 100,
         periodHeaderFontScale: Number(parsed.slideshow && parsed.slideshow.periodHeaderFontScale) || 100,
         eventFontScale: Number(parsed.slideshow && parsed.slideshow.eventFontScale) || 100,
+        teacherFontScale: Number(parsed.slideshow && parsed.slideshow.teacherFontScale) || 100,
         reloadToken: parsed.slideshow && parsed.slideshow.reloadToken ? String(parsed.slideshow.reloadToken) : "",
         scheduleDate: parsed.slideshow && parsed.slideshow.scheduleDate ? String(parsed.slideshow.scheduleDate) : "",
         scheduleDateExpiresOn:

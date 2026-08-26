@@ -36,6 +36,7 @@
     </button>
     <nav class="nav">
       <button class="nav-button is-active" data-route="view" type="button">조회</button>
+      <button class="nav-button" data-route="teachers" type="button">교사 조회</button>
       <button class="nav-button" data-route="slideshow" type="button">슬라이드쇼</button>
       <button class="nav-button" data-route="wallpaper" data-dev-only type="button" hidden>배경화면</button>
       <button class="nav-button" data-route="download" type="button">다운로드</button>
@@ -71,6 +72,26 @@
         <span class="legend-item"><span class="legend-swatch" data-kind="new"></span>신설 수업</span>
         <span class="legend-item"><span class="legend-swatch" data-kind="event"></span>행사</span>
         <span id="variantNote" class="legend-note"></span>
+      </div>
+    </section>
+
+    <section id="teachersPage" class="page teachers-page is-hidden">
+      <div class="teacher-view-head">
+        <div>
+          <p class="eyebrow">교사 시점</p>
+          <h2>교사 주간 시간표</h2>
+          <p class="muted">담당 수업과 교과 변경을 한 주 단위로 확인합니다.</p>
+        </div>
+        <div class="field teacher-picker">
+          <label for="teacherViewSelect">교사</label>
+          <select id="teacherViewSelect"></select>
+        </div>
+      </div>
+      <div id="teacherViewSummary" class="teacher-view-summary"></div>
+      <div id="teacherWeekSchedule" class="teacher-week-shell"></div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch" data-kind="change"></span>교과 변경</span>
+        <span class="legend-item"><span class="legend-swatch" data-kind="new"></span>신설 수업</span>
       </div>
     </section>
 
@@ -556,6 +577,13 @@
             <p id="baseImportMessage" class="message" aria-live="polite"></p>
             <p id="baseTeacherSummary" class="muted"></p>
           </div>
+          <label class="check-item base-teacher-mode" for="teacherModeToggle">
+            <input id="teacherModeToggle" type="checkbox" />
+            <span>
+              <strong>교시별로 다른 교사 입력</strong>
+              <small>켜면 아래 표가 과목·담당교사 입력칸으로 바뀝니다. 기존 과목별 담당 교사가 먼저 채워지며 각 칸에서 바꿀 수 있습니다.</small>
+            </span>
+          </label>
           <div id="baseEditor" class="special-editor"></div>
           <button id="saveBaseButton" class="primary-button" type="button">기본 시간표 저장</button>
 
@@ -564,13 +592,6 @@
               <h3>과목별 담당 교사</h3>
               <p class="muted">반마다 가르치는 과목에 담당 교사를 지정합니다. 해당 반에 없는 과목은 입력칸 대신 "-"로 표시됩니다.</p>
             </div>
-            <label class="check-item" for="teacherModeToggle">
-              <input id="teacherModeToggle" type="checkbox" />
-              <span>
-                <strong>교시별로 다른 교사 입력</strong>
-                <small>켜면 같은 과목도 요일·교시마다 다른 교사를 지정할 수 있습니다 (위쪽 "요일" 기준). 끄면 과목마다 교사 하나만 지정합니다.</small>
-              </span>
-            </label>
             <div id="baseTeacherEditor" class="special-editor"></div>
             <button id="saveBaseTeachersButton" class="primary-button" type="button">담당 교사 저장</button>
           </div>
@@ -580,8 +601,19 @@
               <h3>과목 약칭</h3>
               <p class="muted">화면 표시 칸이 좁을 때 과목명 대신 보여줄 약칭을 지정합니다. 비워두면 원래 과목명이 그대로 표시됩니다.</p>
             </div>
-            <div id="subjectAbbreviationEditor" class="special-editor"></div>
-            <button id="saveSubjectAbbreviationsButton" class="primary-button" type="button">약칭 저장</button>
+            <div class="subject-abbreviation-form">
+              <div class="field">
+                <label for="subjectAbbreviationSubject">과목 선택</label>
+                <select id="subjectAbbreviationSubject"></select>
+              </div>
+              <div class="field">
+                <label for="subjectAbbreviationValue">약칭</label>
+                <input id="subjectAbbreviationValue" type="text" maxlength="12" placeholder="예: 기가" />
+              </div>
+              <button id="saveSubjectAbbreviationsButton" class="primary-button" type="button">+ 약칭 추가</button>
+            </div>
+            <p id="subjectAbbreviationMessage" class="message" aria-live="polite"></p>
+            <div id="subjectAbbreviationEditor" class="list"></div>
           </div>
 
           <div class="subsection">
@@ -818,6 +850,11 @@
                 <label for="slideEventFontScale">행사 글자</label>
                 <input id="slideEventFontScale" type="range" min="70" max="150" step="5" />
                 <p id="slideEventFontScaleLabel" class="message"></p>
+              </div>
+              <div class="field">
+                <label for="slideTeacherFontScale">담당 교사 글자</label>
+                <input id="slideTeacherFontScale" type="range" min="60" max="150" step="5" />
+                <p id="slideTeacherFontScaleLabel" class="message"></p>
               </div>
               <div class="field">
                 <label for="noticeTitleFontSize">안내 제목 글자</label>
