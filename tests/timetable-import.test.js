@@ -68,4 +68,23 @@ const classSpecificMerged = mergeGradeImports([classSpecificTeacherImport, grade
 assert.equal(classSpecificMerged.teachers["1-1"].국어, "국어교사");
 assert.equal(classSpecificMerged.teachers["1-2"].국어, "다른교사");
 
+const conflictRows = Array.from({ length: 8 }, () => Array(89).fill(""));
+dayStarts.forEach((start, dayIndex) => {
+  conflictRows[4][start] = dayLabels[dayIndex];
+  for (let index = 0; index < 9; index += 1) conflictRows[5][start + index] = index + 1;
+});
+conflictRows[6][1] = "1학년";
+conflictRows[6][2] = "학급1(1학년) 학급1반)";
+conflictRows[6][dayStarts[0]] = "국어(김선생)"; // 월요일 1교시
+conflictRows[6][dayStarts[2]] = "국어(이선생)"; // 수요일 1교시 - 같은 과목, 다른 교사
+
+assert.throws(
+  () => parseWorksheetRows(conflictRows, "충돌.xlsx"),
+  /1-1 국어 교사가 한 파일 안에서 다릅니다/
+);
+
+const lenient = parseWorksheetRows(conflictRows, "충돌.xlsx", { strictTeacherPerSubject: false });
+assert.equal(lenient.classTeachersByPeriod["1-1"].mon[0], "김선생");
+assert.equal(lenient.classTeachersByPeriod["1-1"].wed[0], "이선생");
+
 console.log("timetable-import tests passed");

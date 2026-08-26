@@ -37,6 +37,9 @@
       adminPassword: "1234",
       base: makeDefaultBase(),
       teachers: { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+      teacherMode: "subject",
+      teachersByPeriod: { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+      subjectAbbreviations: {},
       baseMerges: [],
       specialSchedules: {},
       changes: {},
@@ -61,6 +64,7 @@
         scheduleDate: "",
         scheduleDateExpiresOn: "",
         showMeal: true,
+        showTeacher: false,
       },
     };
   }
@@ -80,6 +84,9 @@
         ...parsed,
         base: parsed.base || makeDefaultBase(),
         teachers: parsed.teachers || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+        teacherMode: parsed.teacherMode === "period" ? "period" : "subject",
+        teachersByPeriod: parsed.teachersByPeriod || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+        subjectAbbreviations: parsed.subjectAbbreviations || {},
         baseMerges: Array.isArray(parsed.baseMerges) ? parsed.baseMerges : [],
         specialSchedules: parsed.specialSchedules || {},
         changes: parsed.changes || {},
@@ -103,6 +110,7 @@
           scheduleDateExpiresOn:
             parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
           showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
+          showTeacher: Boolean(parsed.slideshow && parsed.slideshow.showTeacher),
         },
       };
     } catch {
@@ -128,6 +136,9 @@
       ...parsed,
       base: parsed.base || makeDefaultBase(),
       teachers: parsed.teachers || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+      teacherMode: parsed.teacherMode === "period" ? "period" : "subject",
+      teachersByPeriod: parsed.teachersByPeriod || { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
+      subjectAbbreviations: parsed.subjectAbbreviations || {},
       baseMerges: Array.isArray(parsed.baseMerges) ? parsed.baseMerges : [],
       specialSchedules: parsed.specialSchedules || {},
       changes: parsed.changes || {},
@@ -151,6 +162,7 @@
         scheduleDateExpiresOn:
           parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
         showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
+        showTeacher: Boolean(parsed.slideshow && parsed.slideshow.showTeacher),
       },
     };
   }

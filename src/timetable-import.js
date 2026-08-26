@@ -67,13 +67,15 @@
     return expectedClasses.includes(className) ? className : "";
   }
 
-  function parseWorksheetRows(rows, sourceName = "Excel 파일") {
+  function parseWorksheetRows(rows, sourceName = "Excel 파일", options = {}) {
+    const { strictTeacherPerSubject = true } = options;
     if (!Array.isArray(rows) || rows.length === 0) {
       throw new Error(`${sourceName}: 읽을 시간표가 없습니다.`);
     }
     const { periodRowIndex, dayColumns } = findScheduleHeader(rows);
     const base = {};
     const classTeachers = {};
+    const classTeachersByPeriod = {};
 
     rows.slice(periodRowIndex + 1).forEach((rawRow) => {
       const row = Array.isArray(rawRow) ? rawRow : [];
@@ -81,39 +83,46 @@
       if (!className) return;
       if (base[className]) throw new Error(`${sourceName}: ${className} 학급이 두 번 들어 있습니다.`);
       const teachers = {};
+      const teachersByPeriod = {};
       base[className] = Object.fromEntries(
-        weekdayLabels.map((weekday) => [
-          weekday.key,
-          dayColumns[weekday.key].map((column) => {
+        weekdayLabels.map((weekday) => {
+          const teacherRow = [];
+          const subjectRow = dayColumns[weekday.key].map((column) => {
             const lesson = parseSubjectTeacher(row[column]);
             if (lesson.subject && lesson.teacher) {
               const existingTeacher = teachers[lesson.subject];
-              if (existingTeacher && existingTeacher !== lesson.teacher) {
+              if (existingTeacher && existingTeacher !== lesson.teacher && strictTeacherPerSubject) {
                 throw new Error(`${sourceName}: ${className} ${lesson.subject} 교사가 한 파일 안에서 다릅니다.`);
               }
               teachers[lesson.subject] = lesson.teacher;
             }
+            teacherRow.push(lesson.teacher);
             return lesson.subject;
-          }),
-        ])
+          });
+          teachersByPeriod[weekday.key] = teacherRow;
+          return [weekday.key, subjectRow];
+        })
       );
       classTeachers[className] = teachers;
+      classTeachersByPeriod[className] = teachersByPeriod;
     });
 
     if (Object.keys(base).length === 0) {
       throw new Error(`${sourceName}: 1-1~3-2 학급 행을 찾지 못했습니다.`);
     }
-    return { sourceName, base, classTeachers };
+    return { sourceName, base, classTeachers, classTeachersByPeriod };
   }
 
   function mergeGradeImports(imports) {
     const base = {};
     const teachers = {};
+    const teachersByPeriod = {};
     imports.forEach((item) => {
       Object.keys(item.base).forEach((className) => {
         if (base[className]) throw new Error(`${className} 학급이 선택한 파일 여러 개에 중복으로 들어 있습니다.`);
         base[className] = item.base[className];
         teachers[className] = item.classTeachers[className] || {};
+        teachersByPeriod[className] = item.classTeachersByPeriod[className] || {};
       });
     });
 
@@ -124,6 +133,7 @@
     return {
       base: Object.fromEntries(expectedClasses.map((className) => [className, base[className]])),
       teachers: Object.fromEntries(expectedClasses.map((className) => [className, teachers[className]])),
+      teachersByPeriod: Object.fromEntries(expectedClasses.map((className) => [className, teachersByPeriod[className]])),
     };
   }
 

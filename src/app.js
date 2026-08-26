@@ -140,6 +140,9 @@
     baseTeacherSummary: $("#baseTeacherSummary"),
     baseTeacherEditor: $("#baseTeacherEditor"),
     saveBaseTeachersButton: $("#saveBaseTeachersButton"),
+    teacherModeToggle: $("#teacherModeToggle"),
+    subjectAbbreviationEditor: $("#subjectAbbreviationEditor"),
+    saveSubjectAbbreviationsButton: $("#saveSubjectAbbreviationsButton"),
     specialDate: $("#specialDate"),
     specialDateHint: $("#specialDateHint"),
     specialEditor: $("#specialEditor"),
@@ -200,6 +203,7 @@
     slideRefreshInterval: $("#slideRefreshInterval"),
     slideScheduleDate: $("#slideScheduleDate"),
     slideShowMeal: $("#slideShowMeal"),
+    slideShowTeacher: $("#slideShowTeacher"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
     forceSlideReloadPermission: $("#forceSlideReloadPermission"),
@@ -386,6 +390,23 @@
 
   function teacherForSubject(className, subject) {
     return (state.teachers && state.teachers[className] && state.teachers[className][subject]) || "";
+  }
+
+  function subjectDisplayLabel(subject) {
+    return (subject && state.subjectAbbreviations && state.subjectAbbreviations[subject]) || subject || "";
+  }
+
+  function resolveTeacherForCell(date, className, periodIndex, subject, hasOverride) {
+    if (state.teacherMode === "period" && !hasOverride) {
+      const special = state.specialSchedules[date] && state.specialSchedules[date][className];
+      if (!Array.isArray(special)) {
+        const weekdayKey = weekdayForDate(date).key;
+        const teacherRow = state.teachersByPeriod[className] && state.teachersByPeriod[className][weekdayKey];
+        const teacher = teacherRow && teacherRow[periodIndex];
+        if (teacher) return teacher;
+      }
+    }
+    return teacherForSubject(className, subject);
   }
 
   function showMessage(target, text) {
@@ -678,6 +699,9 @@
     setControlDisabled(els.importBaseButton, !canBase);
     setContainerDisabled("#baseTeacherEditor", !canBase);
     setControlDisabled(els.saveBaseTeachersButton, !canBase);
+    setControlDisabled(els.teacherModeToggle, !canBase);
+    setContainerDisabled("#subjectAbbreviationEditor", !canBase);
+    setControlDisabled(els.saveSubjectAbbreviationsButton, !canBase);
     [els.baseMergeStart, els.baseMergeEnd, els.baseMergeTitle, els.baseMergeMemo, els.saveBaseMergeButton].forEach((control) =>
       setControlDisabled(control, !canBaseMerge)
     );
@@ -1010,10 +1034,11 @@
             const subject = change ? change.subject : getSubjectsForDate(date, className)[index];
             const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
             const changeClass = change ? ` is-change${isNewChange(change) ? " is-new-change" : ""}` : "";
-            const teacher = variant === "slideshow-grid" ? "" : teacherForSubject(className, subject);
+            const showTeacher = variant !== "slideshow-grid" || Boolean(state.slideshow && state.slideshow.showTeacher);
+            const teacher = showTeacher ? resolveTeacherForCell(date, className, index, subject, Boolean(change)) : "";
             const teacherLabel = teacher ? `<small class="lesson-teacher">${escapeHtml(teacher)}</small>` : "";
             return `<div class="lesson-cell${changeClass}" style="${placement}">
-              <strong>${escapeHtml(subject || "-")}</strong>${teacherLabel}${memo}
+              <strong>${escapeHtml(subjectDisplayLabel(subject) || "-")}</strong>${teacherLabel}${memo}
             </div>`;
           })
           .join("");
@@ -1054,7 +1079,7 @@
       const changeTypeClass = isNewChange(change) ? " is-new-change" : "";
       const changeMeta = isNewChange(change) ? "신설 수업" : `${escapeHtml(original)} 변경`;
       return `<div class="board-lesson is-change${changeTypeClass}${isToday ? " is-today" : ""}">
-        <strong>${escapeHtml(change.subject)}</strong>
+        <strong>${escapeHtml(subjectDisplayLabel(change.subject))}</strong>
         <small>${changeMeta}${change.memo ? ` · ${escapeHtml(change.memo)}` : ""}</small>
       </div>`;
     }
@@ -1071,7 +1096,7 @@
 
     const subject = getSubjectsForDate(date, className)[periodIndex] || "-";
     return `<div class="board-lesson${isToday ? " is-today" : ""}">
-      <strong>${escapeHtml(subject)}</strong>
+      <strong>${escapeHtml(subjectDisplayLabel(subject))}</strong>
     </div>`;
   }
 
@@ -1595,11 +1620,11 @@
             const subject = change ? change.subject : subjects[index];
             const kind = change ? (isNewChange(change) ? " is-change is-new-change" : " is-change") : "";
             const memo = change && change.memo ? `<small>${escapeHtml(change.memo)}</small>` : "";
-            const teacher = teacherForSubject(className, subject);
+            const teacher = resolveTeacherForCell(date, className, index, subject, Boolean(change));
             const teacherLabel = teacher ? `<small class="lesson-teacher">${escapeHtml(teacher)}</small>` : "";
             return `<li class="mobile-row${kind}">
               <span class="mobile-period">${period}</span>
-              <span class="mobile-body"><strong>${escapeHtml(subject || "-")}</strong>${teacherLabel}${memo}</span>
+              <span class="mobile-body"><strong>${escapeHtml(subjectDisplayLabel(subject) || "-")}</strong>${teacherLabel}${memo}</span>
             </li>`;
           })
           .join("");
@@ -1872,18 +1897,23 @@
     return list;
   }
 
-  function renderBaseTeacherEditor() {
-    const subjectsByClass = Object.fromEntries(classes.map((className) => [className, classSubjectList(className)]));
-    const allSubjects = [];
-    const seenAll = new Set();
+  function allDistinctSubjects() {
+    const seen = new Set();
+    const list = [];
     classes.forEach((className) => {
-      subjectsByClass[className].forEach((subject) => {
-        if (!seenAll.has(subject)) {
-          seenAll.add(subject);
-          allSubjects.push(subject);
+      classSubjectList(className).forEach((subject) => {
+        if (!seen.has(subject)) {
+          seen.add(subject);
+          list.push(subject);
         }
       });
     });
+    return list;
+  }
+
+  function renderSubjectTeacherGrid() {
+    const subjectsByClass = Object.fromEntries(classes.map((className) => [className, classSubjectList(className)]));
+    const allSubjects = allDistinctSubjects();
 
     if (allSubjects.length === 0) {
       els.baseTeacherEditor.innerHTML = `<p class="muted">기본 시간표에 등록된 과목이 없습니다.</p>`;
@@ -1918,6 +1948,64 @@
     </div>`;
   }
 
+  function renderPeriodTeacherGrid() {
+    const weekday = els.baseWeekday.value;
+    const headerCells = classes
+      .map((className, index) => `<div class="special-head" style="grid-column:${index + 2};grid-row:1">${escapeHtml(className)}</div>`)
+      .join("");
+    const rows = periods
+      .map((period, periodIndex) => {
+        const inputs = classes
+          .map((className, classIndex) => {
+            const teacherRow = (state.teachersByPeriod[className] && state.teachersByPeriod[className][weekday]) || [];
+            return `<div class="special-input" style="grid-column:${classIndex + 2};grid-row:${periodIndex + 2}">
+              <input data-teacher-period-class="${escapeHtml(className)}" data-teacher-period-index="${periodIndex}" type="text" value="${escapeHtml(teacherRow[periodIndex] || "")}" placeholder="담당 교사" aria-label="${className} ${period}교시 담당 교사" />
+            </div>`;
+          })
+          .join("");
+        return `<div class="special-head" style="grid-column:1;grid-row:${periodIndex + 2}">${period}교시</div>${inputs}`;
+      })
+      .join("");
+    els.baseTeacherEditor.innerHTML = `<div class="special-grid" style="--class-count:${classes.length}">
+      <div class="special-head" style="grid-column:1;grid-row:1">교시</div>
+      ${headerCells}
+      ${rows}
+    </div>`;
+  }
+
+  function renderBaseTeacherEditor(resyncMode = false) {
+    if (resyncMode) {
+      els.teacherModeToggle.checked = state.teacherMode === "period";
+    }
+    if (els.teacherModeToggle.checked) {
+      renderPeriodTeacherGrid();
+      return;
+    }
+    renderSubjectTeacherGrid();
+  }
+
+  function renderSubjectAbbreviationEditor() {
+    const allSubjects = allDistinctSubjects();
+    if (allSubjects.length === 0) {
+      els.subjectAbbreviationEditor.innerHTML = `<p class="muted">기본 시간표에 등록된 과목이 없습니다.</p>`;
+      return;
+    }
+    const rows = allSubjects
+      .map((subject, rowIndex) => {
+        const abbreviation = (state.subjectAbbreviations && state.subjectAbbreviations[subject]) || "";
+        return `<div class="special-head" style="grid-column:1;grid-row:${rowIndex + 2}">${escapeHtml(subject)}</div>
+          <div class="special-input" style="grid-column:2;grid-row:${rowIndex + 2}">
+            <input data-subject-abbreviation="${escapeHtml(subject)}" type="text" value="${escapeHtml(abbreviation)}" placeholder="예: 기가" aria-label="${subject} 약칭" />
+          </div>`;
+      })
+      .join("");
+    els.subjectAbbreviationEditor.innerHTML = `<div class="teacher-grid" style="--class-count:1;--row-count:${allSubjects.length}">
+      <div class="special-head" style="grid-column:1;grid-row:1">과목</div>
+      <div class="special-head" style="grid-column:2;grid-row:1">약칭</div>
+      ${rows}
+    </div>`;
+  }
+
   function loadSheetJs() {
     if (window.XLSX) return Promise.resolve(window.XLSX);
     if (sheetJsPromise) return sheetJsPromise;
@@ -1939,6 +2027,7 @@
   async function readBaseImportFiles(assignments) {
     if (!window.TimetableImport) throw new Error("시간표 가져오기 기능을 불러오지 못했습니다.");
     const XLSX = await loadSheetJs();
+    const strictTeacherPerSubject = state.teacherMode !== "period";
     const imports = [];
     for (const assignment of assignments) {
       const { file } = assignment;
@@ -1946,7 +2035,7 @@
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) throw new Error(`${file.name}: 시트가 없습니다.`);
       const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], { header: 1, defval: "", raw: false });
-      imports.push(window.TimetableImport.parseWorksheetRows(rows, file.name));
+      imports.push(window.TimetableImport.parseWorksheetRows(rows, file.name, { strictTeacherPerSubject }));
     }
     return window.TimetableImport.mergeGradeImports(imports);
   }
@@ -2459,7 +2548,8 @@
     updateLastSaveStatus();
     renderBaseEditor();
     renderBaseTeacherSummary();
-    renderBaseTeacherEditor();
+    renderBaseTeacherEditor(true);
+    renderSubjectAbbreviationEditor();
     renderSpecialDateHint();
     renderSpecialEditor();
     renderSpecialList();
@@ -2474,6 +2564,9 @@
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
     if (els.slideShowMeal) {
       els.slideShowMeal.value = state.slideshow.showMeal !== false ? "true" : "false";
+    }
+    if (els.slideShowTeacher) {
+      els.slideShowTeacher.value = state.slideshow.showTeacher ? "true" : "false";
     }
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
     els.slideClassHeaderFontScale.value = clamp(Number(state.slideshow && state.slideshow.classHeaderFontScale) || 100, 70, 170);
@@ -3026,7 +3119,11 @@
       saveWallpaperSettings(settings.subjects, settings.days, settings.grades, settings.name);
       renderWallpaper();
     });
-    els.baseWeekday.addEventListener("change", renderBaseEditor);
+    els.baseWeekday.addEventListener("change", () => {
+      renderBaseEditor();
+      renderBaseTeacherEditor();
+    });
+    els.teacherModeToggle.addEventListener("change", () => renderBaseTeacherEditor());
     els.specialDate.addEventListener("change", () => {
       renderSpecialDateHint();
       renderSpecialEditor();
@@ -3392,14 +3489,38 @@
 
     els.saveBaseTeachersButton.addEventListener("click", () => {
       if (!ensurePermission("update_base", "기본 시간표 수정")) return;
-      const nextTeachers = Object.fromEntries(classes.map((className) => [className, {}]));
-      $$("#baseTeacherEditor input[data-teacher-class]").forEach((input) => {
-        const teacher = input.value.trim();
-        if (!teacher) return;
-        nextTeachers[input.dataset.teacherClass][input.dataset.teacherSubject] = teacher;
-      });
-      state.teachers = nextTeachers;
+      const periodMode = els.teacherModeToggle.checked;
+      state.teacherMode = periodMode ? "period" : "subject";
+      if (periodMode) {
+        const weekday = els.baseWeekday.value;
+        classes.forEach((className) => {
+          if (!state.teachersByPeriod[className]) state.teachersByPeriod[className] = {};
+          state.teachersByPeriod[className][weekday] = periods.map((_, periodIndex) => {
+            const input = $(`#baseTeacherEditor input[data-teacher-period-class="${className}"][data-teacher-period-index="${periodIndex}"]`);
+            return input ? input.value.trim() : "";
+          });
+        });
+      } else {
+        const nextTeachers = Object.fromEntries(classes.map((className) => [className, {}]));
+        $$("#baseTeacherEditor input[data-teacher-class]").forEach((input) => {
+          const teacher = input.value.trim();
+          if (!teacher) return;
+          nextTeachers[input.dataset.teacherClass][input.dataset.teacherSubject] = teacher;
+        });
+        state.teachers = nextTeachers;
+      }
       saveState("과목별 담당 교사를 저장했습니다.", "update_base");
+    });
+
+    els.saveSubjectAbbreviationsButton.addEventListener("click", () => {
+      if (!ensurePermission("update_base", "기본 시간표 수정")) return;
+      const nextAbbreviations = {};
+      $$("#subjectAbbreviationEditor input[data-subject-abbreviation]").forEach((input) => {
+        const value = input.value.trim();
+        if (value) nextAbbreviations[input.dataset.subjectAbbreviation] = value;
+      });
+      state.subjectAbbreviations = nextAbbreviations;
+      saveState("과목 약칭을 저장했습니다.", "update_base");
     });
 
     els.importBaseButton.addEventListener("click", async () => {
@@ -3430,6 +3551,7 @@
         }
         state.base = imported.base;
         state.teachers = imported.teachers;
+        state.teachersByPeriod = imported.teachersByPeriod;
         await saveState("Excel 기본 시간표를 저장했습니다.", "update_base");
         els.baseImportFiles.forEach((input) => {
           input.value = "";
@@ -3776,6 +3898,9 @@
       state.slideshow.scheduleDateExpiresOn = scheduleDate ? nextDateIso(scheduleDate) : "";
       if (els.slideShowMeal) {
         state.slideshow.showMeal = els.slideShowMeal.value !== "false";
+      }
+      if (els.slideShowTeacher) {
+        state.slideshow.showTeacher = els.slideShowTeacher.value === "true";
       }
       if (canRole("update_slide_typography")) {
         state.slideshow.lessonFontScale = nextLessonFontScale;
