@@ -152,7 +152,7 @@ npm run deploy:netlify
 
 앱 상태는 `public.app_state` JSON 문서로 관리됩니다. 주요 키:
 
-- `base`, `baseMerges`, `specialSchedules`, `changes`, `events`, `notices`, `slideshow`
+- `base`, `teachers`, `baseMerges`, `specialSchedules`, `changes`, `events`, `notices`, `slideshow`
 
 ## 보안 및 운영 주의
 

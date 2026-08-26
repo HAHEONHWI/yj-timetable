@@ -4,6 +4,7 @@ export type TimetableEntry = {
   readonly period: number;
   readonly subject: string;
   readonly originalSubject: string;
+  readonly teacher: string;
   readonly type: "lesson" | "change" | "new" | "event" | "merge";
   readonly memo: string;
 };
@@ -44,6 +45,7 @@ export const PublicStateSchema = z.object({
   base: z.record(z.string(), z.record(z.string(), z.array(z.string()))).default(
     {},
   ),
+  teachers: z.record(z.string(), z.record(z.string(), z.string())).default({}),
   baseMerges: z.array(MergeSchema).default([]),
   specialSchedules: z.record(
     z.string(),
@@ -89,6 +91,7 @@ function resolveParsedTimetable(
   const weekday = weekdayForDate(date);
   const subjects = state.specialSchedules[date]?.[className] ??
     state.base[className]?.[weekday] ?? [];
+  const teacherForSubject = (subject: string) => state.teachers[className]?.[subject] ?? "";
 
   return PERIODS.map((period, periodIndex): TimetableEntry => {
     const originalSubject = subjects[periodIndex] ?? "";
@@ -101,6 +104,7 @@ function resolveParsedTimetable(
         period,
         subject: event.title,
         originalSubject,
+        teacher: "",
         type: "event",
         memo: event.memo,
       };
@@ -112,6 +116,7 @@ function resolveParsedTimetable(
         period,
         subject: change.subject,
         originalSubject,
+        teacher: teacherForSubject(change.subject),
         type: change.type === "new" ? "new" : "change",
         memo: change.memo,
       };
@@ -126,6 +131,7 @@ function resolveParsedTimetable(
         period,
         subject: merge.title,
         originalSubject,
+        teacher: "",
         type: "merge",
         memo: merge.memo,
       };
@@ -135,6 +141,7 @@ function resolveParsedTimetable(
       period,
       subject: originalSubject,
       originalSubject,
+      teacher: teacherForSubject(originalSubject),
       type: "lesson",
       memo: "",
     };
