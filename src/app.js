@@ -38,6 +38,11 @@
   let mealDataFetchedAt = 0;
   let isMealLoading = false;
   let boardRefreshTimer = null;
+  let boardAlertTimer = null;
+  const boardRecentChanges = new Map();
+  const BOARD_HIGHLIGHT_MS = 10 * 60 * 1000;
+  let boardAudioContext = null;
+  let boardChangeBaselineReady = false;
   let remoteUnsubscribe = null;
   let pendingRetryMessage = "";
   let pendingRetryAction = "save_state";
@@ -64,6 +69,13 @@
   const SHEETJS_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
   const SHEETJS_INTEGRITY = "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
+  // 전자칠판 앱이 기기에 설정된 학급을 /board?class=3-1 로 넘긴다.
+  // 이 값이 있으면 기기 설정이 우선이고 화면의 학급 선택기는 감춘다.
+  const boardClassParam = (() => {
+    if (!isBoardMode) return "";
+    const value = new URLSearchParams(location.search).get("class");
+    return value && classes.includes(value) ? value : "";
+  })();
   let sheetJsPromise = null;
   const ROLE_PERMISSIONS = {
     save_state: ["dev", "manager", "teacher"],
@@ -1155,7 +1167,7 @@
         const cells = days
           .map((day, dayIndex) => {
             const isToday = day.iso === today;
-            return `<div style="grid-column:${dayIndex + 2};grid-row:${periodIndex + 2}">
+            return `<div data-cell-key="${changeKey(day.iso, className, period)}" style="grid-column:${dayIndex + 2};grid-row:${periodIndex + 2}">
               ${getBoardCell(day.iso, className, period, periodIndex, isToday)}
             </div>`;
           })
@@ -1176,9 +1188,13 @@
     if (title) {
       title.textContent = "전자칠판 시간표";
     }
-    const savedClass = localStorage.getItem("board-class");
-    if (savedClass && classes.includes(savedClass) && els.viewClass.value !== savedClass) {
-      els.viewClass.value = savedClass;
+    if (boardClassParam) {
+      els.viewClass.value = boardClassParam;
+    } else {
+      const savedClass = localStorage.getItem("board-class");
+      if (savedClass && classes.includes(savedClass) && els.viewClass.value !== savedClass) {
+        els.viewClass.value = savedClass;
+      }
     }
     const className = classes.includes(els.viewClass.value) ? els.viewClass.value : classes[0];
     localStorage.setItem("board-class", className);
@@ -1190,6 +1206,116 @@
     )} ${days[days.length - 1].weekday.label} · 자동 동기화`;
     els.dayTabs.innerHTML = "";
     els.viewSchedule.innerHTML = renderBoardWeekGrid(className);
+    applyBoardRecentHighlights();
+  }
+
+  function boardChangeLines(previousChanges, nextChanges) {
+    const className = classes.includes(els.viewClass.value) ? els.viewClass.value : classes[0];
+    const today = toISO(new Date());
+    const weekDates = new Set(schoolDaysForCurrentWeek().map((day) => day.iso));
+    const lines = [];
+    const keys = [];
+
+    const describe = (key) => {
+      const [date, keyClass, period] = key.split("__");
+      if (keyClass !== className || date < today || !weekDates.has(date)) return null;
+      const before = previousChanges[key] || null;
+      const after = nextChanges[key] || null;
+      const unchanged =
+        before && after && before.subject === after.subject && before.memo === after.memo && before.type === after.type;
+      if (unchanged) return null;
+      const head = `${weekdayLabelForDate(date)}요일 ${period}교시 · `;
+      if (!after) {
+        return { key, text: `${head}${subjectDisplayLabel(before.subject)} 변경 취소` };
+      }
+      const memoSuffix = after.memo ? ` · ${after.memo}` : "";
+      const subject = subjectDisplayLabel(after.subject);
+      if (isNewChange(after)) {
+        return { key, text: `${head}${subject} 신설${memoSuffix}` };
+      }
+      // 교체 후 과목이 원래 과목과 같으면(예: 메모만 수정) 화살표를 쓰지 않는다
+      const original = subjectDisplayLabel(getSubjectsForDate(date, className)[periods.indexOf(Number(period))]);
+      const body = original && original !== subject ? `${original} → ${subject}` : subject;
+      return { key, text: `${head}${body}${memoSuffix}` };
+    };
+
+    new Set([...Object.keys(previousChanges), ...Object.keys(nextChanges)]).forEach((key) => {
+      const entry = describe(key);
+      if (!entry) return;
+      lines.push(entry.text);
+      keys.push(entry.key);
+    });
+
+    return { lines, keys };
+  }
+
+  function playBoardAlertSound() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!boardAudioContext) boardAudioContext = new Ctx();
+      if (boardAudioContext.state === "suspended") boardAudioContext.resume();
+      const startedAt = boardAudioContext.currentTime;
+      [880, 1174.66].forEach((frequency, index) => {
+        const oscillator = boardAudioContext.createOscillator();
+        const gain = boardAudioContext.createGain();
+        const at = startedAt + index * 0.18;
+        oscillator.type = "sine";
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.linearRampToValueAtTime(0.22, at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.34);
+        oscillator.connect(gain).connect(boardAudioContext.destination);
+        oscillator.start(at);
+        oscillator.stop(at + 0.36);
+      });
+    } catch (error) {
+      console.warn("Board alert sound failed:", error);
+    }
+  }
+
+  function showBoardAlert(lines) {
+    let box = document.querySelector("#boardAlert");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "boardAlert";
+      box.className = "board-alert";
+      box.addEventListener("click", () => box.classList.add("is-hidden"));
+      document.body.appendChild(box);
+    }
+    box.innerHTML = `<strong>교과 변경</strong><span>${lines.map(escapeHtml).join(" / ")}</span>`;
+    box.classList.remove("is-hidden");
+    window.clearTimeout(boardAlertTimer);
+    boardAlertTimer = window.setTimeout(() => {
+      box.classList.add("is-hidden");
+    }, 25000);
+  }
+
+  // 배너가 사라진 뒤에도(쉬는시간 등) 바뀐 칸을 찾을 수 있도록 일정 시간 표시를 유지한다.
+  // renderBoardView 가 그리드를 다시 그릴 때마다 호출해서 표시가 지워지지 않게 한다.
+  function applyBoardRecentHighlights() {
+    const now = Date.now();
+    boardRecentChanges.forEach((expiresAt, key) => {
+      if (expiresAt <= now) boardRecentChanges.delete(key);
+    });
+    boardRecentChanges.forEach((expiresAt, key) => {
+      const cell = document.querySelector(`[data-cell-key="${key}"] .board-lesson`);
+      if (cell) cell.classList.add("is-just-updated");
+    });
+  }
+
+  function notifyBoardChanges(previousChanges) {
+    if (!boardChangeBaselineReady) {
+      boardChangeBaselineReady = true;
+      return;
+    }
+    const { lines, keys } = boardChangeLines(previousChanges, state.changes || {});
+    if (!lines.length) return;
+    const expiresAt = Date.now() + BOARD_HIGHLIGHT_MS;
+    keys.forEach((key) => boardRecentChanges.set(key, expiresAt));
+    applyBoardRecentHighlights();
+    showBoardAlert(lines);
+    playBoardAlertSound();
   }
 
   function adminNavLayout() {
@@ -2604,6 +2730,7 @@
 
   function applyRemoteState(remoteState, options = {}) {
     const { keepNoticeSelection = false, restartSlideshow = true } = options;
+    const previousChanges = isBoardMode ? { ...(state.changes || {}) } : null;
     const previousSlideSeconds = Number(state.slideshow.intervalSeconds) || 8;
     const previousRefreshSeconds = Number(state.slideshow.refreshSeconds) || 60;
     const previousReloadToken = state.slideshow && state.slideshow.reloadToken ? String(state.slideshow.reloadToken) : "";
@@ -2638,6 +2765,9 @@
     renderAdmin();
     if (isBoardMode && previousRefreshSeconds !== nextRefreshSeconds) {
       startBoardRefreshTimer();
+    }
+    if (previousChanges) {
+      notifyBoardChanges(previousChanges);
     }
     if (currentRoute === "slideshow") {
       const slideshowTimingChanged =
@@ -2684,6 +2814,14 @@
 
   function shouldUseRemoteSync() {
     return isBoardMode || currentRoute === "slideshow" || currentRoute === "teachers";
+  }
+
+  function resumeRemoteSync() {
+    if (document.visibilityState !== "visible" || !shouldUseRemoteSync()) return;
+    stopRemoteSync();
+    startRemoteSync();
+    if (isBoardMode) startBoardRefreshTimer();
+    refreshFromRemote({ keepNoticeSelection: true, restartSlideshow: false });
   }
 
   function syncRemoteForRoute() {
@@ -2838,7 +2976,8 @@
     const today = toISO(new Date());
     if (isBoardMode) {
       const savedBoardClass = localStorage.getItem("board-class");
-      els.viewClass.value = classes.includes(savedBoardClass) ? savedBoardClass : classes[0];
+      els.viewClass.value = boardClassParam || (classes.includes(savedBoardClass) ? savedBoardClass : classes[0]);
+      document.body.classList.toggle("is-class-locked", Boolean(boardClassParam));
     } else {
       const savedViewClass = localStorage.getItem(VIEW_CLASS_KEY);
       const mobileDefaultClass = window.matchMedia("(max-width: 720px)").matches ? classes[0] : "all";
@@ -2873,6 +3012,9 @@
   }
 
   function bindEvents() {
+    document.addEventListener("visibilitychange", resumeRemoteSync);
+    window.addEventListener("pageshow", resumeRemoteSync);
+    window.addEventListener("online", resumeRemoteSync);
     $$("[data-route]").forEach((button) => {
       button.addEventListener("click", () => {
         routeTo(button.dataset.route, { fullscreen: button.dataset.route === "slideshow" });
