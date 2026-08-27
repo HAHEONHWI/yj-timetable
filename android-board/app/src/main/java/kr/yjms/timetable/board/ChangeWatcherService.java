@@ -1,0 +1,354 @@
+package kr.yjms.timetable.board;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
+
+/**
+ * 화면이 꺼져 있어도 교과 변경을 알리는 포그라운드 서비스.
+ *
+ * 이 칠판에는 Google Play 서비스가 없어 FCM 을 쓸 수 없다. 그래서 푸시 대신
+ * Supabase REST 를 주기적으로 조회한다. 프레임워크 API 만 쓰므로 빌드에 의존성이 늘지 않는다.
+ */
+public class ChangeWatcherService extends Service {
+
+    private static final String TAG = "BoardWatcher";
+
+    private static final String STATE_URL =
+        "https://jzcectvzwbfvbgiszjkt.supabase.co/rest/v1/app_state?id=eq.main&select=data";
+    // 브라우저에 노출되는 공개 키다. service role key 가 아니다.
+    private static final String ANON_KEY = "sb_publishable_JgPxLeD5pJjk46GnS-n3ZQ_gzZmIIuq";
+
+    private static final long POLL_INTERVAL_MS = 60_000L;
+    private static final int ONGOING_NOTIFICATION_ID = 1;
+    private static final int ALERT_NOTIFICATION_ID = 2;
+
+    private static final String CHANNEL_ONGOING = "board-watch";
+    private static final String CHANNEL_ALERT_SOUND = "board-change-sound";
+    private static final String CHANNEL_ALERT_SILENT = "board-change-silent";
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean running = false;
+
+    private final Runnable pollTask = new Runnable() {
+        @Override
+        public void run() {
+            startPollThread();
+            handler.postDelayed(this, POLL_INTERVAL_MS);
+        }
+    };
+
+    static void start(Context context) {
+        Intent intent = new Intent(context, ChangeWatcherService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent);
+        } else {
+            context.startService(intent);
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        createChannels();
+        startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification());
+        if (!running) {
+            running = true;
+            handler.post(pollTask);
+        }
+        return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        handler.removeCallbacks(pollTask);
+        running = false;
+        super.onDestroy();
+    }
+
+    private void startPollThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    poll();
+                } catch (Exception error) {
+                    // 네트워크가 끊긴 아침 등 실패는 흔하다. 다음 주기에 다시 시도한다.
+                    Log.w(TAG, "poll failed: " + error.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    private void poll() throws Exception {
+        String className = BoardPrefs.className(this);
+        if (className.length() == 0) return;
+
+        JSONObject changes = fetchChanges();
+        if (changes == null) return;
+
+        Map<String, String> current = collectChanges(changes, className);
+        String snapshot = encode(current);
+        String previousRaw = BoardPrefs.snapshot(this);
+        if (snapshot.equals(previousRaw)) return;
+
+        BoardPrefs.setSnapshot(this, snapshot);
+
+        // 최초 1회는 기준만 잡고 알리지 않는다. 앱을 처음 켰을 때 밀린 알림이 쏟아지지 않게 한다.
+        if (previousRaw.length() == 0) return;
+
+        List<String> lines = describe(decode(previousRaw), current);
+        if (lines.isEmpty()) return;
+
+        // 칠판 화면이 켜져 있으면 웹 화면이 이미 배너로 알린다. 중복 알림을 막는다.
+        if (MainActivity.isBoardVisible()) return;
+
+        notifyChanges(className, lines);
+    }
+
+    private JSONObject fetchChanges() throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(STATE_URL).openConnection();
+        try {
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("apikey", ANON_KEY);
+            connection.setRequestProperty("Authorization", "Bearer " + ANON_KEY);
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(15000);
+
+            if (connection.getResponseCode() != 200) {
+                Log.w(TAG, "unexpected status " + connection.getResponseCode());
+                return null;
+            }
+
+            StringBuilder body = new StringBuilder();
+            BufferedReader reader = new BufferedReader(
+                new InputStreamReader(connection.getInputStream(), "UTF-8")
+            );
+            try {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    body.append(line);
+                }
+            } finally {
+                reader.close();
+            }
+
+            JSONArray rows = new JSONArray(body.toString());
+            if (rows.length() == 0) return null;
+            JSONObject data = rows.getJSONObject(0).optJSONObject("data");
+            if (data == null) return null;
+            return data.optJSONObject("changes");
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    /** 이 칠판 학급의 오늘 이후 변경만 모은다. 키는 "날짜__학급__교시". */
+    private Map<String, String> collectChanges(JSONObject changes, String className) {
+        Map<String, String> result = new TreeMap<String, String>();
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(new Date());
+
+        Iterator<String> keys = changes.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            String[] parts = key.split("__");
+            if (parts.length != 3) continue;
+            if (!className.equals(parts[1])) continue;
+            if (parts[0].compareTo(today) < 0) continue;
+
+            JSONObject change = changes.optJSONObject(key);
+            if (change == null) continue;
+
+            result.put(key, change.optString("subject", "")
+                + "|" + change.optString("memo", "")
+                + "|" + change.optString("type", "swap"));
+        }
+        return result;
+    }
+
+    private String encode(Map<String, String> values) {
+        StringBuilder builder = new StringBuilder();
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            if (builder.length() > 0) builder.append('\n');
+            builder.append(entry.getKey()).append('=').append(entry.getValue());
+        }
+        return builder.toString();
+    }
+
+    private Map<String, String> decode(String raw) {
+        Map<String, String> values = new TreeMap<String, String>();
+        if (raw.length() == 0) return values;
+        for (String line : raw.split("\n")) {
+            int separator = line.indexOf('=');
+            if (separator <= 0) continue;
+            values.put(line.substring(0, separator), line.substring(separator + 1));
+        }
+        return values;
+    }
+
+    private List<String> describe(Map<String, String> previous, Map<String, String> current) {
+        List<String> lines = new ArrayList<String>();
+
+        for (Map.Entry<String, String> entry : current.entrySet()) {
+            String before = previous.get(entry.getKey());
+            if (entry.getValue().equals(before)) continue;
+            lines.add(line(entry.getKey(), entry.getValue(), false));
+        }
+        for (Map.Entry<String, String> entry : previous.entrySet()) {
+            if (current.containsKey(entry.getKey())) continue;
+            lines.add(line(entry.getKey(), entry.getValue(), true));
+        }
+        return lines;
+    }
+
+    private String line(String key, String value, boolean removed) {
+        String[] parts = key.split("__");
+        String[] fields = value.split("\\|", -1);
+        String subject = fields.length > 0 ? fields[0] : "";
+        String memo = fields.length > 1 ? fields[1] : "";
+        String type = fields.length > 2 ? fields[2] : "swap";
+
+        String head = weekdayLabel(parts[0]) + "요일 " + parts[2] + "교시 · ";
+        if (removed) {
+            return head + subject + " 변경 취소";
+        }
+
+        String text = head + subject + ("new".equals(type) ? " 신설" : "");
+        if (memo.length() > 0) {
+            text = text + " · " + memo;
+        }
+        return text;
+    }
+
+    private String weekdayLabel(String isoDate) {
+        try {
+            Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).parse(isoDate);
+            Calendar calendar = Calendar.getInstance(Locale.KOREA);
+            calendar.setTime(date);
+            String[] labels = {"일", "월", "화", "수", "목", "금", "토"};
+            return labels[calendar.get(Calendar.DAY_OF_WEEK) - 1];
+        } catch (Exception error) {
+            return isoDate;
+        }
+    }
+
+    private void createChannels() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager == null) return;
+
+        NotificationChannel ongoing = new NotificationChannel(
+            CHANNEL_ONGOING, "시간표 감시", NotificationManager.IMPORTANCE_LOW
+        );
+        ongoing.setDescription("화면이 꺼져 있어도 교과 변경을 확인합니다.");
+        manager.createNotificationChannel(ongoing);
+
+        NotificationChannel withSound = new NotificationChannel(
+            CHANNEL_ALERT_SOUND, "교과 변경 알림", NotificationManager.IMPORTANCE_HIGH
+        );
+        manager.createNotificationChannel(withSound);
+
+        NotificationChannel silent = new NotificationChannel(
+            CHANNEL_ALERT_SILENT, "교과 변경 알림 (무음)", NotificationManager.IMPORTANCE_HIGH
+        );
+        silent.setSound(null, null);
+        manager.createNotificationChannel(silent);
+    }
+
+    private PendingIntent boardIntent() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags = flags | PendingIntent.FLAG_IMMUTABLE;
+        }
+        return PendingIntent.getActivity(this, 0, intent, flags);
+    }
+
+    @SuppressWarnings("deprecation")
+    private Notification buildOngoingNotification() {
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? new Notification.Builder(this, CHANNEL_ONGOING)
+            : new Notification.Builder(this);
+
+        return builder
+            .setContentTitle("시간표 감시 중")
+            .setContentText(BoardPrefs.className(this) + " 교과 변경을 확인합니다.")
+            .setSmallIcon(R.drawable.app_icon)
+            .setContentIntent(boardIntent())
+            .setOngoing(true)
+            .build();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void notifyChanges(String className, List<String> lines) {
+        boolean sound = BoardPrefs.soundEnabled(this);
+        String channel = sound ? CHANNEL_ALERT_SOUND : CHANNEL_ALERT_SILENT;
+
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? new Notification.Builder(this, channel)
+            : new Notification.Builder(this);
+
+        StringBuilder body = new StringBuilder();
+        for (String line : lines) {
+            if (body.length() > 0) body.append('\n');
+            body.append(line);
+        }
+
+        String title = lines.size() > 1
+            ? className + " 교과 변경 " + lines.size() + "건"
+            : className + " 교과 변경";
+
+        builder.setContentTitle(title)
+            .setContentText(lines.get(0))
+            .setStyle(new Notification.BigTextStyle().bigText(body.toString()))
+            .setSmallIcon(R.drawable.app_icon)
+            .setContentIntent(boardIntent())
+            .setAutoCancel(true);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            builder.setPriority(Notification.PRIORITY_HIGH);
+            if (sound) {
+                builder.setDefaults(Notification.DEFAULT_SOUND);
+            }
+        }
+
+        NotificationManager manager =
+            (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.notify(ALERT_NOTIFICATION_ID, builder.build());
+        }
+    }
+}
