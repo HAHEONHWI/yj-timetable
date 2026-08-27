@@ -621,28 +621,6 @@ body.board-mode .page-view {
   font-weight: 600;
 }
 
-summary.mobile-class-title {
-  position: relative;
-  cursor: pointer;
-  list-style: none;
-  padding-right: 20px;
-}
-
-summary.mobile-class-title::-webkit-details-marker {
-  display: none;
-}
-
-summary.mobile-class-title::after {
-  content: "▾";
-  position: absolute;
-  right: 4px;
-  transition: transform 0.15s ease;
-}
-
-.mobile-class[open] summary.mobile-class-title::after {
-  transform: rotate(180deg);
-}
-
 .mobile-list {
   margin: 0;
   padding: 0;
