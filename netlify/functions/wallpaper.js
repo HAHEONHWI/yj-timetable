@@ -514,12 +514,12 @@ function renderWallpaperSvg(state, query) {
   const days = schoolDaysForCurrentWeek(now).filter((day) => allowedDaySet.has(day.weekday.key));
 
   const tableX = 0;
-  const tableY = 830;
+  const tableY = 1030;
   const tableWidth = 1170;
   const periodWidth = 110;
   const dayWidth = (tableWidth - periodWidth) / Math.max(days.length, 1);
   const headerHeight = 76;
-  const rowHeight = 145;
+  const rowHeight = 130;
   const tableHeight = headerHeight + periods.length * rowHeight;
 
   const grid = [];
@@ -656,18 +656,18 @@ function renderWallpaperSvg(state, query) {
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1170" height="2532" viewBox="0 0 1170 2532">
-  <rect width="1170" height="2532" fill="#16171b" />
+<svg xmlns="http://www.w3.org/2000/svg" width="1170" height="2535" viewBox="0 0 1170 2535">
+  <rect width="1170" height="2535" fill="#16171b" />
   <g font-family="NanumGothicBold, NanumGothic, Pretendard, sans-serif">
-    ${renderText("용정 시간표", 64, 670, { size: 28, fill: "#9ea0a8", weight: 900 })}
-    ${renderText(titleLabel, 64, 725, { size: titleSize, fill: "#f2f2f2", weight: 900 })}
+    ${renderText("용정 시간표", 64, 870, { size: 28, fill: "#9ea0a8", weight: 900 })}
+    ${renderText(titleLabel, 64, 930, { size: titleSize, fill: "#f2f2f2", weight: 900 })}
     <rect x="${tableX}" y="${tableY}" width="${periodWidth}" height="${headerHeight}" fill="#25262c" stroke="#303137" stroke-width="1" />
     ${renderText("교시", tableX + periodWidth / 2, tableY + 48, { size: 24, fill: "#f2f2f2", anchor: "middle", weight: 900 })}
     ${headerCells}
     ${rows}
     ${chipsMarkup}
-    <rect x="46" y="2260" width="1078" height="78" fill="#1d1e23" stroke="#303137" stroke-width="1" rx="12" />
-    ${renderText(isLegacy ? "1:1 변경: 노란색 · 신설 변경: 붉은색 · 취소된 원래 수업: 회색 · 행사: 초록색" : "1:1 변경: 노란색 · 신설 변경: 붉은색", 585, 2306, {
+    <rect x="46" y="2310" width="1078" height="78" fill="#1d1e23" stroke="#303137" stroke-width="1" rx="12" />
+    ${renderText(isLegacy ? "1:1 변경: 노란색 · 신설 변경: 붉은색 · 취소된 원래 수업: 회색 · 행사: 초록색" : "1:1 변경: 노란색 · 신설 변경: 붉은색", 585, 2349, {
       size: 20,
       fill: "#9ea0a8",
       anchor: "middle",
