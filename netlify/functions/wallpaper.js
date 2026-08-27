@@ -259,6 +259,89 @@ function splitParam(value) {
     .filter(Boolean);
 }
 
+// 아래 4개 함수는 과목/학년 선택 방식이던 예전 배경화면 URL
+// (?subjects=&grades=&name=)과의 호환을 위해 유지한다. 이미 iPhone
+// 단축어를 등록해둔 사용자가 있어 URL 형식을 깨뜨릴 수 없다.
+function normalizedGrades(value) {
+  const grades = Array.isArray(value) ? value.map(String) : [];
+  const filtered = grades.filter((grade) => ["1", "2", "3"].includes(grade));
+  return filtered.length ? [...new Set(filtered)] : ["1", "2", "3"];
+}
+
+function parseGradesParam(value, subjects) {
+  const result = Object.fromEntries(subjects.map((subject) => [subject, ["1", "2", "3"]]));
+  String(value || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((entry) => {
+      const [subject, grades] = entry.split(":");
+      if (!subject) return;
+      result[subject.trim()] = normalizedGrades(String(grades || "").split("|"));
+    });
+  return result;
+}
+
+function gradeForClass(className) {
+  return String(className || "").split("-")[0];
+}
+
+function isSubjectAllowed(gradesBySubject, subject, className) {
+  return normalizedGrades(gradesBySubject[subject]).includes(gradeForClass(className));
+}
+
+function legacyMatchesForCell(state, date, className, period, periodIndex, subjects, gradesBySubject) {
+  const subjectSet = new Set(subjects);
+  const matches = [];
+  const original = getSubjectsForDate(state, date, className)[periodIndex] || "-";
+  const change = state.changes[changeKey(date, className, period)];
+
+  if (change) {
+    if (subjectSet.has(change.subject) && isSubjectAllowed(gradesBySubject, change.subject, className)) {
+      matches.push({ className, title: change.subject, note: change.type === "new" ? "신설 수업" : `${original}에서 변경`, type: change.type === "new" ? "new" : "change" });
+    }
+    if (subjectSet.has(original) && isSubjectAllowed(gradesBySubject, original, className)) {
+      matches.push({ className, title: original, note: `${change.subject}로 변경됨`, type: "original" });
+    }
+    return matches;
+  }
+
+  const lesson = lessonFor(state, date, className, period, periodIndex);
+  if (lesson.type === "event" || (subjectSet.has(lesson.title) && isSubjectAllowed(gradesBySubject, lesson.title, className))) {
+    matches.push({ className, title: lesson.title, note: "", type: lesson.type });
+  }
+  return matches;
+}
+
+function mergeSameEvents(matches) {
+  const merged = [];
+  const eventGroups = {};
+
+  for (const match of matches) {
+    if (match.type === "event") {
+      if (!eventGroups[match.title]) {
+        eventGroups[match.title] = {
+          title: match.title,
+          type: "event",
+          classes: [match.className],
+        };
+      } else {
+        eventGroups[match.title].classes.push(match.className);
+      }
+    } else {
+      merged.push(match);
+    }
+  }
+
+  for (const title in eventGroups) {
+    const group = eventGroups[title];
+    group.className = "";
+    group.note = group.classes.join(", ");
+    merged.push(group);
+  }
+
+  return merged;
+}
 
 function renderText(text, x, y, options = {}) {
   const size = options.size || 34;
@@ -354,6 +437,8 @@ function renderFittedText(text, x, centerY, maxWidth, options = {}) {
 function chipColors(type) {
   if (type === "change") return { bg: "rgba(194, 145, 63, 0.22)", accent: "#c2913f", fg: "#ddb46b", note: "#ddb46b" };
   if (type === "new") return { bg: "rgba(192, 101, 101, 0.22)", accent: "#c06565", fg: "#de9595", note: "#de9595" };
+  if (type === "original") return { bg: "#25262c", accent: "", fg: "#75777f", note: "#75777f" };
+  if (type === "event" || type === "merge") return { bg: "rgba(75, 151, 121, 0.2)", accent: "#4b9779", fg: "#9bd0b7", note: "#9bd0b7" };
   return { bg: "#25262c", accent: "", fg: "#f2f2f2", note: "#9ea0a8" };
 }
 
@@ -362,6 +447,7 @@ function renderChip(match, x, y, width, height, isFullSize = false) {
   const hasClassName = !!match.className;
   const hasNote = !!match.note;
   const compact = !isFullSize || height < 100;
+  const titleDecor = match.type === "original" ? "line-through" : "";
   const accentWidth = colors.accent ? 3 : 0;
   const maxTextWidth = Math.max(24, width - 16 - accentWidth);
   const classSize = compact ? 18 : 28;
@@ -393,7 +479,7 @@ function renderChip(match, x, y, width, height, isFullSize = false) {
     ${colors.accent ? `<rect x="${x}" y="${y}" width="${accentWidth}" height="${height}" rx="1.5" fill="${colors.accent}" />` : ""}
     <g clip-path="url(#${clipId})">
       ${hasClassName ? renderFittedText(match.className, textCenterX, classY, maxTextWidth, { size: classSize, minSize: compact ? 11 : 16, maxLines: 1, fill: colors.fg, weight: 900 }) : ""}
-      ${renderFittedText(match.title, textCenterX, titleY, maxTextWidth, { size: titleSize, minSize: compact ? 9 : 16, maxLines: 2, fill: colors.fg, weight: 900 })}
+      ${renderFittedText(match.title, textCenterX, titleY, maxTextWidth, { size: titleSize, minSize: compact ? 9 : 16, maxLines: 2, fill: colors.fg, weight: 900, decoration: titleDecor })}
       ${hasNote ? renderFittedText(match.note, textCenterX, noteY, maxTextWidth, { size: noteSize, minSize: compact ? 7 : 9, maxLines: 2, fill: colors.note, weight: 800 }) : ""}
     </g>
   `;
@@ -404,8 +490,20 @@ renderChip.sequence = 0;
 function renderWallpaperSvg(state, query) {
   renderChip.sequence = 0;
   const teacher = query.teacher || query.t || "";
-  const titleLabel = teacher ? `${maskedTeacherName(state, teacher)} 선생님의 이번 주 시간표` : "담당 시간표";
-  const titleSize = teacher ? (teacher.length > 5 ? 44 : 52) : 62;
+  const legacySubjects = teacher ? [] : splitParam(query.subjects || query.subject || query.s);
+  const isLegacy = !teacher && legacySubjects.length > 0;
+  const legacyGradesBySubject = isLegacy ? parseGradesParam(query.grades || query.grade || query.g, legacySubjects) : {};
+  const legacyName = query.name || query.n || "";
+
+  const titleLabel = teacher
+    ? `${maskedTeacherName(state, teacher)} 선생님의 이번 주 시간표`
+    : isLegacy
+      ? legacyName
+        ? `${maskedTeacherName(state, legacyName)} 선생님의 이번 주 시간표`
+        : "내 과목 주간표"
+      : "담당 시간표";
+  const titleNameForSize = teacher || (isLegacy ? legacyName : "");
+  const titleSize = titleNameForSize ? (titleNameForSize.length > 5 ? 44 : 52) : 62;
   const selectedDays = splitParam(query.days || query.day || query.d);
   const allowedDaySet = new Set(selectedDays.length ? selectedDays : weekdays.map((day) => day.key));
   const now = kstNow();
@@ -430,7 +528,13 @@ function renderWallpaperSvg(state, query) {
     for (let p = 0; p < periods.length; p++) {
       const day = days[d];
       const period = periods[p];
-      grid[d][p] = teacherLessonsForCell(state, teacher, day.iso, period, p);
+      grid[d][p] = isLegacy
+        ? mergeSameEvents(
+            classes.flatMap((className) =>
+              legacyMatchesForCell(state, day.iso, className, period, p, legacySubjects, legacyGradesBySubject)
+            )
+          )
+        : teacherLessonsForCell(state, teacher, day.iso, period, p);
     }
   }
 
@@ -563,7 +667,7 @@ function renderWallpaperSvg(state, query) {
     ${rows}
     ${chipsMarkup}
     <rect x="46" y="2260" width="1078" height="78" fill="#1d1e23" stroke="#303137" stroke-width="1" rx="12" />
-    ${renderText("1:1 변경: 노란색 · 신설 변경: 붉은색", 585, 2306, {
+    ${renderText(isLegacy ? "1:1 변경: 노란색 · 신설 변경: 붉은색 · 취소된 원래 수업: 회색 · 행사: 초록색" : "1:1 변경: 노란색 · 신설 변경: 붉은색", 585, 2306, {
       size: 20,
       fill: "#9ea0a8",
       anchor: "middle",
