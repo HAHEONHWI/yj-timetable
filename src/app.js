@@ -57,6 +57,7 @@
   const DEV_MODE_KEY = "timetable-dev-mode";
   const THEME_KEY = "timetable-theme";
   const HOME_VARIANT_KEY = "timetable-home-variant";
+  const VIEW_CLASS_KEY = "timetable-view-class";
   const ADMIN_NAV_KEY = "timetable-admin-nav";
   const TEACHER_VIEW_KEY = "timetable-teacher-view";
   const BASE_TEACHER_VISIBLE_KEY = "timetable-base-teacher-visible";
@@ -162,6 +163,7 @@
     baseMergeMemo: $("#baseMergeMemo"),
     baseMergeClassChecks: $("#baseMergeClassChecks"),
     saveBaseMergeButton: $("#saveBaseMergeButton"),
+    baseMergeListCount: $("#baseMergeListCount"),
     baseMergeList: $("#baseMergeList"),
     changeDate: $("#changeDate"),
     changeWeekdayHint: $("#changeWeekdayHint"),
@@ -1613,16 +1615,10 @@
             </li>`;
           })
           .join("");
-        if (visibleClasses.length === 1) {
-          return `<section class="mobile-class">
-            <h3 class="mobile-class-title">${escapeHtml(className)}</h3>
-            <ul class="mobile-list">${rows}</ul>
-          </section>`;
-        }
-        return `<details class="mobile-class">
-          <summary class="mobile-class-title">${escapeHtml(className)}</summary>
+        return `<section class="mobile-class">
+          <h3 class="mobile-class-title">${escapeHtml(className)}</h3>
           <ul class="mobile-list">${rows}</ul>
-        </details>`;
+        </section>`;
       })
       .join("");
   }
@@ -2163,19 +2159,29 @@
 
   function renderBaseMergeList() {
     const weekdayLabels = Object.fromEntries(weekdays.map((day) => [day.key, day.label]));
-    els.baseMergeList.innerHTML = state.baseMerges.length
-      ? state.baseMerges
+    const weekdayOrder = Object.fromEntries(weekdays.map((day, index) => [day.key, index]));
+    const merges = state.baseMerges
+      .slice()
+      .sort((first, second) => (weekdayOrder[first.weekday] ?? 99) - (weekdayOrder[second.weekday] ?? 99) || first.start - second.start);
+    els.baseMergeListCount.textContent = `등록된 기본 병합 ${merges.length}건`;
+    els.baseMergeList.innerHTML = merges.length
+      ? merges
           .map((merge) => {
-            return `<article class="list-item">
-              <div>
-                <strong>${weekdayLabels[merge.weekday] || merge.weekday} · ${escapeHtml(merge.title)}</strong>
-                <span>${escapeHtml(merge.classes.join(", "))} · ${formatPeriodRange(merge.start, merge.end)}${merge.memo ? ` · ${escapeHtml(merge.memo)}` : ""}</span>
-              </div>
-              <button class="text-button" data-delete-base-merge="${merge.id}" type="button">삭제</button>
-            </article>`;
+            return `<tr>
+              <td>${weekdayLabels[merge.weekday] || escapeHtml(merge.weekday)}</td>
+              <td class="table-strong">${escapeHtml(merge.title)}</td>
+              <td>${formatPeriodRange(merge.start, merge.end)}</td>
+              <td>${escapeHtml(merge.classes.join(", "))}</td>
+              <td>${merge.memo ? escapeHtml(merge.memo) : ""}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="table-action-button is-danger" data-delete-base-merge="${escapeHtml(merge.id)}" type="button">삭제</button>
+                </div>
+              </td>
+            </tr>`;
           })
           .join("")
-      : `<p class="empty">등록된 기본 병합이 없습니다.</p>`;
+      : `<tr><td colspan="6" class="table-empty">등록된 기본 병합이 없습니다.</td></tr>`;
   }
 
   function renderEventList() {
@@ -2820,7 +2826,7 @@
       }
     }
 
-    fillSelect(els.viewClass, isBoardMode ? classes : ["all", ...classes], (value) => (value === "all" ? "전체 학급" : value));
+    fillSelect(els.viewClass, isBoardMode ? classes : ["all", ...classes], (value) => (value === "all" ? "전체 학급 보기" : value));
     fillSelect(els.changeClass, classes);
     fillSelect(els.baseWeekday, weekdays.map((day) => day.key), (key) => weekdays.find((day) => day.key === key).label);
     fillSelect(els.changePeriod, periods, (period) => `${period}교시`);
@@ -2833,6 +2839,10 @@
     if (isBoardMode) {
       const savedBoardClass = localStorage.getItem("board-class");
       els.viewClass.value = classes.includes(savedBoardClass) ? savedBoardClass : classes[0];
+    } else {
+      const savedViewClass = localStorage.getItem(VIEW_CLASS_KEY);
+      const mobileDefaultClass = window.matchMedia("(max-width: 720px)").matches ? classes[0] : "all";
+      els.viewClass.value = savedViewClass === "all" || classes.includes(savedViewClass) ? savedViewClass : mobileDefaultClass;
     }
     els.changeDate.value = today;
     els.changeType.value = "swap";
@@ -3027,6 +3037,8 @@
     els.viewClass.addEventListener("change", () => {
       if (isBoardMode) {
         localStorage.setItem("board-class", els.viewClass.value);
+      } else {
+        localStorage.setItem(VIEW_CLASS_KEY, els.viewClass.value);
       }
       renderView();
     });
