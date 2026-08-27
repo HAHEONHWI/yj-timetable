@@ -919,6 +919,11 @@ body.board-mode .global-status {
   font-size: clamp(14px, 1.5vh, 26px);
 }
 
+/* 기기(앱 설정)에서 학급이 지정된 칠판은 화면에서 학급을 바꾸지 못하게 한다 */
+body.board-mode.is-class-locked .view-tools .field.compact {
+  display: none;
+}
+
 /* 교과 변경 알림 배너 (탭하면 닫힌다) */
 .board-alert {
   display: grid;

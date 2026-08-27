@@ -68,6 +68,13 @@
   const SHEETJS_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
   const SHEETJS_INTEGRITY = "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw";
   const isBoardMode = location.pathname.replace(/\/+$/, "") === "/board";
+  // 전자칠판 앱이 기기에 설정된 학급을 /board?class=3-1 로 넘긴다.
+  // 이 값이 있으면 기기 설정이 우선이고 화면의 학급 선택기는 감춘다.
+  const boardClassParam = (() => {
+    if (!isBoardMode) return "";
+    const value = new URLSearchParams(location.search).get("class");
+    return value && classes.includes(value) ? value : "";
+  })();
   let sheetJsPromise = null;
   const ROLE_PERMISSIONS = {
     save_state: ["dev", "manager", "teacher"],
@@ -1179,9 +1186,13 @@
     if (title) {
       title.textContent = "전자칠판 시간표";
     }
-    const savedClass = localStorage.getItem("board-class");
-    if (savedClass && classes.includes(savedClass) && els.viewClass.value !== savedClass) {
-      els.viewClass.value = savedClass;
+    if (boardClassParam) {
+      els.viewClass.value = boardClassParam;
+    } else {
+      const savedClass = localStorage.getItem("board-class");
+      if (savedClass && classes.includes(savedClass) && els.viewClass.value !== savedClass) {
+        els.viewClass.value = savedClass;
+      }
     }
     const className = classes.includes(els.viewClass.value) ? els.viewClass.value : classes[0];
     localStorage.setItem("board-class", className);
@@ -2959,7 +2970,8 @@
     const today = toISO(new Date());
     if (isBoardMode) {
       const savedBoardClass = localStorage.getItem("board-class");
-      els.viewClass.value = classes.includes(savedBoardClass) ? savedBoardClass : classes[0];
+      els.viewClass.value = boardClassParam || (classes.includes(savedBoardClass) ? savedBoardClass : classes[0]);
+      document.body.classList.toggle("is-class-locked", Boolean(boardClassParam));
     }
     els.changeDate.value = today;
     els.changeType.value = "swap";
