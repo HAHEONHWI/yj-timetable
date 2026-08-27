@@ -919,6 +919,67 @@ body.board-mode .global-status {
   font-size: clamp(14px, 1.5vh, 26px);
 }
 
+/* 교과 변경 알림 배너 (탭하면 닫힌다) */
+.board-alert {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  position: fixed;
+  bottom: calc(var(--board-footer-height) + var(--space-12));
+  left: 50%;
+  z-index: 30;
+  max-width: min(76vw, 1100px);
+  transform: translateX(-50%);
+  border: 2px solid var(--st-change);
+  border-radius: var(--radius-md);
+  padding: clamp(10px, 1.3vh, 22px) clamp(18px, 2vw, 40px);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  cursor: pointer;
+  animation: board-alert-in 220ms ease-out;
+}
+
+.board-alert strong {
+  color: var(--st-change-tx);
+  font-size: clamp(14px, 1.6vh, 28px);
+  letter-spacing: 0.06em;
+}
+
+.board-alert span {
+  color: var(--ink-strong);
+  font-size: clamp(18px, 2.2vh, 42px);
+  font-weight: 700;
+}
+
+@keyframes board-alert-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* 방금 바뀐 칸을 깜빡여서 알림이 사라진 뒤에도 찾을 수 있게 한다 */
+.board-lesson.is-just-updated {
+  animation: board-cell-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes board-cell-pulse {
+  0%,
+  100% {
+    outline: 3px solid transparent;
+    outline-offset: -3px;
+  }
+  50% {
+    outline: 3px solid var(--st-change);
+    outline-offset: -3px;
+  }
+}
+
 /* 5. 전자칠판에서 동작하지 않는 표식/음영 토글과 안내문은 숨기고 범례는 읽을 수 있게 키운다 */
 body.board-mode #homeVariantToggle,
 body.board-mode .legend-note {
