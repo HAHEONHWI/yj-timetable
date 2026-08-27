@@ -643,7 +643,24 @@
               <div id="baseMergeClassChecks" class="check-grid"></div>
             </div>
             <button id="saveBaseMergeButton" class="primary-button" type="button">기본 병합 저장</button>
-            <div id="baseMergeList" class="list"></div>
+            <div class="list-head">
+              <h3 id="baseMergeListCount">등록된 기본 병합 0건</h3>
+            </div>
+            <div class="table-shell">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>요일</th>
+                    <th>병합명</th>
+                    <th>교시</th>
+                    <th>적용 학급</th>
+                    <th>메모</th>
+                    <th class="table-actions-head">관리</th>
+                  </tr>
+                </thead>
+                <tbody id="baseMergeList"></tbody>
+              </table>
+            </div>
           </div>
         </section>
 
