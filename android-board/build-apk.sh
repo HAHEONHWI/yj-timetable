@@ -30,13 +30,15 @@ mkdir -p "$BUILD_DIR/classes" "$BUILD_DIR/compiled-res" "$BUILD_DIR/dex" "$OUT_D
   --java "$BUILD_DIR/generated" \
   "$BUILD_DIR/compiled-res"/*.flat
 
+APP_SOURCES=$(find "$APP_DIR/src/main/java" -name "*.java")
+
 javac \
   -source 1.8 \
   -target 1.8 \
   -bootclasspath "$PLATFORM_JAR" \
   -classpath "$BUILD_DIR/generated" \
   -d "$BUILD_DIR/classes" \
-  "$APP_DIR/src/main/java/kr/yjms/timetable/board/MainActivity.java" \
+  $APP_SOURCES \
   "$BUILD_DIR/generated/kr/yjms/timetable/board/R.java"
 
 CLASS_FILES=$(find "$BUILD_DIR/classes" -name "*.class")
