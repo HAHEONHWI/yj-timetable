@@ -887,11 +887,11 @@ body.board-mode .view-tools > div:first-child {
 }
 
 body.board-mode .view-tools h2 {
-  font-size: 32px;
+  font-size: clamp(26px, 3vh, 56px);
 }
 
 body.board-mode .view-tools .muted {
-  font-size: 16px;
+  font-size: clamp(14px, 1.6vh, 30px);
   font-weight: 500;
 }
 
@@ -900,16 +900,40 @@ body.board-mode .field.compact {
 }
 
 body.board-mode label {
-  font-size: 15px;
+  font-size: clamp(13px, 1.5vh, 26px);
 }
 
 body.board-mode select {
-  min-height: 52px;
+  min-height: clamp(52px, 5vh, 92px);
   border-color: var(--blue-soft);
   background: var(--blue-dark);
   color: var(--ink-strong);
-  font-size: 24px;
+  font-size: clamp(19px, 2.3vh, 42px);
   font-weight: 600;
+}
+
+/* 4. 오류 배너를 하단으로 내려 학급 선택기를 가리지 않게 한다 */
+body.board-mode .global-status {
+  top: auto;
+  bottom: calc(var(--board-footer-height) + var(--space-10));
+  font-size: clamp(14px, 1.5vh, 26px);
+}
+
+/* 5. 전자칠판에서 동작하지 않는 표식/음영 토글과 안내문은 숨기고 범례는 읽을 수 있게 키운다 */
+body.board-mode #homeVariantToggle,
+body.board-mode .legend-note {
+  display: none;
+}
+
+body.board-mode .page-view .legend {
+  gap: clamp(18px, 2vw, 44px);
+  margin-top: var(--space-10);
+  font-size: clamp(13px, 1.4vh, 24px);
+}
+
+body.board-mode .page-view .legend-swatch {
+  width: 3px;
+  height: clamp(13px, 1.4vh, 24px);
 }
 
 /* 안드로이드 모바일 다운로드 버튼 스타일 (/?dev=1) */
@@ -1205,8 +1229,8 @@ body.board-mode .schedule-shell {
   overflow: hidden;
   background: var(--line);
   gap: 1px;
-  grid-template-columns: 72px repeat(5, minmax(0, 1fr));
-  grid-template-rows: 58px repeat(9, minmax(0, 1fr));
+  grid-template-columns: clamp(72px, 3.75vw, 150px) repeat(5, minmax(0, 1fr));
+  grid-template-rows: clamp(58px, 5.4vh, 116px) repeat(9, minmax(0, 1fr));
 }
 
 .board-week-grid > div {
@@ -1242,12 +1266,12 @@ body.board-mode .schedule-shell {
 }
 
 .board-day-head strong {
-  font-size: 25px;
+  font-size: clamp(20px, 2.4vh, 46px);
 }
 
 .board-day-head small {
   color: var(--muted);
-  font-size: 15px;
+  font-size: clamp(13px, 1.45vh, 28px);
 }
 
 .board-day-head.is-today {
@@ -1262,7 +1286,7 @@ body.board-mode .schedule-shell {
 
 .board-period-head {
   color: var(--blue-soft);
-  font-size: 20px;
+  font-size: clamp(16px, 1.9vh, 36px);
 }
 
 .board-lesson {
@@ -1279,12 +1303,12 @@ body.board-mode .schedule-shell {
 
 .board-lesson strong {
   overflow-wrap: anywhere;
-  font-size: 24px;
+  font-size: clamp(19px, 2.3vh, 44px);
 }
 
 .board-lesson small {
   color: inherit;
-  font-size: 12px;
+  font-size: clamp(11px, 1.2vh, 22px);
   font-weight: 500;
   opacity: 0.86;
 }

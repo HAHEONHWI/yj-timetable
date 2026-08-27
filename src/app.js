@@ -2606,7 +2606,7 @@
     state = remoteState;
     const nextSlideSeconds = Number(state.slideshow.intervalSeconds) || 8;
     const nextRefreshSeconds = Number(state.slideshow.refreshSeconds) || 60;
-    if (currentRoute === "slideshow" && nextReloadToken && nextReloadToken !== previousReloadToken) {
+    if ((isBoardMode || currentRoute === "slideshow") && nextReloadToken && nextReloadToken !== previousReloadToken) {
       if ("caches" in window) {
         try {
           caches.keys().then((names) => {
@@ -2630,6 +2630,9 @@
       renderWallpaper();
     }
     renderAdmin();
+    if (isBoardMode && previousRefreshSeconds !== nextRefreshSeconds) {
+      startBoardRefreshTimer();
+    }
     if (currentRoute === "slideshow") {
       const slideshowTimingChanged =
         previousSlideSeconds !== nextSlideSeconds || previousRefreshSeconds !== nextRefreshSeconds;
@@ -3968,6 +3971,14 @@
     });
   }
 
+  function startBoardRefreshTimer() {
+    window.clearInterval(boardRefreshTimer);
+    const seconds = Math.max(10, Number(state.slideshow && state.slideshow.refreshSeconds) || 60);
+    boardRefreshTimer = window.setInterval(() => {
+      refreshFromRemote({ keepNoticeSelection: true, restartSlideshow: false });
+    }, seconds * 1000);
+  }
+
   async function init() {
     document.body.classList.toggle("board-mode", isBoardMode);
     currentRoute = isBoardMode ? "view" : routeFromPath();
@@ -3995,12 +4006,7 @@
     routeTo(currentRoute);
     analyticsRouteTrackingReady = true;
     syncRemoteForRoute();
-    if (isBoardMode) {
-      const seconds = Math.max(10, Number(state.slideshow && state.slideshow.refreshSeconds) || 60);
-      boardRefreshTimer = window.setInterval(() => {
-        refreshFromRemote({ keepNoticeSelection: true, restartSlideshow: false });
-      }, seconds * 1000);
-    }
+    if (isBoardMode) startBoardRefreshTimer();
     refreshFromRemote();
   }
 
