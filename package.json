@@ -8,6 +8,12 @@
   "scripts": {
     "start:widget": "electron .",
     "dist:win": "electron-builder --win nsis --x64",
+    "check:client": "node --check src/app-utils.js && node --check src/app.js && node --check src/storage.js && node --check src/timetable-import.js && node --check netlify/functions/meal.js && node --check netlify/functions/wallpaper.js",
+    "check:functions": "deno check supabase/functions/*/index.ts",
+    "test:client": "node --test tests/*.test.js",
+    "test:functions": "deno test supabase/functions/_shared/*.test.ts",
+    "test": "npm run check:client && npm run check:functions && npm run test:client && npm run test:functions",
+    "audit:production": "npm audit --omit=dev --package-lock-only",
     "prepare:netlify": "sh scripts/prepare-netlify-deploy.sh",
     "deploy:netlify": "NETLIFY_DEPLOY_DIR=/private/tmp/timetable-netlify-deploy npm run prepare:netlify && npx netlify deploy --prod --dir=/private/tmp/timetable-netlify-deploy"
   },

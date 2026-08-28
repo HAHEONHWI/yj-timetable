@@ -67,6 +67,9 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: "Admin account is not active" }, 403);
   }
 
+  const actorId = actorProfile.user_id;
+  const actorUsername = actorProfile.username;
+  const actorName = actorProfile.display_name || actorProfile.username;
   const actorRole = actorProfile.role || "teacher";
   const actorCanManage = actorRole === "dev" || actorRole === "manager";
   const body = await req.json().catch(() => ({}));
@@ -74,9 +77,9 @@ Deno.serve(async (req) => {
 
   async function audit(actionName: string, targetId: string | null, afterData: unknown, success: boolean, errorMessage = "") {
     await supabaseAdmin.from("audit_logs").insert({
-      actor_id: actorProfile.user_id,
-      actor_username: actorProfile.username,
-      actor_name: actorProfile.display_name || actorProfile.username,
+      actor_id: actorId,
+      actor_username: actorUsername,
+      actor_name: actorName,
       actor_role: actorRole,
       action: actionName,
       target_type: "admin_profile",

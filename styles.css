@@ -1264,6 +1264,16 @@ body.board-mode .schedule-shell {
   overflow: hidden;
 }
 
+.board-event-slot {
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.board-lesson-placeholder {
+  background: var(--panel);
+}
+
 .board-week-grid {
   display: grid;
   height: 100%;
@@ -1911,6 +1921,16 @@ body.board-mode .schedule-shell {
   align-items: stretch;
   min-height: 0;
   overflow: hidden;
+}
+
+@media (min-width: 721px) and (max-width: 1024px) {
+  body.board-mode .schedule-shell {
+    overflow: auto;
+  }
+
+  .board-week-grid {
+    min-width: 1100px;
+  }
 }
 
 .download-page {
@@ -3526,6 +3546,80 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  body.board-mode,
+  body.slideshow-mode {
+    overflow: auto;
+  }
+
+  body.board-mode main,
+  body.slideshow-mode main {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  body.board-mode .page-view {
+    display: block;
+    height: auto;
+    min-height: calc(100vh - var(--board-footer-height));
+    padding: var(--space-14);
+  }
+
+  body.board-mode .mobile-schedule {
+    margin-top: var(--space-14);
+  }
+
+  .slideshow-page {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .slideshow-frame {
+    height: auto;
+    min-height: 100vh;
+    grid-template-rows: auto minmax(560px, 1fr) auto;
+    gap: var(--space-12);
+    padding: var(--space-14);
+  }
+
+  .slideshow-top {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-10);
+  }
+
+  .slideshow-top h2 {
+    font-size: clamp(24px, 8vw, 32px);
+    overflow-wrap: break-word;
+    word-break: keep-all;
+  }
+
+  .slideshow-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .slideshow-meta {
+    grid-column: 1 / -1;
+  }
+
+  .slideshow-actions .ghost-button {
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .slideshow-stage {
+    overflow: auto;
+  }
+
+  .schedule-grid.slideshow-grid {
+    min-width: 860px;
+    min-height: 560px;
+  }
+
   .admin-workspace.is-sidebar {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -1,7 +1,6 @@
 (function () {
   const STORAGE_KEY = "school-timetable-v1";
   const ADMIN_PROFILE_KEY = "timetable-admin-profile";
-  const LEGACY_ADMIN_PASSWORD_KEY = "timetable-admin-password";
   const AUTH_USERNAME_DOMAIN = "yjms.local";
   const USERNAME_PATTERN = /^[a-z0-9_-]{3,32}$/;
 
@@ -17,6 +16,7 @@
   const sampleSubjects = ["국어", "수학", "영어", "사회", "과학", "체육", "미술", "음악", "창체"];
   let supabaseClient = null;
   let remoteChannel = null;
+  let remoteStateVersion = 1;
 
   function makeDefaultBase() {
     const base = {};
@@ -34,7 +34,6 @@
 
   function createDefaultState() {
     return {
-      adminPassword: "1234",
       base: makeDefaultBase(),
       teachers: { "1-1": {}, "1-2": {}, "2-1": {}, "2-2": {}, "3-1": {}, "3-2": {} },
       teacherMode: "subject",
@@ -228,7 +227,7 @@
 
     if (!response.ok) {
       const detail = payload && payload.error ? payload.error : response.statusText;
-      return { ok: false, error: `${response.status} ${detail}` };
+      return { ...(payload || {}), ok: false, error: `${response.status} ${detail}` };
     }
 
     return payload || { ok: true };
@@ -239,12 +238,13 @@
       return read();
     }
 
-    const { data, error } = await client().from("app_state").select("data").eq("id", "main").single();
+    const { data, error } = await client().from("app_state").select("data, version").eq("id", "main").single();
     if (error) {
       throw new Error(`Supabase DB 연결 실패: ${error.message}`);
     }
 
     const remoteState = normalizeState(data && data.data);
+    remoteStateVersion = Number(data && data.version) || 1;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteState));
     return remoteState;
   }
@@ -266,6 +266,7 @@
         (payload) => {
           if (!payload.new || payload.eventType === "DELETE") return;
           const remoteState = normalizeState(payload.new.data);
+          remoteStateVersion = Number(payload.new.version) || remoteStateVersion;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteState));
           onChange(remoteState);
         }
@@ -286,8 +287,7 @@
 
   async function writeRemote(state, action = "save_state") {
     const accessToken = await authAccessToken();
-    const legacyPassword = sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY);
-    if (!accessToken && !legacyPassword) {
+    if (!accessToken) {
       return { ok: false, error: "관리자 로그인 세션이 없습니다." };
     }
 
@@ -296,14 +296,21 @@
 
     const result = await invokeFunction(
       "save-state",
-      legacyPassword ? { action, password: legacyPassword, state: publicState } : { action, state: publicState },
+      { action, state: publicState, version: remoteStateVersion },
       { accessToken }
     );
     if (result.ok === false) {
+      if (result.code === "STATE_CONFLICT" && result.state) {
+        const remoteState = normalizeState(result.state);
+        remoteStateVersion = Number(result.version) || remoteStateVersion;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteState));
+        return { ...result, state: remoteState };
+      }
       console.warn("Supabase write failed:", result.error);
       return result;
     }
 
+    remoteStateVersion = Number(result.version) || remoteStateVersion + 1;
     return result;
   }
 
@@ -329,13 +336,7 @@
 
   const KEEP_SESSION_KEY = "timetable-admin-keep-session";
 
-  async function verifyAdminPassword(username, password, rememberMe = true, options = {}) {
-    // Re-confirmation prompts (e.g. force-reload) pass a *known* dev
-    // username in to re-check the same account's password — never the
-    // legacy shared-password login, which has no username of its own.
-    // Falling back to it here would silently swap an active dev session
-    // for the demoted Legacy Admin/manager profile on any wrong password.
-    const { allowLegacyFallback = true } = options;
+  async function verifyAdminPassword(username, password, rememberMe = true) {
     if (rememberMe) {
       localStorage.setItem(KEEP_SESSION_KEY, "true");
     } else {
@@ -344,17 +345,7 @@
     }
 
     if (!isSupabaseEnabled()) {
-      const safeUsername = String(username || "").trim() || "admin";
-      const ok = safeUsername === "admin" && password === read().adminPassword;
-      if (ok) {
-        const localProfile = { username: "admin", displayName: "로컬 관리자", role: "dev" };
-        sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(localProfile));
-        if (rememberMe) {
-          localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(localProfile));
-        }
-        return { ok: true, profile: localProfile };
-      }
-      return { ok: false };
+      return { ok: false, error: "관리자 로그인을 사용하려면 Supabase 설정이 필요합니다." };
     }
 
     let email = "";
@@ -378,7 +369,6 @@
           displayName: profile.display_name || profile.username,
           role: profile.role || "teacher",
         };
-        sessionStorage.removeItem(LEGACY_ADMIN_PASSWORD_KEY);
         sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(adminProfile));
         if (rememberMe) {
           localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(adminProfile));
@@ -391,27 +381,12 @@
       await client().auth.signOut();
     }
 
-    if (!allowLegacyFallback) {
-      return { ok: false, error: error ? error.message : "비밀번호가 맞지 않습니다." };
-    }
-
-    const legacyResult = await invokeFunction("admin-login", { password });
-    if (legacyResult.ok === true) {
-      const legacyProfile = { username: "legacy-admin", displayName: "Legacy Admin", role: "manager" };
-      sessionStorage.setItem(LEGACY_ADMIN_PASSWORD_KEY, password);
-      sessionStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(legacyProfile));
-      if (rememberMe) {
-        localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(legacyProfile));
-      }
-      return { ok: true, profile: legacyProfile };
-    }
-
-    return { ok: false, error: error ? error.message : legacyResult.error || "로그인 실패" };
+    return { ok: false, error: error ? error.message : "비밀번호가 맞지 않습니다." };
   }
 
   function clearAdminPassword() {
     sessionStorage.removeItem(ADMIN_PROFILE_KEY);
-    sessionStorage.removeItem(LEGACY_ADMIN_PASSWORD_KEY);
+    sessionStorage.removeItem("timetable-admin-password");
     localStorage.removeItem(ADMIN_PROFILE_KEY);
     localStorage.removeItem(KEEP_SESSION_KEY);
     if (isSupabaseEnabled()) {
@@ -439,20 +414,14 @@
 
   async function restoreAdminSession() {
     if (!isSupabaseEnabled()) {
-      const profile = getAdminProfile();
-      return { ok: Boolean(profile), profile };
+      clearAdminPassword();
+      return { ok: false };
     }
 
     try {
       const { data, error } = await client().auth.getSession();
       if (error || !data || !data.session || !data.session.user) {
-        const legacyPassword = sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY);
-        if (legacyPassword) {
-          return { ok: true, profile: getAdminProfile() };
-        }
-        if (localStorage.getItem(KEEP_SESSION_KEY) !== "true") {
-          clearAdminPassword();
-        }
+        clearAdminPassword();
         return { ok: false };
       }
 
@@ -488,9 +457,9 @@
 
   async function hasAdminSession() {
     if (!isSupabaseEnabled()) {
-      return Boolean(getAdminProfile());
+      return false;
     }
-    return Boolean((await authAccessToken()) || sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY));
+    return Boolean(await authAccessToken());
   }
 
   function changeKey(date, className, period) {

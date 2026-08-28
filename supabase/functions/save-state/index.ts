@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseExpectedStateVersion } from "../_shared/state-version.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,13 +140,17 @@ Deno.serve(async (req) => {
 
   const authHeader = req.headers.get("Authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-  const { action, state, password } = await req.json().catch(() => ({ action: "save_state", state: null, password: "" }));
+  const { action, state, version } = await req.json().catch(() => ({ action: "save_state", state: null, version: null }));
   const normalizedAction = typeof action === "string" && action ? action : "save_state";
+  const expectedVersion = parseExpectedStateVersion(version);
   if (!rolePermissions[normalizedAction]) {
     return json({ ok: false, error: "Unknown action" }, 400);
   }
   if (!state || typeof state !== "object" || Array.isArray(state)) {
     return json({ ok: false, error: "Invalid state" }, 400);
+  }
+  if (expectedVersion === null) {
+    return json({ ok: false, error: "Invalid state version" }, 400);
   }
 
   const supabaseAdmin = createClient(
@@ -153,48 +158,59 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  let actorId: string | null = null;
-  let actorUsername = "legacy-admin";
-  let actorName = "Legacy Admin";
-  let actorRole = "manager";
-
-  function verifyLegacyPassword() {
-    const adminPassword = Deno.env.get("ADMIN_PASSWORD");
-    return Boolean(adminPassword && password === adminPassword);
+  if (!token) {
+    return json({ ok: false, error: "Missing admin auth token" }, 401);
   }
 
-  if (token) {
-    const { data: userResult, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError || !userResult.user) {
-      if (!verifyLegacyPassword()) {
-        return json({ ok: false, error: "Invalid admin auth token" }, 401);
-      }
-    } else {
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from("admin_profiles")
-        .select("username, display_name, role, is_active")
-        .eq("user_id", userResult.user.id)
-        .single();
-
-      if (profileError || !profile || profile.is_active !== true) {
-        return json({ ok: false, error: "Admin account is not active" }, 403);
-      }
-
-      actorId = userResult.user.id;
-      actorUsername = profile.username;
-      actorName = profile.display_name || profile.username;
-      actorRole = profile.role || "teacher";
-    }
-  } else if (!verifyLegacyPassword()) {
-    return json({ ok: false, error: "Missing or invalid admin auth token" }, 401);
+  const { data: userResult, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userResult.user) {
+    return json({ ok: false, error: "Invalid admin auth token" }, 401);
   }
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("admin_profiles")
+    .select("username, display_name, role, is_active")
+    .eq("user_id", userResult.user.id)
+    .single();
+
+  if (profileError || !profile || profile.is_active !== true) {
+    return json({ ok: false, error: "Admin account is not active" }, 403);
+  }
+
+  const actorId = userResult.user.id;
+  const actorUsername = profile.username;
+  const actorName = profile.display_name || profile.username;
+  const actorRole = profile.role || "teacher";
 
   const { data: beforeRows } = await supabaseAdmin
     .from("app_state")
-    .select("data")
+    .select("data, version")
     .eq("id", "main")
     .limit(1);
   const beforeState = beforeRows && beforeRows[0] ? beforeRows[0].data : null;
+  const currentVersion = parseExpectedStateVersion(beforeRows && beforeRows[0] ? beforeRows[0].version : null) || 1;
+
+  const returnConflict = async (latestState: unknown, latestVersion: number) => {
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: actorId,
+      actor_username: actorUsername,
+      actor_name: actorName,
+      actor_role: actorRole,
+      action: normalizedAction,
+      target_type: "app_state",
+      target_id: "main",
+      before_data: latestState,
+      after_data: state,
+      success: false,
+      error_message: "State version conflict",
+      user_agent: req.headers.get("user-agent"),
+    });
+    return json({ ok: false, code: "STATE_CONFLICT", error: "State changed on another device", state: latestState, version: latestVersion }, 409);
+  };
+
+  if (expectedVersion !== currentVersion) {
+    return returnConflict(beforeState, currentVersion);
+  }
 
   const requiredActions = changedActions(beforeState, state as Record<string, unknown>, normalizedAction);
   const deniedAction = requiredActions.find((requiredAction) => !canPerform(actorRole, requiredAction));
@@ -217,9 +233,12 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: deniedAction ? `Permission denied: ${deniedAction}` : "Permission denied" }, 403);
   }
 
-  const { error } = await supabaseAdmin
+  const { data: updatedRows, error } = await supabaseAdmin
     .from("app_state")
-    .upsert({ id: "main", data: state, updated_at: new Date().toISOString() });
+    .update({ data: state, updated_at: new Date().toISOString(), version: currentVersion + 1 })
+    .eq("id", "main")
+    .eq("version", expectedVersion)
+    .select("version");
 
   if (error) {
     await supabaseAdmin.from("audit_logs").insert({
@@ -239,6 +258,17 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: error.message }, 500);
   }
 
+  if (!updatedRows || !updatedRows[0]) {
+    const { data: latestRows } = await supabaseAdmin
+      .from("app_state")
+      .select("data, version")
+      .eq("id", "main")
+      .limit(1);
+    const latestState = latestRows && latestRows[0] ? latestRows[0].data : beforeState;
+    const latestVersion = parseExpectedStateVersion(latestRows && latestRows[0] ? latestRows[0].version : null) || currentVersion;
+    return returnConflict(latestState, latestVersion);
+  }
+
   await supabaseAdmin.from("audit_logs").insert({
     actor_id: actorId,
     actor_username: actorUsername,
@@ -255,6 +285,7 @@ Deno.serve(async (req) => {
 
   return json({
     ok: true,
+    version: updatedRows[0].version,
     actor: {
       username: actorUsername,
       displayName: actorName,

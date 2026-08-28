@@ -72,11 +72,9 @@ window.SUPABASE_CONFIG = {
 };
 ```
 
-4. 관리자 비밀번호(시크릿) 설정 및 Edge Functions 배포
+4. Supabase Auth 관리자 계정 생성 후 Edge Function 배포
 
 ```bash
-npx supabase secrets set ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD --project-ref YOUR_PROJECT_REF
-npx supabase functions deploy admin-login --project-ref YOUR_PROJECT_REF
 npx supabase functions deploy save-state --project-ref YOUR_PROJECT_REF
 ```
 

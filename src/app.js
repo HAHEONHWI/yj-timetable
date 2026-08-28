@@ -1,4 +1,5 @@
 (function () {
+  const { clamp, escapeHtml, fillSelect, formatDate, fromISO, mondayOf, nextDateIso, pad, toISO } = window.TimetableAppUtils;
   const {
     classes,
     weekdays,
@@ -268,33 +269,6 @@
     auditLogList: $("#auditLogList"),
   };
 
-  function pad(value) {
-    return String(value).padStart(2, "0");
-  }
-
-  function toISO(date) {
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  }
-
-  function fromISO(value) {
-    const [year, month, day] = value.split("-").map(Number);
-    return new Date(year, month - 1, day);
-  }
-
-  function formatDate(value) {
-    const date = fromISO(value);
-    return `${date.getMonth() + 1}.${date.getDate()}`;
-  }
-
-  function mondayOf(date) {
-    const copy = new Date(date);
-    const day = copy.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    copy.setDate(copy.getDate() + diff);
-    copy.setHours(0, 0, 0, 0);
-    return copy;
-  }
-
   function schoolDaysForTwoWeeks() {
     const start = mondayOf(new Date());
     const regularDays = Array.from({ length: 10 }, (_, index) => {
@@ -360,27 +334,6 @@
       return { iso: today, weekday: { key: "special", label: weekdayLabelForDate(today) }, weekLabel: "특별" };
     }
     return null;
-  }
-
-  function nextDateIso(value) {
-    const date = fromISO(value);
-    date.setDate(date.getDate() + 1);
-    return toISO(date);
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function fillSelect(select, values, labeler = (value) => value) {
-    select.innerHTML = values
-      .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(labeler(value))}</option>`)
-      .join("");
   }
 
   function weekdayForDate(value) {
@@ -521,10 +474,6 @@
     mainEggToastTimer = window.setTimeout(() => {
       toast.classList.remove("is-visible");
     }, 2200);
-  }
-
-  function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
   }
 
   function isLoggedIn() {
@@ -1152,6 +1101,11 @@
   function renderBoardWeekGrid(className) {
     const days = schoolDaysForCurrentWeek();
     const today = toISO(new Date());
+    const events = days.flatMap((day, dayIndex) =>
+      getEventsForDate(day.iso)
+        .filter((event) => event.classes.includes(className))
+        .map((event) => ({ day, dayIndex, event }))
+    );
     const headerCells = days
       .map((day, index) => {
         const todayClass = day.iso === today ? " is-today" : "";
@@ -1167,8 +1121,15 @@
         const cells = days
           .map((day, dayIndex) => {
             const isToday = day.iso === today;
+            const isEvent = events.some(({ day: eventDay, event }) => {
+              return eventDay.iso === day.iso && period >= event.start && period <= event.end;
+            });
             return `<div data-cell-key="${changeKey(day.iso, className, period)}" style="grid-column:${dayIndex + 2};grid-row:${periodIndex + 2}">
-              ${getBoardCell(day.iso, className, period, periodIndex, isToday)}
+              ${
+                isEvent
+                  ? `<div class="board-lesson board-lesson-placeholder${isToday ? " is-today" : ""}"></div>`
+                  : getBoardCell(day.iso, className, period, periodIndex, isToday)
+              }
             </div>`;
           })
           .join("");
@@ -1176,10 +1137,23 @@
       })
       .join("");
 
+    const eventCells = events
+      .map(({ day, dayIndex, event }) => {
+        const isToday = day.iso === today;
+        const span = event.end - event.start + 1;
+        return `<div class="board-event-slot" style="grid-column:${dayIndex + 2};grid-row:${event.start + 1} / span ${span}">
+          <div class="board-lesson is-event${isToday ? " is-today" : ""}">
+            <strong>${escapeHtml(event.title)}</strong>
+            <small>행사 · ${formatPeriodRange(event.start, event.end)}${event.memo ? ` · ${escapeHtml(event.memo)}` : ""}</small>
+          </div>
+        </div>`;
+      })
+      .join("");
+
     return `<div class="board-week-grid">
       <div class="board-corner" style="grid-column:1;grid-row:1">교시</div>
       ${headerCells}
-      ${rows}
+      ${rows}${eventCells}
     </div>`;
   }
 
@@ -1206,6 +1180,9 @@
     )} ${days[days.length - 1].weekday.label} · 자동 동기화`;
     els.dayTabs.innerHTML = "";
     els.viewSchedule.innerHTML = renderBoardWeekGrid(className);
+    if (els.mobileSchedule) {
+      els.mobileSchedule.innerHTML = renderMobileList(today, [className]);
+    }
     applyBoardRecentHighlights();
   }
 
@@ -2793,9 +2770,8 @@
       clearGlobalStatus();
       applyRemoteState(remoteState, options);
     } catch (error) {
-      showGlobalError(
-        `Supabase 연결 실패: 브라우저에 저장된 시간표를 계속 표시합니다. ${friendlyRemoteError(error)}`
-      );
+      console.warn("Supabase refresh failed:", error);
+      showGlobalError("Supabase 연결 실패: 이 브라우저의 시간표를 표시합니다. 연결을 확인한 뒤 다시 저장하세요.");
     }
   }
 
@@ -2922,6 +2898,16 @@
 
     const result = await resultPromise;
     if (result && result.ok === false) {
+      if (result.code === "STATE_CONFLICT" && result.state) {
+        pendingRetryMessage = "";
+        pendingRetryAction = "save_state";
+        applyRemoteState(result.state, { keepNoticeSelection: true, restartSlideshow: false });
+        updateLastSaveStatus("error");
+        const conflictMessage = "다른 기기에서 먼저 저장했습니다. 최신 시간표를 불러왔으니 변경 내용을 다시 적용해 저장하세요.";
+        showGlobalError(conflictMessage);
+        showMessage(els.adminMessage, conflictMessage);
+        return;
+      }
       const detail = friendlyRemoteError(result.error);
       updateLastSaveStatus("error");
       showGlobalError(`원격 저장 실패: 이 브라우저 화면에는 반영됐지만 다른 기기에는 아직 공유되지 않았습니다. ${detail}`, {

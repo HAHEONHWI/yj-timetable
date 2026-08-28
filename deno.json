@@ -1,0 +1,7 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "check": "deno check supabase/functions/*/index.ts",
+    "test": "deno test supabase/functions/_shared/*.test.ts"
+  }
+}

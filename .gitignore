@@ -10,6 +10,10 @@ dist/
 android-board/build/
 android-board/output/
 android-board/debug.keystore
+android-widget/build/
+android-widget/debug.keystore
+android-widget/output/*.idsig
+android-widget/output/*.zip
 
 # Static distribution files
 downloads/

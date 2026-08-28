@@ -1,8 +1,8 @@
 [functions.admin-login]
-verify_jwt = false
+verify_jwt = true
 
 [functions.save-state]
-verify_jwt = false
+verify_jwt = true
 
 [functions.public-api]
 verify_jwt = false
