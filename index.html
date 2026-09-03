@@ -539,6 +539,7 @@
           <button id="specialTab" class="admin-tab" data-admin-tab="special" type="button" role="tab" aria-controls="specialPanel" aria-selected="false" tabindex="-1">특별시간표</button>
           <button id="changeTab" class="admin-tab is-active" data-admin-tab="change" type="button" role="tab" aria-controls="changePanel" aria-selected="true" tabindex="0">단일교과 변경</button>
           <button id="eventTab" class="admin-tab" data-admin-tab="event" type="button" role="tab" aria-controls="eventPanel" aria-selected="false" tabindex="-1">행사 변경</button>
+          <button id="academicTab" class="admin-tab" data-admin-tab="academic" type="button" role="tab" aria-controls="academicPanel" aria-selected="false" tabindex="-1">학사일정</button>
           <button id="noticeTab" class="admin-tab" data-admin-tab="notice" type="button" role="tab" aria-controls="noticePanel" aria-selected="false" tabindex="-1">안내사항</button>
           <button id="slideshowSettingsTab" class="admin-tab" data-admin-tab="slideshowSettings" type="button" role="tab" aria-controls="slideshowSettingsPanel" aria-selected="false" tabindex="-1">슬라이드쇼 설정</button>
           <div class="admin-nav-divider" aria-hidden="true"></div>
@@ -790,6 +791,54 @@
             <button id="cancelEventEditButton" class="ghost-button is-hidden" type="button">수정 취소</button>
           </div>
           <div id="eventList" class="list"></div>
+        </section>
+
+        <section id="academicPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="academicTab" aria-hidden="true">
+          <div class="academic-admin">
+            <div class="academic-calendar-head">
+              <div>
+                <h3>월간 학사일정</h3>
+                <p class="muted">조회·교사 화면의 월간 학사일정에 표시되는 행사를 달력에서 바로 등록·수정합니다. 교시 범위는 시간표에서 행사로 덮는 구간입니다.</p>
+              </div>
+              <div class="academic-calendar-controls" aria-label="월 이동">
+                <button class="ghost-button" data-academic-shift="-1" type="button" aria-label="이전 달">이전</button>
+                <strong id="academicMonthLabel" class="academic-calendar-month" aria-live="polite"></strong>
+                <button class="ghost-button" data-academic-shift="1" type="button" aria-label="다음 달">다음</button>
+              </div>
+            </div>
+            <div id="academicCalendar" class="academic-calendar-frame" role="grid"></div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="academicDate">날짜</label>
+              <input id="academicDate" type="date" />
+            </div>
+            <div class="field">
+              <label for="academicStart">시작 교시</label>
+              <select id="academicStart"></select>
+            </div>
+            <div class="field">
+              <label for="academicEnd">끝 교시</label>
+              <select id="academicEnd"></select>
+            </div>
+            <div class="field">
+              <label for="academicTitle">일정명</label>
+              <input id="academicTitle" type="text" placeholder="예: 개학식" />
+            </div>
+          </div>
+          <div class="field">
+            <label>적용 학급</label>
+            <div id="academicClassChecks" class="check-grid"></div>
+          </div>
+          <div class="field">
+            <label for="academicMemo">메모</label>
+            <input id="academicMemo" type="text" placeholder="예: 전 학년 강당 이동" />
+          </div>
+          <div class="button-row">
+            <button id="saveAcademicButton" class="primary-button" type="button">학사일정 저장</button>
+            <button id="cancelAcademicEditButton" class="ghost-button is-hidden" type="button">수정 취소</button>
+          </div>
+          <div id="academicList" class="list"></div>
         </section>
 
         <section id="noticePanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="noticeTab" aria-hidden="true">

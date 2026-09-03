@@ -47,7 +47,22 @@
       .sort((first, second) => first.date.localeCompare(second.date) || String(first.title || "").localeCompare(String(second.title || ""), "ko"));
   }
 
-  const api = { buildMonthGrid, eventsForMonth, shiftMonth };
+
+  function monthKeyOf(dateISO) {
+    const match = String(dateISO).match(/^(\d{4})-(\d{2})-\d{2}$/);
+    return match ? `${match[1]}-${match[2]}` : "";
+  }
+
+  function upsertEvent(events, event) {
+    if (!event || typeof event.id !== "string" || !event.id) throw new Error("학사일정에는 id가 필요합니다.");
+    const list = Array.isArray(events) ? events.slice() : [];
+    const index = list.findIndex((item) => item && item.id === event.id);
+    if (index === -1) list.push(event);
+    else list[index] = event;
+    return list.sort((first, second) => String(first.date).localeCompare(String(second.date)) || String(first.title || "").localeCompare(String(second.title || ""), "ko"));
+  }
+
+  const api = { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, upsertEvent };
   global.TimetableCalendar = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

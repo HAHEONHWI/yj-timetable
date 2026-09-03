@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { buildMonthGrid, eventsForMonth, shiftMonth } = require("../src/calendar.js");
+const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, upsertEvent } = require("../src/calendar.js");
 
 // Given: 2026년 9월
 // When: 월간 달력 칸을 만든다.
@@ -38,5 +38,31 @@ assert.deepEqual(
   eventsForMonth(events, "2026-09", "all").map((event) => event.id),
   ["all", "first", "second"]
 );
+
+// Given: 관리자 화면이 고른 날짜
+// When: 그 날짜가 속한 달을 구한다.
+// Then: YYYY-MM만 남기고, 날짜 형식이 아니면 빈 문자열이다.
+assert.equal(monthKeyOf("2026-09-17"), "2026-09");
+assert.equal(monthKeyOf("2026-09"), "");
+
+// Given: 관리자 학사일정 등록
+// When: 새 id로 저장한다.
+// Then: 목록에 추가되고 날짜순으로 정렬된다.
+const added = upsertEvent(events, { id: "new", date: "2026-09-01", title: "학부모 총회", classes: ["1-1"] });
+assert.equal(added.length, events.length + 1);
+assert.deepEqual(added.map((event) => event.id), ["new", "all", "first", "second", "other-month"]);
+
+// Given: 이미 등록된 학사일정
+// When: 같은 id로 다시 저장한다.
+// Then: 새로 추가하지 않고 해당 항목만 교체한다.
+const edited = upsertEvent(events, { id: "first", date: "2026-09-24", title: "1반 체험학습", classes: ["1-1"] });
+assert.equal(edited.length, events.length);
+assert.equal(edited.find((event) => event.id === "first").date, "2026-09-24");
+assert.deepEqual(edited.map((event) => event.id), ["all", "second", "first", "other-month"]);
+
+// Given: id가 없는 값
+// When: 저장을 시도한다.
+// Then: 목록을 망가뜨리지 않고 즉시 실패한다.
+assert.throws(() => upsertEvent(events, { date: "2026-09-01", title: "잘못된 일정" }), /id/);
 
 console.log("calendar tests passed");
