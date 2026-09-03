@@ -101,6 +101,14 @@
 - 상태: 기본, active, disabled, empty, loading
 - 반응형: 480px 이하에서 API 폐기 버튼을 전체 폭으로 쌓는다.
 
+### Academic Calendar
+
+- 구조: `.academic-calendar` 안에 월 이동 control, 7열 요일 머리글, 6주 날짜 grid를 둔다.
+- 데이터: 학생 조회는 선택 학급 `events`, 교사 조회는 전체 `events`만 표시하며 시간표·교과 변경은 섞지 않는다.
+- 상태: 현재 달 밖 날짜는 약하게, 오늘은 `--shadow-today`, 일정은 행사 token으로 구분한다.
+- 반응형: 720px 이하에서도 7열을 유지하며 날짜칸은 일정 건수만 표시한다. 달력 아래 목록에서 전체 일정명과 대상을 제공해 CJK 문구 잘림과 가로 overflow를 막는다.
+- 접근성: 월 이동은 실제 button, grid에는 월·일정 수 label, 날짜 cell에는 날짜와 일정 수 label을 제공한다.
+
 ## 6. Motion & Interaction
 
 - 기본 화면은 정적이다. 상태 전환은 즉시 표시한다.

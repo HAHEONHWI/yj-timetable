@@ -17,8 +17,10 @@
     isSupabaseEnabled,
     changeKey,
   } = window.TimetableStore;
+  const { buildMonthGrid, eventsForMonth, shiftMonth } = window.TimetableCalendar;
   let state = read();
   let selectedDate = "";
+  let academicCalendarMonth = toISO(new Date()).slice(0, 7);
   let currentRoute = "view";
   let selectedNoticeId = state.notices[0] ? state.notices[0].id : "";
   let selectedEventId = "";
@@ -119,6 +121,8 @@
     mobileSchedule: $("#mobileSchedule"),
     dayTabs: $("#dayTabs"),
     viewSchedule: $("#viewSchedule"),
+    viewAcademicCalendar: $("#viewAcademicCalendar"),
+    teacherAcademicCalendar: $("#teacherAcademicCalendar"),
     slideshowTitle: $("#slideshowTitle"),
     slideshowMeta: $("#slideshowMeta"),
     slideshowStage: $("#slideshowStage"),
@@ -1609,6 +1613,85 @@
     if (els.mobileSchedule) {
       els.mobileSchedule.innerHTML = renderMobileList(selectedDate, visibleClasses);
     }
+    renderAcademicCalendar(
+      els.viewAcademicCalendar,
+      visibleClasses.length === 1 ? visibleClasses[0] : "all"
+    );
+  }
+
+  function renderAcademicCalendar(container, className) {
+    if (!container) return;
+    const days = buildMonthGrid(academicCalendarMonth);
+    const academicEvents = eventsForMonth(state.events, academicCalendarMonth, className);
+    const eventsByDate = new Map();
+    academicEvents.forEach((event) => {
+      if (!eventsByDate.has(event.date)) eventsByDate.set(event.date, []);
+      eventsByDate.get(event.date).push(event);
+    });
+    const [year, month] = academicCalendarMonth.split("-").map(Number);
+    const today = toISO(new Date());
+    const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+    const eventDetails = (event) => [
+      className === "all" && Array.isArray(event.classes) ? event.classes.join(", ") : "",
+      event.memo || "",
+    ].filter(Boolean);
+    const weekRows = Array.from({ length: 6 }, (_, weekIndex) => {
+      const dayCells = days.slice(weekIndex * 7, weekIndex * 7 + 7).map((day) => {
+        const dayEvents = eventsByDate.get(day.iso) || [];
+        const eventItems = dayEvents
+          .map((event) => {
+            const details = eventDetails(event);
+            return `<li class="academic-calendar-event">
+              <strong>${escapeHtml(event.title || "학사일정")}</strong>
+              ${details.length ? `<span>${escapeHtml(details.join(" · "))}</span>` : ""}
+            </li>`;
+          })
+          .join("");
+        const classes = [
+          "academic-calendar-day",
+          day.inMonth ? "" : "is-outside",
+          day.iso === today ? "is-today" : "",
+        ].filter(Boolean).join(" ");
+        return `<div class="${classes}" role="gridcell" aria-label="${year}년 ${Number(day.iso.slice(5, 7))}월 ${day.day}일${dayEvents.length ? `, 학사일정 ${dayEvents.length}건` : ""}">
+          <span class="academic-calendar-date">${day.day}</span>
+          ${dayEvents.length ? `<span class="academic-calendar-day-count" aria-hidden="true">${dayEvents.length}건</span>` : ""}
+          <ul class="academic-calendar-events">${eventItems}</ul>
+        </div>`;
+      }).join("");
+      return `<div class="academic-calendar-row" role="row">${dayCells}</div>`;
+    }).join("");
+    const agendaItems = academicEvents
+      .map((event) => {
+        const details = eventDetails(event);
+        return `<li>
+          <time datetime="${escapeHtml(event.date)}">${formatDate(event.date)} ${weekdayLabelForDate(event.date)}</time>
+          <div><strong>${escapeHtml(event.title || "학사일정")}</strong>${details.length ? `<span>${escapeHtml(details.join(" · "))}</span>` : ""}</div>
+        </li>`;
+      })
+      .join("");
+    container.innerHTML = `<section class="academic-calendar" aria-labelledby="${container.id}Title">
+      <div class="academic-calendar-head">
+        <div>
+          <h3 id="${container.id}Title">월간 학사일정</h3>
+          <p class="muted">시간표와 교과 변경을 제외한 학사일정만 표시합니다.</p>
+        </div>
+        <div class="academic-calendar-controls" aria-label="월 이동">
+          <button class="ghost-button" data-calendar-shift="-1" type="button" aria-label="이전 달">이전</button>
+          <strong class="academic-calendar-month" aria-live="polite">${year}년 ${month}월</strong>
+          <button class="ghost-button" data-calendar-shift="1" type="button" aria-label="다음 달">다음</button>
+        </div>
+      </div>
+      <div class="academic-calendar-frame" role="grid" aria-label="${year}년 ${month}월 학사일정, ${academicEvents.length}건">
+        <div class="academic-calendar-weekdays" role="row">
+          ${weekdayLabels.map((label) => `<span role="columnheader">${label}</span>`).join("")}
+        </div>
+        <div class="academic-calendar-grid" role="rowgroup">${weekRows}</div>
+      </div>
+      <div class="academic-calendar-agenda">
+        <h4>이번 달 일정</h4>
+        ${agendaItems ? `<ul>${agendaItems}</ul>` : `<p class="empty">등록된 학사일정이 없습니다.</p>`}
+      </div>
+    </section>`;
   }
 
   function teacherNames() {
@@ -1650,6 +1733,7 @@
 
   function renderTeacherView() {
     if (!els.teacherViewSelect || !els.teacherWeekSchedule) return;
+    renderAcademicCalendar(els.teacherAcademicCalendar, "all");
     const names = teacherNames();
     const storedTeacher = localStorage.getItem(TEACHER_VIEW_KEY) || "";
     const currentTeacher = names.includes(els.teacherViewSelect.value)
@@ -3131,6 +3215,16 @@
         moveSlideshow(-1, true);
         startSlideshow();
       }
+    });
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-calendar-shift]");
+      if (!button) return;
+      const calendarHost = button.closest("#viewAcademicCalendar, #teacherAcademicCalendar");
+      const direction = Number(button.dataset.calendarShift);
+      academicCalendarMonth = shiftMonth(academicCalendarMonth, direction);
+      renderView();
+      if (currentRoute === "teachers") renderTeacherView();
+      if (calendarHost) calendarHost.querySelector(`[data-calendar-shift="${direction}"]`)?.focus();
     });
     window.addEventListener("popstate", () => {
       routeTo(routeFromPath(), { replace: true });
