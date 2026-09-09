@@ -139,12 +139,22 @@ Deno.serve(async (req) => {
 
   const authHeader = req.headers.get("Authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-  const { action, state, password } = await req.json().catch(() => ({ action: "save_state", state: null, password: "" }));
+  const contentLength = req.headers.get("content-length");
+  let parseError: unknown = null;
+  const { action, state, password } = await req.json().catch((err) => {
+    parseError = err;
+    return { action: "save_state", state: null, password: "" };
+  });
   const normalizedAction = typeof action === "string" && action ? action : "save_state";
   if (!rolePermissions[normalizedAction]) {
     return json({ ok: false, error: "Unknown action" }, 400);
   }
   if (!state || typeof state !== "object" || Array.isArray(state)) {
+    console.error(
+      "[save-state] Invalid state —",
+      parseError ? `JSON parse error: ${parseError}` : `state type: ${Array.isArray(state) ? "array" : typeof state}`,
+      `| content-length: ${contentLength ?? "unknown"}`,
+    );
     return json({ ok: false, error: "Invalid state" }, 400);
   }
 

@@ -125,6 +125,9 @@
   }
 
   function write(state, action = "save_state") {
+    if (!state || typeof state !== "object" || Array.isArray(state)) {
+      return Promise.resolve({ ok: false, error: "Invalid state" });
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     if (isSupabaseEnabled()) {
       return writeRemote(state, action);
@@ -208,17 +211,28 @@
   async function invokeFunction(name, body, options = {}) {
     const config = window.SUPABASE_CONFIG;
     const accessToken = options.accessToken || "";
-    const response = await fetch(`${config.url}/functions/v1/${name}`, {
-      method: "POST",
-      headers: {
-        apikey: config.anonKey,
-        Authorization: `Bearer ${accessToken || config.anonKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    const serialized = JSON.stringify(body);
+    const byteSize = new TextEncoder().encode(serialized).length;
+    if (byteSize > 900_000) {
+      console.warn(`[invokeFunction] ${name} body is ${(byteSize / 1024).toFixed(1)} KB — near or over limit`);
+    }
+    let response;
+    let text;
+    try {
+      response = await fetch(`${config.url}/functions/v1/${name}`, {
+        method: "POST",
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${accessToken || config.anonKey}`,
+          "Content-Type": "application/json",
+        },
+        body: serialized,
+      });
+      text = await response.text();
+    } catch (err) {
+      return { ok: false, error: `Failed to fetch: ${err && err.message ? err.message : err}` };
+    }
 
-    const text = await response.text();
     let payload = null;
     try {
       payload = text ? JSON.parse(text) : null;
@@ -227,8 +241,22 @@
     }
 
     if (!response.ok) {
-      const detail = payload && payload.error ? payload.error : response.statusText;
-      return { ok: false, error: `${response.status} ${detail}` };
+      if (response.status === 401 && accessToken && !options.authRetried) {
+        try {
+          const { data, error } = await client().auth.refreshSession();
+          if (!error && data && data.session && data.session.access_token) {
+            return invokeFunction(name, JSON.parse(serialized), {
+              accessToken: data.session.access_token,
+              authRetried: true,
+            });
+          }
+          if (error) return { ok: false, error: error.message || "관리자 로그인 세션을 갱신하지 못했습니다." };
+        } catch (error) {
+          return { ok: false, error: error.message || "관리자 로그인 세션을 갱신하지 못했습니다." };
+        }
+      }
+      const detail = payload && (payload.error || payload.message) ? payload.error || payload.message : response.statusText;
+      return { ok: false, status: response.status, error: `${response.status} ${detail}` };
     }
 
     return payload || { ok: true };
@@ -285,7 +313,12 @@
   }
 
   async function writeRemote(state, action = "save_state") {
-    const accessToken = await authAccessToken();
+    let accessToken;
+    try {
+      accessToken = await authAccessToken();
+    } catch (error) {
+      return { ok: false, error: error.message || "관리자 로그인 세션을 확인하지 못했습니다." };
+    }
     const legacyPassword = sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY);
     if (!accessToken && !legacyPassword) {
       return { ok: false, error: "관리자 로그인 세션이 없습니다." };
@@ -372,6 +405,10 @@
         .eq("user_id", data.user.id)
         .single();
 
+      if (profileError) {
+        return { ok: false, error: `관리자 정보 조회 실패: ${profileError.message}` };
+      }
+
       if (!profileError && profile && profile.is_active === true) {
         const adminProfile = {
           username: profile.username,
@@ -445,7 +482,8 @@
 
     try {
       const { data, error } = await client().auth.getSession();
-      if (error || !data || !data.session || !data.session.user) {
+      if (error) return { ok: false, error: error.message };
+      if (!data || !data.session || !data.session.user) {
         const legacyPassword = sessionStorage.getItem(LEGACY_ADMIN_PASSWORD_KEY);
         if (legacyPassword) {
           return { ok: true, profile: getAdminProfile() };
@@ -463,6 +501,10 @@
         .eq("user_id", data.session.user.id)
         .single();
 
+      if (profileError) {
+        return { ok: false, error: `관리자 정보 조회 실패: ${profileError.message}` };
+      }
+
       if (!profileError && profile && profile.is_active === true) {
         const adminProfile = {
           username: profile.username,
@@ -476,8 +518,6 @@
         return { ok: true, profile: adminProfile };
       }
 
-      // 비활성 계정이거나 프로필 조회 불가
-      await client().auth.signOut();
       clearAdminPassword();
       return { ok: false, error: "비활성화된 계정입니다." };
     } catch (e) {
