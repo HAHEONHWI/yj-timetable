@@ -611,7 +611,7 @@
     const enabled = isDeveloperMode();
     document.body.classList.toggle("is-dev-mode", enabled);
     $$("[data-dev-only]").forEach((element) => {
-      element.hidden = !enabled;
+      element.hidden = false;
     });
 
     // iOS 자동화 가이드 모달 이벤트 바인딩
