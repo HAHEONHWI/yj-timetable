@@ -4,34 +4,31 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.Gravity;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 import android.widget.FrameLayout;
 
 public class MainActivity extends Activity {
 
     private static final String BOARD_URL = "https://schedule.yjms.kr/board";
-    private static final long SETTINGS_LONG_PRESS_MS = 3000L;
-    private static final int CORNER_SIZE_DP = 120;
     private static final int REQUEST_NOTIFICATIONS = 100;
 
     private static volatile boolean boardVisible = false;
 
     private WebView webView;
     private String loadedClassName = "";
-    private final Handler longPressHandler = new Handler(Looper.getMainLooper());
 
     /** 화면이 켜져 있으면 웹 화면이 직접 배너로 알리므로 서비스는 알림을 띄우지 않는다. */
     static boolean isBoardVisible() {
@@ -76,42 +73,54 @@ public class MainActivity extends Activity {
 
         FrameLayout root = new FrameLayout(this);
         root.addView(webView);
-        root.addView(buildSettingsCorner());
+        root.addView(buildSettingsButton());
         setContentView(root);
 
         requestNotificationPermission();
     }
 
-    /** 왼쪽 위 모서리를 길게 누르면 설정이 열린다. 학생이 우연히 누르지 못하게 3초를 요구한다. */
-    private View buildSettingsCorner() {
-        int size = Math.round(CORNER_SIZE_DP * getResources().getDisplayMetrics().density);
-        View corner = new View(this);
-        corner.setLayoutParams(new FrameLayout.LayoutParams(size, size, Gravity.TOP | Gravity.START));
+    private View buildSettingsButton() {
+        Button button = new Button(this);
+        button.setText("설정");
+        button.setTextSize(17);
+        button.setTextColor(Color.WHITE);
+        button.setAllCaps(false);
+        button.setElevation(dp(4));
 
-        final Runnable openSettings = new Runnable() {
-            @Override
-            public void run() {
-                openSettings();
-            }
-        };
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(Color.rgb(27, 42, 74));
+        background.setCornerRadius(dp(12));
+        button.setBackground(background);
 
-        corner.setOnTouchListener(new View.OnTouchListener() {
+        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+            dp(96),
+            dp(48),
+            Gravity.TOP | Gravity.END
+        );
+        params.topMargin = dp(16);
+        params.setMarginEnd(dp(16));
+        button.setLayoutParams(params);
+        button.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @Override
-            public boolean onTouch(View view, MotionEvent event) {
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        longPressHandler.postDelayed(openSettings, SETTINGS_LONG_PRESS_MS);
-                        return true;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        longPressHandler.removeCallbacks(openSettings);
-                        return true;
-                    default:
-                        return true;
-                }
+            @SuppressWarnings("deprecation")
+            public WindowInsets onApplyWindowInsets(View view, WindowInsets insets) {
+                params.topMargin = dp(16) + insets.getSystemWindowInsetTop();
+                params.setMarginEnd(dp(16) + insets.getSystemWindowInsetRight());
+                view.setLayoutParams(params);
+                return insets;
             }
         });
-        return corner;
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openSettings();
+            }
+        });
+        return button;
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void openSettings() {
@@ -177,7 +186,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         boardVisible = false;
-        longPressHandler.removeCallbacksAndMessages(null);
         super.onPause();
     }
 }

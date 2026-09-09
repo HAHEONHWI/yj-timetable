@@ -94,7 +94,7 @@ public class SettingsActivity extends Activity {
         root.addView(overlayPermissionButton);
 
         TextView hint = new TextView(this);
-        hint.setText("설정 열기: 시간표 화면 왼쪽 위를 3초간 누르세요.");
+        hint.setText("설정 열기: 시간표 화면 오른쪽 위의 설정 버튼을 누르세요.");
         hint.setTextSize(15);
         hint.setTextColor(Color.parseColor("#5f687a"));
         hint.setPadding(0, 36, 0, 0);
