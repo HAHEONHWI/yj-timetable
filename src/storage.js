@@ -213,15 +213,20 @@
     if (byteSize > 900_000) {
       console.warn(`[invokeFunction] ${name} body is ${(byteSize / 1024).toFixed(1)} KB — near or over limit`);
     }
-    const response = await fetch(`${config.url}/functions/v1/${name}`, {
-      method: "POST",
-      headers: {
-        apikey: config.anonKey,
-        Authorization: `Bearer ${accessToken || config.anonKey}`,
-        "Content-Type": "application/json",
-      },
-      body: serialized,
-    });
+    let response;
+    try {
+      response = await fetch(`${config.url}/functions/v1/${name}`, {
+        method: "POST",
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${accessToken || config.anonKey}`,
+          "Content-Type": "application/json",
+        },
+        body: serialized,
+      });
+    } catch (err) {
+      return { ok: false, error: `Failed to fetch: ${err && err.message ? err.message : err}` };
+    }
 
     const text = await response.text();
     let payload = null;

@@ -2908,6 +2908,11 @@
     window.clearTimeout(globalStatusTimer);
   }
 
+  function isTransientSaveError(errorText) {
+    const text = String(errorText || "");
+    return /Invalid state|Failed to fetch|NetworkError|Load failed|연결|network error/i.test(text) || /^5\d\d/.test(text.trim());
+  }
+
   async function saveState(message, action = "save_state") {
     pendingRetryMessage = message;
     pendingRetryAction = action;
@@ -2923,7 +2928,11 @@
       startSlideshow();
     }
 
-    const result = await resultPromise;
+    let result = await resultPromise;
+    if (result && result.ok === false && isTransientSaveError(result.error)) {
+      await new Promise((r) => setTimeout(r, 1500));
+      result = await write(state, action);
+    }
     if (result && result.ok === false) {
       const detail = friendlyRemoteError(result.error);
       updateLastSaveStatus("error");
