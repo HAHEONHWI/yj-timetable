@@ -208,6 +208,11 @@
   async function invokeFunction(name, body, options = {}) {
     const config = window.SUPABASE_CONFIG;
     const accessToken = options.accessToken || "";
+    const serialized = JSON.stringify(body);
+    const byteSize = new TextEncoder().encode(serialized).length;
+    if (byteSize > 900_000) {
+      console.warn(`[invokeFunction] ${name} body is ${(byteSize / 1024).toFixed(1)} KB — near or over limit`);
+    }
     const response = await fetch(`${config.url}/functions/v1/${name}`, {
       method: "POST",
       headers: {
@@ -215,7 +220,7 @@
         Authorization: `Bearer ${accessToken || config.anonKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: serialized,
     });
 
     const text = await response.text();

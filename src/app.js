@@ -474,7 +474,10 @@
     if (/Failed to fetch|NetworkError|Load failed|연결|network|fetch/i.test(text)) {
       return "Supabase에 연결하지 못했습니다. 인터넷 연결이나 Supabase 상태를 확인한 뒤 다시 저장하세요.";
     }
-    if (/Invalid state|400/i.test(text)) {
+    if (/Invalid state/i.test(text)) {
+      return "저장 요청 전송 중 오류가 발생했습니다. 네트워크 상태를 확인하고 다시 저장해 주세요.";
+    }
+    if (/^400/i.test(text)) {
       return "저장할 시간표 데이터 형식이 올바르지 않습니다. 방금 입력한 항목을 확인하세요.";
     }
     if (/ADMIN_PASSWORD/i.test(text)) {
