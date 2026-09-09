@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="kr.yjms.timetable.board"
-    android:versionCode="4"
-    android:versionName="1.2.0">
+    android:versionCode="5"
+    android:versionName="1.3.0">
     <uses-sdk
         android:minSdkVersion="21"
         android:targetSdkVersion="35" />
@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="false"

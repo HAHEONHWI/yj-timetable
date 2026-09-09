@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -14,6 +15,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
@@ -48,7 +50,21 @@ public class MainActivity extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
         ));
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (!request.isForMainFrame() && "yjboard".equals(request.getUrl().getScheme())) {
+                    return true;
+                }
+                return handleBoardCommand(view, request.getUrl());
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return handleBoardCommand(view, Uri.parse(url));
+            }
+        });
         webView.setBackgroundColor(Color.rgb(245, 247, 251));
 
         WebSettings settings = webView.getSettings();
@@ -108,6 +124,36 @@ public class MainActivity extends Activity {
             return;
         }
         requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, REQUEST_NOTIFICATIONS);
+    }
+
+    private boolean handleBoardCommand(WebView view, Uri command) {
+        if (!"yjboard".equals(command.getScheme())) return false;
+        if (!"overlay".equals(command.getHost())) return true;
+
+        Uri current = Uri.parse(view.getUrl() == null ? "" : view.getUrl());
+        if (!"https".equals(current.getScheme()) || !"schedule.yjms.kr".equals(current.getHost())) {
+            return true;
+        }
+
+        String title = command.getQueryParameter("title");
+        String body = command.getQueryParameter("body");
+        int seconds = 15;
+        String secondsValue = command.getQueryParameter("seconds");
+        if (secondsValue != null && secondsValue.matches("[0-9]{1,3}")) {
+            seconds = Integer.parseInt(secondsValue);
+        }
+        seconds = Math.max(3, Math.min(60, seconds));
+        boolean shown = BoardOverlay.show(
+            this,
+            title == null ? "학교 알림" : title,
+            body == null ? "" : body,
+            seconds * 1000L
+        );
+        view.evaluateJavascript(
+            "window.dispatchEvent(new CustomEvent('yjboardoverlayresult',{detail:{shown:" + shown + "}}))",
+            null
+        );
+        return true;
     }
 
     @Override

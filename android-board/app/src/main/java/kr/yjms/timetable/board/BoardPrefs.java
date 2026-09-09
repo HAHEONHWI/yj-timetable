@@ -12,6 +12,7 @@ final class BoardPrefs {
     private static final String KEY_CLASS = "board_class";
     private static final String KEY_SOUND = "alert_sound";
     private static final String KEY_SNAPSHOT = "changes_snapshot";
+    private static final String KEY_NOTICE_SNAPSHOT = "notices_snapshot";
 
     private BoardPrefs() {
     }
@@ -45,11 +46,27 @@ final class BoardPrefs {
         return prefs(context).getString(KEY_SNAPSHOT, "");
     }
 
+    static boolean hasSnapshot(Context context) {
+        return prefs(context).contains(KEY_SNAPSHOT);
+    }
+
     static void setSnapshot(Context context, String value) {
         prefs(context).edit().putString(KEY_SNAPSHOT, value).apply();
     }
 
     static void clearSnapshot(Context context) {
         prefs(context).edit().remove(KEY_SNAPSHOT).apply();
+    }
+
+    static String noticeSnapshot(Context context) {
+        return prefs(context).getString(KEY_NOTICE_SNAPSHOT, "");
+    }
+
+    static boolean hasNoticeSnapshot(Context context) {
+        return prefs(context).contains(KEY_NOTICE_SNAPSHOT);
+    }
+
+    static void setNoticeSnapshot(Context context, String value) {
+        prefs(context).edit().putString(KEY_NOTICE_SNAPSHOT, value).apply();
     }
 }

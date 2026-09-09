@@ -1,8 +1,12 @@
 package kr.yjms.timetable.board;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -23,10 +27,14 @@ public class SettingsActivity extends Activity {
 
     private RadioGroup classGroup;
     private CheckBox soundBox;
+    private Button overlayPermissionButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -63,16 +71,32 @@ public class SettingsActivity extends Activity {
         root.addView(classGroup);
 
         soundBox = new CheckBox(this);
-        soundBox.setText("교과 변경 시 알림음 재생");
+        soundBox.setText("교과 변경·공지 알림음 재생");
         soundBox.setTextSize(21);
         soundBox.setPadding(12, 44, 12, 14);
         soundBox.setChecked(BoardPrefs.soundEnabled(this));
         root.addView(soundBox);
 
+        overlayPermissionButton = new Button(this);
+        overlayPermissionButton.setTextSize(18);
+        LinearLayout.LayoutParams overlayParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        overlayParams.topMargin = 24;
+        overlayPermissionButton.setLayoutParams(overlayParams);
+        overlayPermissionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openOverlayPermission();
+            }
+        });
+        root.addView(overlayPermissionButton);
+
         TextView hint = new TextView(this);
-        hint.setText("설정을 다시 열려면 시간표 화면 왼쪽 위 모서리를 3초간 길게 누르세요.");
+        hint.setText("설정 열기: 시간표 화면 왼쪽 위를 3초간 누르세요.");
         hint.setTextSize(15);
-        hint.setTextColor(Color.parseColor("#8a93a6"));
+        hint.setTextColor(Color.parseColor("#5f687a"));
         hint.setPadding(0, 36, 0, 0);
         root.addView(hint);
 
@@ -96,6 +120,26 @@ public class SettingsActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.addView(root);
         setContentView(scroll);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (overlayPermissionButton == null) return;
+        boolean granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this);
+        overlayPermissionButton.setText(granted
+            ? "다른 앱 위 표시 권한: 허용됨"
+            : "다른 앱 위 표시 권한 허용");
+        overlayPermissionButton.setEnabled(!granted);
+    }
+
+    private void openOverlayPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
+        Intent intent = new Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:" + getPackageName())
+        );
+        startActivity(intent);
     }
 
     private void save() {
