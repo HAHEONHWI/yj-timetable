@@ -42,7 +42,8 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             if (alertTone == null || alertToneCount <= 0) return;
-            alertTone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+            boolean started = alertTone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+            Log.i("YJBoard", "student call beep started=" + started);
             alertToneCount--;
             if (alertToneCount > 0) {
                 alertHandler.postDelayed(this, 650L);
@@ -201,7 +202,7 @@ public class MainActivity extends Activity {
         if (!BoardPrefs.soundEnabled(this)) return;
         alertHandler.removeCallbacks(alertToneTask);
         if (alertTone != null) alertTone.release();
-        alertTone = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
+        alertTone = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
         alertToneCount = 3;
         alertToneTask.run();
         Log.i("YJBoard", "student call sound started");

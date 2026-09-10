@@ -3,6 +3,7 @@ package kr.yjms.timetable.board;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.app.NotificationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -28,6 +29,7 @@ public class SettingsActivity extends Activity {
     private RadioGroup classGroup;
     private CheckBox soundBox;
     private Button overlayPermissionButton;
+    private Button fullScreenPermissionButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,6 +95,22 @@ public class SettingsActivity extends Activity {
         });
         root.addView(overlayPermissionButton);
 
+        fullScreenPermissionButton = new Button(this);
+        fullScreenPermissionButton.setTextSize(18);
+        LinearLayout.LayoutParams fullScreenParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        fullScreenParams.topMargin = 12;
+        fullScreenPermissionButton.setLayoutParams(fullScreenParams);
+        fullScreenPermissionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openFullScreenPermission();
+            }
+        });
+        root.addView(fullScreenPermissionButton);
+
         TextView hint = new TextView(this);
         hint.setText("설정 열기: 시간표 화면 오른쪽 위의 설정 버튼을 누르세요.");
         hint.setTextSize(15);
@@ -131,12 +149,27 @@ public class SettingsActivity extends Activity {
             ? "다른 앱 위 표시 권한: 허용됨"
             : "다른 앱 위 표시 권한 허용");
         overlayPermissionButton.setEnabled(!granted);
+        boolean fullScreenGranted = Build.VERSION.SDK_INT < 34
+            || getSystemService(NotificationManager.class).canUseFullScreenIntent();
+        fullScreenPermissionButton.setText(fullScreenGranted
+            ? "다른 앱 위 호출 권한: 허용됨"
+            : "다른 앱 위 호출 권한 허용");
+        fullScreenPermissionButton.setEnabled(!fullScreenGranted);
     }
 
     private void openOverlayPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
         Intent intent = new Intent(
             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:" + getPackageName())
+        );
+        startActivity(intent);
+    }
+
+    private void openFullScreenPermission() {
+        if (Build.VERSION.SDK_INT < 34) return;
+        Intent intent = new Intent(
+            Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
             Uri.parse("package:" + getPackageName())
         );
         startActivity(intent);

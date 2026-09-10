@@ -7,6 +7,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -53,8 +55,8 @@ public class ChangeWatcherService extends Service {
     private static final int STUDENT_CALL_NOTIFICATION_ID = 4;
 
     private static final String CHANNEL_ONGOING = "board-watch";
-    private static final String CHANNEL_ALERT_SOUND = "board-change-sound";
-    private static final String CHANNEL_ALERT_SILENT = "board-change-silent";
+    private static final String CHANNEL_ALERT_SOUND = "board-change-sound-v2";
+    private static final String CHANNEL_ALERT_SILENT = "board-change-silent-v2";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean running = false;
@@ -145,6 +147,8 @@ public class ChangeWatcherService extends Service {
         )) return;
 
         BoardPrefs.setStudentCallId(this, callId);
+        Log.i(TAG, "student call matched class=" + className + " id=" + callId
+            + " boardVisible=" + MainActivity.isBoardVisible());
         if (MainActivity.isBoardVisible()) return;
         notifyStudentCall(call);
     }
@@ -378,6 +382,13 @@ public class ChangeWatcherService extends Service {
         NotificationChannel withSound = new NotificationChannel(
             CHANNEL_ALERT_SOUND, "시간표 알림", NotificationManager.IMPORTANCE_HIGH
         );
+        withSound.setSound(
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+            new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        );
         manager.createNotificationChannel(withSound);
 
         NotificationChannel silent = new NotificationChannel(
@@ -512,6 +523,13 @@ public class ChangeWatcherService extends Service {
             .setStyle(new Notification.BigTextStyle().bigText(body))
             .setSmallIcon(R.drawable.app_icon)
             .setContentIntent(boardIntent())
+            .setFullScreenIntent(
+                boardIntent(),
+                StudentCallPolicy.shouldUseFullScreen(MainActivity.isBoardVisible())
+            )
+            .setCategory(Notification.CATEGORY_CALL)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setTimeoutAfter(5 * 60_000L)
             .setAutoCancel(true);
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
@@ -522,6 +540,11 @@ public class ChangeWatcherService extends Service {
         NotificationManager manager =
             (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
+            boolean fullScreen = Build.VERSION.SDK_INT < 34
+                || manager.canUseFullScreenIntent();
+            Log.i(TAG, "student call notification posted sound=" + sound
+                + " notificationsEnabled=" + manager.areNotificationsEnabled()
+                + " fullScreen=" + fullScreen);
             manager.notify(STUDENT_CALL_NOTIFICATION_ID, builder.build());
         }
     }

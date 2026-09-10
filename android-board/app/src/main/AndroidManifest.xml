@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="kr.yjms.timetable.board"
-    android:versionCode="7"
-    android:versionName="1.4.0">
+    android:versionCode="8"
+    android:versionName="1.5.0">
     <uses-sdk
         android:minSdkVersion="21"
         android:targetSdkVersion="35" />
@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
         android:allowBackup="false"

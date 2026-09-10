@@ -20,4 +20,8 @@ final class StudentCallPolicy {
             && !callId.equals(previousCallId)
             && expiresAtMs > nowMs;
     }
+
+    static boolean shouldUseFullScreen(boolean boardVisible) {
+        return !boardVisible;
+    }
 }
