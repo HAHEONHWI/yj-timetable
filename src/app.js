@@ -41,6 +41,8 @@
   let isMealLoading = false;
   let boardRefreshTimer = null;
   let boardAlertTimer = null;
+  let studentCallTimer = null;
+  let studentCallEscapeHandler = null;
   const boardRecentChanges = new Map();
   const BOARD_HIGHLIGHT_MS = 10 * 60 * 1000;
   let boardAudioContext = null;
@@ -87,6 +89,7 @@
     update_change: ["dev", "manager", "teacher"],
     update_event: ["dev", "manager", "teacher"],
     update_notice: ["dev", "manager", "teacher"],
+    call_student: ["dev", "manager", "teacher"],
     update_slide_runtime: ["dev", "manager", "teacher"],
     update_slide_typography: ["dev", "manager"],
     force_reload: ["dev"],
@@ -218,6 +221,12 @@
     addNoticeButton: $("#addNoticeButton"),
     saveNoticeButton: $("#saveNoticeButton"),
     noticeList: $("#noticeList"),
+    studentCallClass: $("#studentCallClass"),
+    studentCallName: $("#studentCallName"),
+    studentCallDestination: $("#studentCallDestination"),
+    studentCallMessage: $("#studentCallMessage"),
+    sendStudentCallButton: $("#sendStudentCallButton"),
+    studentCallStatus: $("#studentCallStatus"),
     slideLessonFontScale: $("#slideLessonFontScale"),
     slideLessonFontScaleLabel: $("#slideLessonFontScaleLabel"),
     slideClassHeaderFontScale: $("#slideClassHeaderFontScale"),
@@ -753,6 +762,15 @@
     const canSlideTypography = canRole("update_slide_typography");
     const canForceReload = canRole("force_reload");
     const canManageApiKeys = canRole("manage_api_keys");
+    const canCallStudent = canRole("call_student");
+
+    [
+      els.studentCallClass,
+      els.studentCallName,
+      els.studentCallDestination,
+      els.studentCallMessage,
+      els.sendStudentCallButton,
+    ].forEach((control) => setControlDisabled(control, !canCallStudent));
 
     setContainerDisabled("#baseEditor", !canBase);
     setControlDisabled(els.saveBaseButton, !canBase);
@@ -1335,6 +1353,82 @@
     applyBoardRecentHighlights();
     showBoardAlert(lines);
     playBoardAlertSound();
+  }
+
+  function isActiveStudentCall(call) {
+    if (!call || typeof call !== "object") return false;
+    if (!call.id || !classes.includes(call.className) || !String(call.studentName || "").trim()) return false;
+    const expiresAt = Date.parse(call.expiresAt || "");
+    return Number.isFinite(expiresAt) && expiresAt > Date.now();
+  }
+
+  function playStudentCallSound() {
+    if (navigator.userAgent.includes("YJBoardApp/")) {
+      sendBoardCommand("sound");
+      return;
+    }
+    playBoardAlertSound();
+    window.setTimeout(playBoardAlertSound, 700);
+  }
+
+  function sendBoardCommand(command) {
+    const bridge = document.createElement("iframe");
+    bridge.hidden = true;
+    bridge.src = `yjboard://${command}`;
+    document.body.appendChild(bridge);
+    window.setTimeout(() => bridge.remove(), 1000);
+  }
+
+  function closeStudentCall() {
+    const overlay = document.querySelector("#boardStudentCall");
+    if (overlay) {
+      overlay.remove();
+      if (navigator.userAgent.includes("YJBoardApp/")) sendBoardCommand("call-end");
+    }
+    window.clearTimeout(studentCallTimer);
+    if (studentCallEscapeHandler) {
+      document.removeEventListener("keydown", studentCallEscapeHandler);
+      studentCallEscapeHandler = null;
+    }
+  }
+
+  function showStudentCall(call) {
+    closeStudentCall();
+    const destination = String(call.destination || "교무실").trim() || "교무실";
+    const message = String(call.message || "").trim();
+    const overlay = document.createElement("section");
+    overlay.id = "boardStudentCall";
+    overlay.className = "board-student-call";
+    overlay.setAttribute("role", "alertdialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "boardStudentCallName");
+    overlay.innerHTML = `<div class="board-student-call-card">
+      <p class="board-student-call-label">학생 호출</p>
+      <h2 id="boardStudentCallName">${escapeHtml(call.studentName)}</h2>
+      <p class="board-student-call-destination">${escapeHtml(destination)}로 와 주세요.</p>
+      ${message ? `<p class="board-student-call-message">${escapeHtml(message)}</p>` : ""}
+      <p class="board-student-call-class">${escapeHtml(call.className)} 학생</p>
+      <button class="board-student-call-close" type="button" aria-label="호출 닫기">×</button>
+    </div>`;
+    overlay.querySelector("button").addEventListener("click", closeStudentCall);
+    document.body.appendChild(overlay);
+    studentCallEscapeHandler = (event) => {
+      if (event.key === "Escape") closeStudentCall();
+    };
+    document.addEventListener("keydown", studentCallEscapeHandler);
+    overlay.querySelector("button").focus();
+    playStudentCallSound();
+    studentCallTimer = window.setTimeout(closeStudentCall, 60_000);
+  }
+
+  function notifyBoardStudentCall(call) {
+    if (!isBoardMode || !isActiveStudentCall(call)) return;
+    const className = boardClassParam || els.viewClass.value;
+    if (call.className !== className) return;
+    const seenKey = `board-student-call:${className}`;
+    if (sessionStorage.getItem(seenKey) === call.id) return;
+    sessionStorage.setItem(seenKey, call.id);
+    showStudentCall(call);
   }
 
   function adminNavLayout() {
@@ -2771,6 +2865,7 @@
     renderChangeList();
     renderEventList();
     renderNoticeList();
+    renderStudentCallStatus();
     renderSlideScheduleDateOptions();
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
@@ -2793,6 +2888,20 @@
     renderAdminAccounts();
     renderAuditLogs();
     applyAdminPermissions();
+  }
+
+  function renderStudentCallStatus() {
+    if (!els.studentCallStatus) return;
+    const call = state.studentCall;
+    if (!call || typeof call !== "object") {
+      els.studentCallStatus.textContent = "아직 보낸 호출이 없습니다.";
+      return;
+    }
+    const createdAt = new Date(call.createdAt || "");
+    const time = Number.isNaN(createdAt.getTime())
+      ? "시간 정보 없음"
+      : createdAt.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    els.studentCallStatus.textContent = `마지막 호출 · ${call.className || "학급 미지정"} ${call.studentName || "이름 없음"} · ${time}`;
   }
 
   function cleanupExpiredScheduleData() {
@@ -2868,6 +2977,7 @@
     if (previousChanges) {
       notifyBoardChanges(previousChanges);
     }
+    notifyBoardStudentCall(state.studentCall);
     if (currentRoute === "slideshow") {
       const slideshowTimingChanged =
         previousSlideSeconds !== nextSlideSeconds || previousRefreshSeconds !== nextRefreshSeconds;
@@ -3036,13 +3146,14 @@
         retry: true,
       });
       showMessage(els.adminMessage, `브라우저에는 반영됨 · 원격 저장 실패: ${detail}`);
-      return;
+      return result;
     }
     pendingRetryMessage = "";
     pendingRetryAction = "save_state";
     markLastSaveSuccess();
     showGlobalStatus(message, "success", { autoHide: true });
     showMessage(els.adminMessage, `${message} · ${isSupabaseEnabled && isSupabaseEnabled() ? "원격 동기화 완료" : "이 브라우저에 저장됨"}`);
+    return result || { ok: true };
   }
 
   function retrySaveState() {
@@ -3074,6 +3185,7 @@
 
     fillSelect(els.viewClass, isBoardMode ? classes : ["all", ...classes], (value) => (value === "all" ? "전체 학급 보기" : value));
     fillSelect(els.changeClass, classes);
+    fillSelect(els.studentCallClass, classes);
     fillSelect(els.baseWeekday, weekdays.map((day) => day.key), (key) => weekdays.find((day) => day.key === key).label);
     fillSelect(els.changePeriod, periods, (period) => `${period}교시`);
     fillSelect(els.baseMergeStart, periods, (period) => `${period}교시`);
@@ -3100,6 +3212,7 @@
     els.baseMergeEnd.value = "2";
     els.eventStart.value = "7";
     els.eventEnd.value = "9";
+    els.studentCallDestination.value = "교무실";
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
@@ -4029,6 +4142,54 @@
       saveState("행사를 삭제했습니다.", "update_event");
     });
 
+    els.sendStudentCallButton.addEventListener("click", async () => {
+      if (!ensurePermission("call_student", "학생 호출")) return;
+      const className = els.studentCallClass.value;
+      const studentName = els.studentCallName.value.trim();
+      const destination = els.studentCallDestination.value.trim();
+      const message = els.studentCallMessage.value.trim();
+      if (!classes.includes(className)) {
+        showMessage(els.adminMessage, "호출할 학급을 선택하세요.");
+        els.studentCallClass.focus();
+        return;
+      }
+      if (!studentName) {
+        showMessage(els.adminMessage, "학생 이름을 입력하세요.");
+        els.studentCallName.focus();
+        return;
+      }
+      if (!destination) {
+        showMessage(els.adminMessage, "호출 장소를 입력하세요.");
+        els.studentCallDestination.focus();
+        return;
+      }
+      const createdAt = new Date();
+      state.studentCall = {
+        id: `${createdAt.getTime()}-${Math.random().toString(36).slice(2, 9)}`,
+        className,
+        studentName,
+        destination,
+        message,
+        createdAt: createdAt.toISOString(),
+        expiresAt: new Date(createdAt.getTime() + 5 * 60_000).toISOString(),
+      };
+      setControlDisabled(els.sendStudentCallButton, true);
+      const result = await saveState(`${className} ${studentName} 학생 호출을 보냈습니다.`, "call_student");
+      setControlDisabled(els.sendStudentCallButton, false);
+      if (result && result.ok === false) return;
+      els.studentCallName.value = "";
+      els.studentCallMessage.value = "";
+      els.studentCallName.focus();
+    });
+
+    [els.studentCallName, els.studentCallDestination, els.studentCallMessage].forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        els.sendStudentCallButton.click();
+      });
+    });
+
     els.slideEventFontScale.addEventListener("input", () => {
       const scale = clamp(Number(els.slideEventFontScale.value) || 100, 70, 150);
       els.slideEventFontScaleLabel.textContent = `행사 ${scale}%`;
@@ -4275,6 +4436,7 @@
     refreshAdminAuth();
     renderView();
     renderAdmin();
+    notifyBoardStudentCall(state.studentCall);
     routeTo(currentRoute);
     analyticsRouteTrackingReady = true;
     syncRemoteForRoute();

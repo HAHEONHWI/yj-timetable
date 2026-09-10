@@ -540,6 +540,7 @@
           <button id="changeTab" class="admin-tab is-active" data-admin-tab="change" type="button" role="tab" aria-controls="changePanel" aria-selected="true" tabindex="0">단일교과 변경</button>
           <button id="eventTab" class="admin-tab" data-admin-tab="event" type="button" role="tab" aria-controls="eventPanel" aria-selected="false" tabindex="-1">행사 변경</button>
           <button id="noticeTab" class="admin-tab" data-admin-tab="notice" type="button" role="tab" aria-controls="noticePanel" aria-selected="false" tabindex="-1">안내사항</button>
+          <button id="studentCallTab" class="admin-tab" data-admin-tab="studentCall" type="button" role="tab" aria-controls="studentCallPanel" aria-selected="false" tabindex="-1">학생 호출</button>
           <button id="slideshowSettingsTab" class="admin-tab" data-admin-tab="slideshowSettings" type="button" role="tab" aria-controls="slideshowSettingsPanel" aria-selected="false" tabindex="-1">슬라이드쇼 설정</button>
           <div class="admin-nav-divider" aria-hidden="true"></div>
           <button id="accountsTab" class="admin-tab" data-admin-tab="accounts" type="button" role="tab" aria-controls="accountsPanel" aria-selected="false" tabindex="-1">계정 관리</button>
@@ -790,6 +791,33 @@
             <button id="cancelEventEditButton" class="ghost-button is-hidden" type="button">수정 취소</button>
           </div>
           <div id="eventList" class="list"></div>
+        </section>
+
+        <section id="studentCallPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="studentCallTab" aria-hidden="true">
+          <div>
+            <h3>학생 호출 보내기</h3>
+            <p class="muted">선택한 학급 전자칠판에 호출 화면을 띄우고 경고음을 재생합니다. 호출은 5분간 유효합니다.</p>
+          </div>
+          <div class="student-call-form">
+            <div class="field">
+              <label for="studentCallClass">학급</label>
+              <select id="studentCallClass"></select>
+            </div>
+            <div class="field">
+              <label for="studentCallName">학생 이름</label>
+              <input id="studentCallName" type="text" maxlength="30" autocomplete="off" placeholder="예: 홍길동" />
+            </div>
+            <div class="field">
+              <label for="studentCallDestination">호출 장소</label>
+              <input id="studentCallDestination" type="text" maxlength="40" autocomplete="off" value="교무실" placeholder="예: 교무실" />
+            </div>
+            <div class="field student-call-message-field">
+              <label for="studentCallMessage">추가 안내</label>
+              <input id="studentCallMessage" type="text" maxlength="80" autocomplete="off" placeholder="예: 담임 선생님께 와 주세요" />
+            </div>
+          </div>
+          <button id="sendStudentCallButton" class="primary-button student-call-send" type="button">호출 보내기</button>
+          <div id="studentCallStatus" class="student-call-status" aria-live="polite"></div>
         </section>
 
         <section id="noticePanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="noticeTab" aria-hidden="true">

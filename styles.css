@@ -46,6 +46,11 @@
   --danger-soft: #de9595;
 
   --overlay: rgba(8, 9, 12, 0.72);
+  --student-call-backdrop: rgba(10, 18, 34, 0.96);
+  --student-call-panel: #1b2a4a;
+  --student-call-ink: #ffffff;
+  --student-call-muted: #b9d7f5;
+  --student-call-detail: #dbeafb;
 
   --radius-sm: 3px;
   --radius-md: 5px;
@@ -885,7 +890,7 @@ body.board-mode select {
   min-height: clamp(52px, 5vh, 92px);
   border-color: var(--blue-soft);
   background: var(--blue-dark);
-  color: var(--ink-strong);
+  color: var(--student-call-ink);
   font-size: clamp(19px, 2.3vh, 42px);
   font-weight: 600;
 }
@@ -944,6 +949,86 @@ body.board-mode.is-class-locked .view-tools .field.compact {
     opacity: 1;
     transform: translate(-50%, 0);
   }
+}
+
+.board-student-call {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 2vh, 28px);
+  background: var(--student-call-backdrop);
+  color: var(--student-call-ink);
+  text-align: center;
+  word-break: keep-all;
+}
+
+.board-student-call-card {
+  display: grid;
+  place-items: center;
+  gap: clamp(6px, 1.2vh, 18px);
+  width: min(100%, 1500px);
+  max-height: calc(100dvh - clamp(20px, 4vh, 56px));
+  box-sizing: border-box;
+  border: 3px solid var(--blue);
+  border-radius: var(--radius-lg);
+  background: var(--student-call-panel);
+  padding: clamp(16px, 3vh, 44px) clamp(20px, 5vw, 88px);
+  box-shadow: var(--shadow-lg);
+}
+
+.board-student-call-label,
+.board-student-call-class,
+.board-student-call-message,
+.board-student-call-destination {
+  margin: 0;
+}
+
+.board-student-call-label {
+  color: var(--student-call-muted);
+  font-size: clamp(18px, min(3vw, 6vh), 48px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.board-student-call h2 {
+  margin: 0;
+  color: var(--student-call-ink);
+  font-size: clamp(48px, min(11vw, 18vh), 180px);
+  line-height: 1.05;
+}
+
+.board-student-call-destination {
+  color: var(--student-call-ink);
+  font-size: clamp(28px, min(5vw, 9vh), 78px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.board-student-call-message {
+  color: var(--student-call-detail);
+  font-size: clamp(20px, min(3vw, 6vh), 48px);
+  line-height: 1.4;
+}
+
+.board-student-call-class {
+  color: var(--student-call-muted);
+  font-size: clamp(18px, min(2vw, 4.5vh), 34px);
+  font-weight: 600;
+}
+
+.board-student-call-close {
+  min-width: 72px;
+  min-height: 72px;
+  border: 1px solid var(--student-call-ink);
+  border-radius: var(--radius-md);
+  background: var(--student-call-ink);
+  color: var(--student-call-panel);
+  padding: 0 var(--space-16);
+  font-size: clamp(36px, 5vw, 72px);
+  line-height: 1;
+  font-weight: 700;
 }
 
 /* 방금 바뀐 칸을 깜빡여서 알림이 사라진 뒤에도 찾을 수 있게 한다 */
@@ -1355,6 +1440,44 @@ body.board-mode .schedule-shell {
   font-size: clamp(11px, 1.2vh, 22px);
   font-weight: 500;
   opacity: 0.86;
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .board-week-grid {
+    grid-template-rows: 40px repeat(9, minmax(0, 1fr));
+  }
+
+  .board-day-head {
+    gap: 1px;
+    padding: 2px;
+  }
+
+  .board-day-head strong {
+    font-size: 16px;
+  }
+
+  .board-day-head small {
+    font-size: 10px;
+  }
+
+  .board-period-head {
+    font-size: 12px;
+  }
+
+  .board-lesson {
+    gap: 0;
+    padding: 1px;
+    line-height: 1.05;
+  }
+
+  .board-lesson strong {
+    font-size: 12px;
+  }
+
+  .board-lesson small {
+    font-size: 8px;
+    line-height: 1;
+  }
 }
 
 .board-lesson.is-change {
@@ -2573,6 +2696,28 @@ body.board-mode .schedule-shell {
 
 .change-form-grid {
   grid-template-columns: repeat(5, minmax(130px, 1fr));
+}
+
+.student-call-form {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.55fr) minmax(180px, 0.9fr) minmax(180px, 0.9fr) minmax(260px, 1.5fr);
+  gap: 14px;
+}
+
+.student-call-send {
+  justify-self: start;
+  min-width: 150px;
+}
+
+.student-call-status {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel-strong);
+  color: var(--muted);
+  padding: var(--space-12);
+  font-size: var(--text-14);
+  line-height: 1.5;
+  word-break: keep-all;
 }
 
 textarea {
@@ -3908,6 +4053,7 @@ textarea {
   .form-grid,
   .form-grid.two,
   .period-editor,
+  .student-call-form,
   .check-grid,
   .event-font-settings,
   .admin-account-form .form-grid {
