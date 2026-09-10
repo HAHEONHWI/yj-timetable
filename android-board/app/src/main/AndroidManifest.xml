@@ -35,6 +35,12 @@
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:label="전자칠판 설정" />
+        <activity
+            android:name=".StudentCallActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="landscape" />
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"

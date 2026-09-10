@@ -146,11 +146,11 @@ public class ChangeWatcherService extends Service {
             System.currentTimeMillis()
         )) return;
 
-        BoardPrefs.setStudentCallId(this, callId);
         Log.i(TAG, "student call matched class=" + className + " id=" + callId
             + " boardVisible=" + MainActivity.isBoardVisible());
         if (MainActivity.isBoardVisible()) return;
         notifyStudentCall(call);
+        BoardPrefs.setStudentCallId(this, callId);
     }
 
     private long parseUtc(String value) {
@@ -415,6 +415,20 @@ public class ChangeWatcherService extends Service {
         return PendingIntent.getActivity(this, studentCallFullScreen ? 4 : 0, intent, flags);
     }
 
+    private PendingIntent studentCallIntent(JSONObject call) {
+        Intent intent = new Intent(this, StudentCallActivity.class);
+        intent.putExtra("student_name", call.optString("studentName", "학생"));
+        intent.putExtra("destination", call.optString("destination", "교무실"));
+        intent.putExtra("message", call.optString("message", ""));
+        intent.putExtra("class_name", call.optString("className", ""));
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags = flags | PendingIntent.FLAG_IMMUTABLE;
+        }
+        return PendingIntent.getActivity(this, 5, intent, flags);
+    }
+
     @SuppressWarnings("deprecation")
     private Notification buildOngoingNotification() {
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -531,7 +545,7 @@ public class ChangeWatcherService extends Service {
             .setSmallIcon(R.drawable.app_icon)
             .setContentIntent(boardIntent())
             .setFullScreenIntent(
-                boardIntent(true),
+                studentCallIntent(call),
                 StudentCallPolicy.shouldUseFullScreen(MainActivity.isBoardVisible())
             )
             .setCategory(Notification.CATEGORY_CALL)
