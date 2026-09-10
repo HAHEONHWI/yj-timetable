@@ -412,7 +412,7 @@ public class ChangeWatcherService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             flags = flags | PendingIntent.FLAG_IMMUTABLE;
         }
-        return PendingIntent.getActivity(this, 0, intent, flags);
+        return PendingIntent.getActivity(this, studentCallFullScreen ? 4 : 0, intent, flags);
     }
 
     @SuppressWarnings("deprecation")
