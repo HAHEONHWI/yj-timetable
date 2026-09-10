@@ -71,7 +71,7 @@ public class SettingsActivity extends Activity {
         root.addView(classGroup);
 
         soundBox = new CheckBox(this);
-        soundBox.setText("교과 변경·공지 알림음 재생");
+        soundBox.setText("교과 변경·공지·학생 호출 알림음 재생");
         soundBox.setTextSize(21);
         soundBox.setPadding(12, 44, 12, 14);
         soundBox.setChecked(BoardPrefs.soundEnabled(this));

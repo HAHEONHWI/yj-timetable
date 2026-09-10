@@ -5,9 +5,14 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,7 +33,22 @@ public class MainActivity extends Activity {
     private static volatile boolean boardVisible = false;
 
     private WebView webView;
+    private View settingsButton;
     private String loadedClassName = "";
+    private final Handler alertHandler = new Handler(Looper.getMainLooper());
+    private ToneGenerator alertTone;
+    private int alertToneCount;
+    private final Runnable alertToneTask = new Runnable() {
+        @Override
+        public void run() {
+            if (alertTone == null || alertToneCount <= 0) return;
+            alertTone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+            alertToneCount--;
+            if (alertToneCount > 0) {
+                alertHandler.postDelayed(this, 650L);
+            }
+        }
+    };
 
     /** 화면이 켜져 있으면 웹 화면이 직접 배너로 알리므로 서비스는 알림을 띄우지 않는다. */
     static boolean isBoardVisible() {
@@ -51,7 +71,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (!request.isForMainFrame() && "yjboard".equals(request.getUrl().getScheme())) {
-                    return true;
+                    return handleBoardCommand(view, request.getUrl());
                 }
                 return handleBoardCommand(view, request.getUrl());
             }
@@ -70,10 +90,12 @@ public class MainActivity extends Activity {
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setUserAgentString(settings.getUserAgentString() + " YJBoardApp/1.4.0");
 
         FrameLayout root = new FrameLayout(this);
         root.addView(webView);
-        root.addView(buildSettingsButton());
+        settingsButton = buildSettingsButton();
+        root.addView(settingsButton);
         setContentView(root);
 
         requestNotificationPermission();
@@ -137,12 +159,21 @@ public class MainActivity extends Activity {
 
     private boolean handleBoardCommand(WebView view, Uri command) {
         if (!"yjboard".equals(command.getScheme())) return false;
-        if (!"overlay".equals(command.getHost())) return true;
 
         Uri current = Uri.parse(view.getUrl() == null ? "" : view.getUrl());
         if (!"https".equals(current.getScheme()) || !"schedule.yjms.kr".equals(current.getHost())) {
             return true;
         }
+
+        if ("sound".equals(command.getHost())) {
+            playStudentCallSound();
+            return true;
+        }
+        if ("call-end".equals(command.getHost())) {
+            settingsButton.setVisibility(View.VISIBLE);
+            return true;
+        }
+        if (!"overlay".equals(command.getHost())) return true;
 
         String title = command.getQueryParameter("title");
         String body = command.getQueryParameter("body");
@@ -163,6 +194,17 @@ public class MainActivity extends Activity {
             null
         );
         return true;
+    }
+
+    private void playStudentCallSound() {
+        settingsButton.setVisibility(View.GONE);
+        if (!BoardPrefs.soundEnabled(this)) return;
+        alertHandler.removeCallbacks(alertToneTask);
+        if (alertTone != null) alertTone.release();
+        alertTone = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
+        alertToneCount = 3;
+        alertToneTask.run();
+        Log.i("YJBoard", "student call sound started");
     }
 
     @Override
@@ -187,5 +229,16 @@ public class MainActivity extends Activity {
     protected void onPause() {
         boardVisible = false;
         super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        alertHandler.removeCallbacks(alertToneTask);
+        if (alertTone != null) {
+            alertTone.release();
+            alertTone = null;
+        }
+        if (webView != null) webView.destroy();
+        super.onDestroy();
     }
 }

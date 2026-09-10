@@ -54,6 +54,7 @@
           detailFontSize: 42,
         },
       ],
+      studentCall: null,
       slideshow: {
         intervalSeconds: 8,
         refreshSeconds: 60,
@@ -101,6 +102,10 @@
               detailFontSize: Number(notice.detailFontSize) || 42,
             }))
           : [],
+        studentCall:
+          parsed.studentCall && typeof parsed.studentCall === "object" && !Array.isArray(parsed.studentCall)
+            ? parsed.studentCall
+            : null,
         slideshow: {
           intervalSeconds: Number(parsed.slideshow && parsed.slideshow.intervalSeconds) || 8,
           refreshSeconds: Number(parsed.slideshow && parsed.slideshow.refreshSeconds) || 60,
@@ -158,6 +163,10 @@
             detailFontSize: Number(notice.detailFontSize) || 42,
           }))
         : defaults.notices,
+      studentCall:
+        parsed.studentCall && typeof parsed.studentCall === "object" && !Array.isArray(parsed.studentCall)
+          ? parsed.studentCall
+          : null,
       slideshow: {
         intervalSeconds: Number(parsed.slideshow && parsed.slideshow.intervalSeconds) || 8,
         refreshSeconds: Number(parsed.slideshow && parsed.slideshow.refreshSeconds) || 60,

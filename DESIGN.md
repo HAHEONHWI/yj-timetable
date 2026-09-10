@@ -17,6 +17,8 @@
 | 경계선 | `--line` | `#303137` | 카드, 입력, 구분선 |
 | 행동 | `--blue` | `#5b93cf` | 주 버튼, 선택 상태 |
 | 행동 hover | `--blue-dark` | `#3f76b0` | 주 버튼 hover |
+| 학생 호출 배경 | `--student-call-backdrop`, `--student-call-panel` | `rgba(10, 18, 34, 0.96)`, `#1b2a4a` | 전체 화면 호출 배경과 카드 |
+| 학생 호출 글자 | `--student-call-ink`, `--student-call-muted`, `--student-call-detail` | `#ffffff`, `#b9d7f5`, `#dbeafb` | 이름·학급·추가 안내 |
 | 성공 | `--green` | `#4b9779` | 성공 상태 |
 | 위험 | `--danger` | `#c06565` | 폐기, 오류 |
 | 변경 배경/글자 | `--change-bg`, `--change-text` | `rgba(194, 145, 63, 0.13)`, `#ddb46b` | 교과 변경 |
@@ -100,6 +102,13 @@
 - 구조: `.list > .list-item`, 본문과 선택 행동
 - 상태: 기본, active, disabled, empty, loading
 - 반응형: 480px 이하에서 API 폐기 버튼을 전체 폭으로 쌓는다.
+
+### Student Call
+
+- 관리자 폼은 기존 `Field`, `Form Panel`, `primary-button`을 재사용한다.
+- 전자칠판 호출은 전체 화면의 깊은 청색 overlay, 큰 학생 이름, 흰색 안내문으로 즉시 구분한다.
+- 호출 닫기 버튼은 최소 44×44px이며 `Escape`와 버튼 클릭을 모두 지원한다.
+- 학급·학생 이름·호출 장소는 한국어 의미구가 분리되지 않도록 `word-break: keep-all`을 적용한다.
 
 ### Academic Calendar
 

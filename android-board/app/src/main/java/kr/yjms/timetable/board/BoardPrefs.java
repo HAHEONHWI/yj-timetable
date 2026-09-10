@@ -13,6 +13,7 @@ final class BoardPrefs {
     private static final String KEY_SOUND = "alert_sound";
     private static final String KEY_SNAPSHOT = "changes_snapshot";
     private static final String KEY_NOTICE_SNAPSHOT = "notices_snapshot";
+    private static final String KEY_STUDENT_CALL_ID = "student_call_id";
 
     private BoardPrefs() {
     }
@@ -68,5 +69,13 @@ final class BoardPrefs {
 
     static void setNoticeSnapshot(Context context, String value) {
         prefs(context).edit().putString(KEY_NOTICE_SNAPSHOT, value).apply();
+    }
+
+    static String studentCallId(Context context) {
+        return prefs(context).getString(KEY_STUDENT_CALL_ID, "");
+    }
+
+    static void setStudentCallId(Context context, String value) {
+        prefs(context).edit().putString(KEY_STUDENT_CALL_ID, value).apply();
     }
 }

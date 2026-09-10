@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TimeZone;
 
 /**
  * 화면이 꺼져 있어도 교과 변경을 알리는 포그라운드 서비스.
@@ -49,6 +50,7 @@ public class ChangeWatcherService extends Service {
     private static final int ONGOING_NOTIFICATION_ID = 1;
     private static final int CHANGE_NOTIFICATION_ID = 2;
     private static final int NOTICE_NOTIFICATION_ID = 3;
+    private static final int STUDENT_CALL_NOTIFICATION_ID = 4;
 
     private static final String CHANNEL_ONGOING = "board-watch";
     private static final String CHANNEL_ALERT_SOUND = "board-change-sound";
@@ -125,6 +127,38 @@ public class ChangeWatcherService extends Service {
 
         processChanges(changes, className);
         processNotices(notices);
+        processStudentCall(data.optJSONObject("studentCall"), className);
+    }
+
+    private void processStudentCall(JSONObject call, String className) {
+        if (call == null) return;
+        String callId = call.optString("id", "");
+        String targetClass = call.optString("className", "");
+        long expiresAtMs = parseUtc(call.optString("expiresAt", ""));
+        if (!StudentCallPolicy.shouldNotify(
+            className,
+            targetClass,
+            callId,
+            BoardPrefs.studentCallId(this),
+            expiresAtMs,
+            System.currentTimeMillis()
+        )) return;
+
+        BoardPrefs.setStudentCallId(this, callId);
+        if (MainActivity.isBoardVisible()) return;
+        notifyStudentCall(call);
+    }
+
+    private long parseUtc(String value) {
+        if (value == null || value.length() == 0) return 0L;
+        try {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date parsed = format.parse(value);
+            return parsed == null ? 0L : parsed.getTime();
+        } catch (Exception error) {
+            return 0L;
+        }
     }
 
     private void processChanges(JSONObject changes, String className) {
@@ -338,7 +372,7 @@ public class ChangeWatcherService extends Service {
         NotificationChannel ongoing = new NotificationChannel(
             CHANNEL_ONGOING, "시간표 감시", NotificationManager.IMPORTANCE_LOW
         );
-        ongoing.setDescription("화면이 꺼져 있어도 교과 변경과 공지를 확인합니다.");
+        ongoing.setDescription("화면이 꺼져 있어도 교과 변경, 공지, 학생 호출을 확인합니다.");
         manager.createNotificationChannel(ongoing);
 
         NotificationChannel withSound = new NotificationChannel(
@@ -371,7 +405,7 @@ public class ChangeWatcherService extends Service {
 
         return builder
             .setContentTitle("시간표 감시 중")
-            .setContentText(BoardPrefs.className(this) + " 교과 변경과 공지를 확인합니다.")
+            .setContentText(BoardPrefs.className(this) + " 교과 변경, 공지, 학생 호출을 확인합니다.")
             .setSmallIcon(R.drawable.app_icon)
             .setContentIntent(boardIntent())
             .setOngoing(true)
@@ -457,6 +491,38 @@ public class ChangeWatcherService extends Service {
             (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
             manager.notify(NOTICE_NOTIFICATION_ID, builder.build());
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void notifyStudentCall(JSONObject call) {
+        boolean sound = BoardPrefs.soundEnabled(this);
+        String channel = sound ? CHANNEL_ALERT_SOUND : CHANNEL_ALERT_SILENT;
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? new Notification.Builder(this, channel)
+            : new Notification.Builder(this);
+
+        String studentName = call.optString("studentName", "학생").trim();
+        String destination = call.optString("destination", "교무실").trim();
+        String message = call.optString("message", "").trim();
+        String body = destination + "로 와 주세요." + (message.length() == 0 ? "" : " " + message);
+
+        builder.setContentTitle("학생 호출 · " + studentName)
+            .setContentText(body)
+            .setStyle(new Notification.BigTextStyle().bigText(body))
+            .setSmallIcon(R.drawable.app_icon)
+            .setContentIntent(boardIntent())
+            .setAutoCancel(true);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            builder.setPriority(Notification.PRIORITY_HIGH);
+            if (sound) builder.setDefaults(Notification.DEFAULT_SOUND);
+        }
+
+        NotificationManager manager =
+            (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.notify(STUDENT_CALL_NOTIFICATION_ID, builder.build());
         }
     }
 }
