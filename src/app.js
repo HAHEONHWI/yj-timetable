@@ -1408,7 +1408,7 @@
       <p class="board-student-call-destination">${escapeHtml(destination)}로 와 주세요.</p>
       ${message ? `<p class="board-student-call-message">${escapeHtml(message)}</p>` : ""}
       <p class="board-student-call-class">${escapeHtml(call.className)} 학생</p>
-      <button class="board-student-call-close" type="button">확인</button>
+      <button class="board-student-call-close" type="button" aria-label="호출 닫기">×</button>
     </div>`;
     overlay.querySelector("button").addEventListener("click", closeStudentCall);
     document.body.appendChild(overlay);

@@ -399,8 +399,15 @@ public class ChangeWatcherService extends Service {
     }
 
     private PendingIntent boardIntent() {
+        return boardIntent(false);
+    }
+
+    private PendingIntent boardIntent(boolean studentCallFullScreen) {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        if (studentCallFullScreen) {
+            intent.putExtra("student_call_full_screen", true);
+        }
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             flags = flags | PendingIntent.FLAG_IMMUTABLE;
@@ -524,7 +531,7 @@ public class ChangeWatcherService extends Service {
             .setSmallIcon(R.drawable.app_icon)
             .setContentIntent(boardIntent())
             .setFullScreenIntent(
-                boardIntent(),
+                boardIntent(true),
                 StudentCallPolicy.shouldUseFullScreen(MainActivity.isBoardVisible())
             )
             .setCategory(Notification.CATEGORY_CALL)

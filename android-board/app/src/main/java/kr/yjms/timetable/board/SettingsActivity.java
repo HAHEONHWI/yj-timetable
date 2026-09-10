@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.app.NotificationManager;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.util.Log;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -89,15 +90,18 @@ public class SettingsActivity extends Activity {
             @Override
             public void onClick(View view) {
                 ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
-                tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+                Log.i("YJBoard", "settings test beep started="
+                    + tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420));
                 new android.os.Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+                        Log.i("YJBoard", "settings test beep started="
+                            + tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420));
                         new android.os.Handler().postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+                                Log.i("YJBoard", "settings test beep started="
+                                    + tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420));
                                 new android.os.Handler().postDelayed(new Runnable() {
                                     @Override
                                     public void run() {

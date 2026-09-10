@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private View settingsButton;
     private String loadedClassName = "";
+    private boolean launchedForStudentCall;
     private final Handler alertHandler = new Handler(Looper.getMainLooper());
     private ToneGenerator alertTone;
     private int alertToneCount;
@@ -59,6 +60,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        launchedForStudentCall = getIntent().getBooleanExtra("student_call_full_screen", false);
 
         // 수업 중 화면이 저절로 꺼지지 않게 한다. 쉬는시간에 손으로 끄는 것은 그대로 가능하다.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -150,6 +152,13 @@ public class MainActivity extends Activity {
         startActivity(new Intent(this, SettingsActivity.class));
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        launchedForStudentCall = intent.getBooleanExtra("student_call_full_screen", false);
+    }
+
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT < 33) return;
         if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED) {
@@ -172,6 +181,10 @@ public class MainActivity extends Activity {
         }
         if ("call-end".equals(command.getHost())) {
             settingsButton.setVisibility(View.VISIBLE);
+            if (launchedForStudentCall) {
+                launchedForStudentCall = false;
+                finishAndRemoveTask();
+            }
             return true;
         }
         if (!"overlay".equals(command.getHost())) return true;

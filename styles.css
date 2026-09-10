@@ -1019,14 +1019,15 @@ body.board-mode.is-class-locked .view-tools .field.compact {
 }
 
 .board-student-call-close {
-  min-width: 160px;
-  min-height: 52px;
+  min-width: 72px;
+  min-height: 72px;
   border: 1px solid var(--student-call-ink);
   border-radius: var(--radius-md);
   background: var(--student-call-ink);
   color: var(--student-call-panel);
-  padding: 0 var(--space-24);
-  font-size: var(--text-18);
+  padding: 0 var(--space-16);
+  font-size: clamp(36px, 5vw, 72px);
+  line-height: 1;
   font-weight: 700;
 }
 
