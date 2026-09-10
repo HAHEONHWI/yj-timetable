@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.app.NotificationManager;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,6 +32,7 @@ public class SettingsActivity extends Activity {
     private CheckBox soundBox;
     private Button overlayPermissionButton;
     private Button fullScreenPermissionButton;
+    private Button soundTestButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +81,36 @@ public class SettingsActivity extends Activity {
         soundBox.setPadding(12, 44, 12, 14);
         soundBox.setChecked(BoardPrefs.soundEnabled(this));
         root.addView(soundBox);
+
+        soundTestButton = new Button(this);
+        soundTestButton.setText("알림음 테스트");
+        soundTestButton.setTextSize(18);
+        soundTestButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
+                tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+                new android.os.Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+                        new android.os.Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420);
+                                new android.os.Handler().postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        tone.release();
+                                    }
+                                }, 500L);
+                            }
+                        }, 650L);
+                    }
+                }, 650L);
+            }
+        });
+        root.addView(soundTestButton);
 
         overlayPermissionButton = new Button(this);
         overlayPermissionButton.setTextSize(18);
