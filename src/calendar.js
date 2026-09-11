@@ -41,7 +41,11 @@
     return (Array.isArray(events) ? events : [])
       .filter((event) => {
         if (!event || typeof event.date !== "string" || !event.date.startsWith(`${monthKey}-`)) return false;
-        return className === "all" || (Array.isArray(event.classes) && event.classes.includes(className));
+        if (className === "all") return true;
+        if (Array.isArray(event.classes)) return event.classes.includes(className);
+        if (!Array.isArray(event.grades)) return false;
+        const grade = Number(String(className).split("-")[0]);
+        return event.grades.length === 0 || event.grades.includes(grade);
       })
       .slice()
       .sort((first, second) => first.date.localeCompare(second.date) || String(first.title || "").localeCompare(String(second.title || ""), "ko"));

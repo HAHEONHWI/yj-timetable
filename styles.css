@@ -2821,6 +2821,16 @@ textarea {
   font-size: 14px;
 }
 
+#syncNeisButton {
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.neis-event-list {
+  margin-bottom: var(--space-10);
+}
+
 .list-head .filter-tabs {
   margin-left: auto;
   gap: 2px;
@@ -3700,6 +3710,16 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  .teacher-view-head {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-10);
+  }
+
+  .teacher-picker {
+    width: 100%;
+  }
+
   .academic-calendar-head {
     align-items: stretch;
     flex-direction: column;
@@ -3789,6 +3809,7 @@ textarea {
 
   .academic-calendar-agenda span {
     margin-top: var(--space-2);
+    word-break: keep-all;
   }
 
   .admin-workspace.is-sidebar {

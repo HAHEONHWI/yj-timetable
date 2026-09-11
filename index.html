@@ -746,6 +746,15 @@
         </section>
 
         <section id="eventPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="eventTab" aria-hidden="true">
+          <div class="list-head">
+            <div>
+              <h3>NEIS 월간 학사일정</h3>
+              <p id="neisSyncStatus" class="muted" aria-live="polite">동기화 정보를 불러오는 중입니다.</p>
+            </div>
+            <button id="syncNeisButton" class="ghost-button" type="button">지금 동기화</button>
+          </div>
+          <div id="neisEventList" class="list neis-event-list" aria-label="나이스 학사일정 행사 추가"></div>
+          <p id="neisPrefillStatus" class="message is-hidden" aria-live="polite"></p>
           <div class="form-grid">
             <div class="field">
               <label for="eventDate">날짜</label>

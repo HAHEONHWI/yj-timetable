@@ -21,6 +21,8 @@ const events = [
   { id: "first", date: "2026-09-10", title: "1반 체험학습", classes: ["1-1", "2-1", "3-1"] },
   { id: "second", date: "2026-09-11", title: "2반 체험학습", classes: ["1-2", "2-2", "3-2"] },
   { id: "other-month", date: "2026-10-01", title: "개천절 행사", classes: ["1-1"] },
+  { id: "neis-first", date: "2026-09-15", title: "1학년 진로체험", grades: [1], source: "neis" },
+  { id: "neis-all", date: "2026-09-20", title: "학교장 재량휴업일", grades: [], source: "neis" },
 ];
 
 // Given: 학생 1-1 조회와 9월 학사일정
@@ -28,7 +30,15 @@ const events = [
 // Then: 해당 월·학급 일정만 날짜순으로 남는다.
 assert.deepEqual(
   eventsForMonth(events, "2026-09", "1-1").map((event) => event.id),
-  ["all", "first"]
+  ["all", "first", "neis-first", "neis-all"]
+);
+
+// Given: 2학년 학급 조회와 학년별 NEIS 일정
+// When: 월과 학급으로 학사일정을 고른다.
+// Then: 1학년 전용 일정은 빠지고 전교 일정은 남는다.
+assert.deepEqual(
+  eventsForMonth(events, "2026-09", "2-1").map((event) => event.id),
+  ["all", "first", "neis-all"]
 );
 
 // Given: 교사 조회와 9월 학사일정
@@ -36,7 +46,7 @@ assert.deepEqual(
 // Then: 해당 월 전체 학사일정이 남는다.
 assert.deepEqual(
   eventsForMonth(events, "2026-09", "all").map((event) => event.id),
-  ["all", "first", "second"]
+  ["all", "first", "second", "neis-first", "neis-all"]
 );
 
 // Given: 관리자 화면이 고른 날짜
