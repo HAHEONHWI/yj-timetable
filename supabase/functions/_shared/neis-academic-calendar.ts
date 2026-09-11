@@ -15,14 +15,16 @@ const scheduleRowSchema = z.object({
   TW_GRADE_EVENT_YN: z.string(),
   THREE_GRADE_EVENT_YN: z.string(),
   SBTR_DD_SC_NM: z.string().nullish().transform((value) => value?.trim() ?? ""),
-  LOAD_DTM: z.string().regex(/^\d{8}$/),
+  LOAD_DTM: z.string().regex(/^\d{8,}$/).nullish(),
 });
+
+const countSchema = z.union([z.number().int().nonnegative(), z.string().regex(/^\d+$/).transform(Number)]);
 
 const successResponseSchema = z.object({
   SchoolSchedule: z.tuple([
     z.object({
       head: z.tuple([
-        z.object({ list_total_count: z.number().int().nonnegative() }),
+        z.object({ list_total_count: countSchema }),
         z.object({ RESULT: resultSchema }),
       ]),
     }),
@@ -126,7 +128,7 @@ export async function parseNeisSchedulePage(
       content: row.EVENT_CNTNT,
       grades,
       isSchoolDay: row.SBTR_DD_SC_NM === "해당없음",
-      sourceUpdatedAt: isoDate(row.LOAD_DTM),
+      sourceUpdatedAt: isoDate((row.LOAD_DTM ?? row.AA_YMD).slice(0, 8)),
     };
   }));
 

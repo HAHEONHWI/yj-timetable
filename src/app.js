@@ -514,6 +514,9 @@
     if (/^429\b/i.test(text)) {
       return "저장 요청이 많아 잠시 제한됐습니다. 잠시 후 다시 저장하세요. (429)";
     }
+    if (/^502\s+NEIS\s+/i.test(text)) {
+      return `나이스 응답을 처리하지 못했습니다. ${text.replace(/^502\s+/i, "")}`;
+    }
     if (/^5\d\d\b/i.test(text)) {
       return "저장 서버에서 오류가 발생했습니다. 잠시 후 다시 저장하세요.";
     }
@@ -2533,6 +2536,39 @@
       : `<p class="empty">추가할 예정 나이스 학사일정이 없습니다.</p>`;
   }
 
+  function isNeisDiscretionaryHoliday(event) {
+    return /재량\s*휴업일/.test(`${event.title || ""} ${event.content || ""}`);
+  }
+
+  async function materializeNeisDiscretionaryHolidays() {
+    if (!canRole("sync_neis_calendar")) return;
+    const holidays = neisAcademicEvents.filter(isNeisDiscretionaryHoliday);
+    const generatedIds = new Set(holidays.map((event) => `neis-holiday:${event.id}`));
+    const existingGenerated = state.events.filter((event) => String(event.id).startsWith("neis-holiday:"));
+    if (!holidays.length && !existingGenerated.length) return;
+    const nextGenerated = holidays.map((event) => ({
+      id: `neis-holiday:${event.id}`,
+      date: event.date,
+      title: "재량휴업일",
+      start: periods[0],
+      end: periods[periods.length - 1],
+      classes: classes.slice(),
+      memo: event.content ? `NEIS · ${event.content}` : "NEIS 자동 반영",
+    }));
+    const unchanged = existingGenerated.length === nextGenerated.length && nextGenerated.every((event) => {
+      const current = state.events.find((item) => item.id === event.id);
+      return current && JSON.stringify(current) === JSON.stringify(event);
+    });
+    if (unchanged) return;
+    state.events = state.events.filter((event) => !String(event.id).startsWith("neis-holiday:") || generatedIds.has(event.id));
+    nextGenerated.forEach((event) => {
+      const index = state.events.findIndex((item) => item.id === event.id);
+      if (index >= 0) state.events[index] = event;
+      else state.events.push(event);
+    });
+    await saveState("나이스 재량휴업일을 행사변경에 자동 반영했습니다.", "update_event");
+  }
+
   async function refreshNeisAcademicEvents({ showError = false } = {}) {
     if (typeof readAcademicEvents !== "function") return;
     try {
@@ -4261,6 +4297,7 @@
         return;
       }
       await refreshNeisAcademicEvents({ showError: true });
+      await materializeNeisDiscretionaryHolidays();
       setControlDisabled(els.syncNeisButton, !canRole("sync_neis_calendar"));
     });
 

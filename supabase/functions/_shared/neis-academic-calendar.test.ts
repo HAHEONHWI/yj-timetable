@@ -64,6 +64,30 @@ Deno.test("NEIS 조회 결과 없음 응답을 정상 빈 페이지로 처리한
   assert.deepEqual(result, { totalCount: 0, events: [] });
 });
 
+Deno.test("NEIS 응답의 문자열 건수와 누락된 갱신일을 허용한다", async () => {
+  const response = {
+    SchoolSchedule: [{
+      head: [{ list_total_count: "1" }, { RESULT: { CODE: "INFO-000", MESSAGE: "정상 처리되었습니다." } }],
+    }, { row: [{
+      ATPT_OFCDC_SC_CODE: "Q10",
+      SD_SCHUL_CODE: "8602013",
+      AA_YMD: "20260915",
+      EVENT_NM: "재량휴업일",
+      EVENT_CNTNT: null,
+      ONE_GRADE_EVENT_YN: "N",
+      TW_GRADE_EVENT_YN: "N",
+      THREE_GRADE_EVENT_YN: "N",
+      SBTR_DD_SC_NM: "휴업일",
+      LOAD_DTM: "20260915123000",
+    }] }],
+  };
+
+  const result = await parseNeisSchedulePage(response);
+
+  assert.equal(result.totalCount, 1);
+  assert.equal(result.events[0]?.sourceUpdatedAt, "2026-09-15");
+});
+
 Deno.test("NEIS 오류 응답을 거부한다", async () => {
   // Given
   const response = {

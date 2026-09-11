@@ -74,18 +74,26 @@ async function fetchAcademicEvents(
   educationOfficeCode: string,
   range: { readonly from: string; readonly to: string },
 ): Promise<readonly NeisAcademicEvent[]> {
-  const firstPage = await fetchPage(apiKey, schoolCode, educationOfficeCode, range, 1);
-  const events = [...firstPage.events];
-  const pageCount = Math.ceil(firstPage.totalCount / 100);
-  for (let pageIndex = 2; pageIndex <= pageCount; pageIndex += 1) {
-    const page = await fetchPage(apiKey, schoolCode, educationOfficeCode, range, pageIndex);
-    events.push(...page.events);
-  }
-  if (events.length !== firstPage.totalCount) {
-    throw new NeisResponseError(
-      "INCOMPLETE_RESPONSE",
-      `예상 ${firstPage.totalCount}건 중 ${events.length}건만 받았습니다.`,
-    );
+  const events: NeisAcademicEvent[] = [];
+  let cursor = new Date(`${range.from.slice(0, 4)}-${range.from.slice(4, 6)}-${range.from.slice(6, 8)}T00:00:00Z`);
+  const end = new Date(`${range.to.slice(0, 4)}-${range.to.slice(4, 6)}-${range.to.slice(6, 8)}T00:00:00Z`);
+  while (cursor <= end) {
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setUTCDate(chunkEnd.getUTCDate() + 30);
+    if (chunkEnd > end) chunkEnd.setTime(end.getTime());
+    const chunk = {
+      from: cursor.toISOString().slice(0, 10).replaceAll("-", ""),
+      to: chunkEnd.toISOString().slice(0, 10).replaceAll("-", ""),
+    };
+    const firstPage = await fetchPage(apiKey, schoolCode, educationOfficeCode, chunk, 1);
+    events.push(...firstPage.events);
+    const pageCount = Math.ceil(firstPage.totalCount / 100);
+    for (let pageIndex = 2; pageIndex <= pageCount; pageIndex += 1) {
+      const page = await fetchPage(apiKey, schoolCode, educationOfficeCode, chunk, pageIndex);
+      events.push(...page.events);
+    }
+    cursor = new Date(chunkEnd);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return events;
 }
@@ -187,6 +195,9 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: error.message }, 502);
     }
     console.error("[sync-neis-calendar] Unhandled error", error);
-    return json({ ok: false, error: "NEIS 학사일정을 동기화하지 못했습니다." }, 500);
+    return json({
+      ok: false,
+      error: error instanceof Error ? `NEIS 동기화 처리 오류: ${error.message}` : "NEIS 학사일정을 동기화하지 못했습니다.",
+    }, 502);
   }
 });
