@@ -60,7 +60,7 @@ assert.equal(monthKeyOf("2026-09"), "");
 // Then: 목록에 추가되고 날짜순으로 정렬된다.
 const added = upsertEvent(events, { id: "new", date: "2026-09-01", title: "학부모 총회", classes: ["1-1"] });
 assert.equal(added.length, events.length + 1);
-assert.deepEqual(added.map((event) => event.id), ["new", "all", "first", "second", "other-month"]);
+assert.deepEqual(added.map((event) => event.id), ["new", "all", "first", "second", "neis-first", "neis-all", "other-month"]);
 
 // Given: 이미 등록된 학사일정
 // When: 같은 id로 다시 저장한다.
@@ -68,7 +68,7 @@ assert.deepEqual(added.map((event) => event.id), ["new", "all", "first", "second
 const edited = upsertEvent(events, { id: "first", date: "2026-09-24", title: "1반 체험학습", classes: ["1-1"] });
 assert.equal(edited.length, events.length);
 assert.equal(edited.find((event) => event.id === "first").date, "2026-09-24");
-assert.deepEqual(edited.map((event) => event.id), ["all", "second", "first", "other-month"]);
+assert.deepEqual(edited.map((event) => event.id), ["all", "second", "neis-first", "neis-all", "first", "other-month"]);
 
 // Given: id가 없는 값
 // When: 저장을 시도한다.
