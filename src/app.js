@@ -490,17 +490,32 @@
 
   function friendlyRemoteError(error) {
     const text = String(error && (error.message || error.error || error) ? error.message || error.error || error : "");
-    if (/관리자 비밀번호 세션|session/i.test(text)) {
+    if (/세션|session|refresh.token|invalid.jwt|jwt.expired/i.test(text)) {
       return "관리자 로그인 세션이 없습니다. 다시 로그인한 뒤 저장하세요.";
     }
-    if (/Incorrect password|401|403|권한|unauthorized|forbidden/i.test(text)) {
+    if (/Incorrect password|^401\b|unauthorized/i.test(text)) {
       return "관리자 권한이 확인되지 않았습니다. 아이디와 비밀번호로 다시 로그인하세요.";
+    }
+    if (/^403\b|권한|forbidden/i.test(text)) {
+      return "이 작업의 저장 권한이 없습니다. 계정 권한을 관리자에게 확인하세요.";
     }
     if (/Failed to fetch|NetworkError|Load failed|연결|network|fetch/i.test(text)) {
       return "Supabase에 연결하지 못했습니다. 인터넷 연결이나 Supabase 상태를 확인한 뒤 다시 저장하세요.";
     }
-    if (/Invalid state|400/i.test(text)) {
-      return "저장할 시간표 데이터 형식이 올바르지 않습니다. 방금 입력한 항목을 확인하세요.";
+    if (/Invalid state/i.test(text)) {
+      return "서버가 저장 요청의 시간표 데이터를 읽지 못했습니다. 입력 내용을 복사해 둔 뒤 페이지를 다시 열어 주세요. (Invalid state)";
+    }
+    if (/Unknown action/i.test(text)) {
+      return "서버가 이 저장 작업을 지원하지 않습니다. 입력 내용을 복사해 둔 뒤 페이지를 다시 열어 주세요. (Unknown action)";
+    }
+    if (/^400/i.test(text)) {
+      return `서버가 저장 요청을 거절했습니다. 오류: ${text}`;
+    }
+    if (/^429\b/i.test(text)) {
+      return "저장 요청이 많아 잠시 제한됐습니다. 잠시 후 다시 저장하세요. (429)";
+    }
+    if (/^5\d\d\b/i.test(text)) {
+      return "저장 서버에서 오류가 발생했습니다. 잠시 후 다시 저장하세요.";
     }
     if (/ADMIN_PASSWORD/i.test(text)) {
       return "서버 관리자 인증 설정을 확인하세요.";
@@ -636,7 +651,7 @@
     const enabled = isDeveloperMode();
     document.body.classList.toggle("is-dev-mode", enabled);
     $$("[data-dev-only]").forEach((element) => {
-      element.hidden = !enabled;
+      element.hidden = false;
     });
 
     // iOS 자동화 가이드 모달 이벤트 바인딩
@@ -3263,6 +3278,11 @@
     window.clearTimeout(globalStatusTimer);
   }
 
+  function isTransientSaveError(errorText) {
+    const text = String(errorText || "");
+    return /Invalid state|Failed to fetch|NetworkError|Load failed|연결|network error/i.test(text) || /^5\d\d/.test(text.trim());
+  }
+
   async function saveState(message, action = "save_state") {
     pendingRetryMessage = message;
     pendingRetryAction = action;
@@ -3278,7 +3298,11 @@
       startSlideshow();
     }
 
-    const result = await resultPromise;
+    let result = await resultPromise;
+    if (result && result.ok === false && isTransientSaveError(result.error)) {
+      await new Promise((r) => setTimeout(r, 1500));
+      result = await write(state, action);
+    }
     if (result && result.ok === false) {
       const detail = friendlyRemoteError(result.error);
       updateLastSaveStatus("error");
