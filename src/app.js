@@ -1448,7 +1448,7 @@
     const hint = light ? "라이트 모드 사용 중, 다크 모드로 전환" : "다크 모드 사용 중, 라이트 모드로 전환";
     [els.boardThemeButton, els.themeButton].forEach((button) => {
       if (!button) return;
-      button.textContent = light ? "☀" : "☾";
+      button.textContent = light ? "선명" : "기본";
       button.setAttribute("aria-label", hint);
       button.setAttribute("aria-pressed", String(light));
       button.title = label;
