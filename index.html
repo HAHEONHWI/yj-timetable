@@ -6,10 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>용정시간표 - 조회</title>
   <link rel="icon" href="./assets/logo.png" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="stylesheet"
-    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles-krds.css" />
   <script>
     // set before first paint so the themed tokens never flash the wrong palette
     document.documentElement.setAttribute(
@@ -29,10 +27,14 @@
 </head>
 
 <body>
+  <a class="skip-link" href="#mainContent">본문 바로가기</a>
   <header class="topbar">
     <button id="homeButton" class="brand" type="button" aria-label="조회 화면으로 이동">
       <img class="brand-logo" src="./assets/logo.png" alt="" />
-      <span class="brand-name">용정시간표</span>
+      <span class="brand-copy">
+        <span class="brand-name">용정시간표</span>
+        <span class="brand-description">수업과 학사일정을 한곳에서 확인하세요</span>
+      </span>
     </button>
     <nav class="nav">
       <button class="nav-button is-active" data-route="view" type="button">조회</button>
@@ -46,28 +48,28 @@
     <button id="themeButton" class="theme-button" type="button" aria-label="화면 모드 전환"></button>
   </header>
 
-  <main>
-    <section id="viewPage" class="page page-view">
-      <div class="view-tools">
+  <main id="mainContent" tabindex="-1">
+    <section id="viewPage" class="page page-view krds-page">
+      <div class="view-tools krds-page-header">
         <div>
           <h2>이번주-다음주 시간표</h2>
           <p id="todayLabel" class="muted"></p>
           <p id="rangeLabel" class="muted"></p>
         </div>
-        <div class="field compact">
+        <div class="field compact krds-field">
           <label for="viewClass">학급</label>
           <select id="viewClass"></select>
         </div>
-        <div id="homeVariantToggle" class="segmented" role="group" aria-label="변경 표시 방식">
+        <div id="homeVariantToggle" class="segmented krds-segmented" role="group" aria-label="변경 표시 방식">
           <button class="segmented-option" data-variant="line" type="button">표식</button>
           <button class="segmented-option is-active" data-variant="shade" type="button">음영</button>
         </div>
         <button id="boardThemeButton" class="board-theme-button" type="button" aria-label="화면 모드 전환"></button>
       </div>
-      <div id="dayTabs" class="day-tabs" role="tablist"></div>
-      <div id="viewSchedule" class="schedule-shell"></div>
+      <div id="dayTabs" class="day-tabs krds-tabs" role="tablist"></div>
+      <div id="viewSchedule" class="schedule-shell krds-table"></div>
       <div id="mobileSchedule" class="mobile-schedule"></div>
-      <div class="legend">
+      <div class="legend krds-badge-group">
         <span class="legend-item"><span class="legend-swatch" data-kind="change"></span>교과 변경</span>
         <span class="legend-item"><span class="legend-swatch" data-kind="new"></span>신설 수업</span>
         <span class="legend-item"><span class="legend-swatch" data-kind="event"></span>행사</span>
@@ -1068,8 +1070,15 @@
   </main>
 
   <footer class="footer">
-    <span>© 2026 23기 하헌휘. All rights reserved.</span>
-    <button class="footer-link" data-route="privacy" type="button">개인정보처리방침</button>
+    <div>
+      <strong>용정시간표</strong>
+      <span>용정중학교 수업·학사일정 안내 서비스</span>
+      <span class="footer-disclosure">KRDS 디자인 시스템을 활용해 제작했습니다.</span>
+    </div>
+    <div class="footer-meta">
+      <button class="footer-link" data-route="privacy" type="button">개인정보처리방침</button>
+      <span>© 2026 23기 하헌휘</span>
+    </div>
   </footer>
 
   <div id="confirmDialog" class="modal-overlay is-hidden">
