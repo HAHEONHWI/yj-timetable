@@ -2631,6 +2631,36 @@
     await saveState("나이스 휴업일·공휴일을 행사변경에 자동 반영했습니다.", "update_event");
   }
 
+  // 주말은 특별시간표가 있어야 조회 화면에 뜬다. 나이스에 수업일로 표시된
+  // 주말 행사(공휴일·휴업일 라벨이 아닌 것)가 있으면 그 날짜를 열어둔다.
+  // 교과를 하나도 안 넣으면 저장이 거부되므로 첫 학급 1교시에만 "-"를 둔다.
+  // 관리자가 이미 짜둔 특별시간표는 절대 덮어쓰지 않는다.
+  function isNeisWeekendActivity(event) {
+    return Boolean(event)
+      && event.source === "neis"
+      && event.isSchoolDay
+      && isWeekend(event.date);
+  }
+
+  async function materializeNeisWeekendSpecialSchedules() {
+    if (!canRole("update_special")) return;
+    // cleanupExpiredScheduleData와 같은 기준을 써서, 만들자마자 지워질
+    // 지난 날짜는 애초에 만들지 않는다.
+    const cutoffDate = toISO(mondayOf(new Date()));
+    const dates = [...new Set(neisAcademicEvents.filter(isNeisWeekendActivity).map((event) => event.date))]
+      .filter((date) => date >= cutoffDate && !state.specialSchedules[date])
+      .sort();
+    if (!dates.length) return;
+    dates.forEach((date) => {
+      const schedule = {};
+      classes.forEach((className, classIndex) => {
+        schedule[className] = periods.map((_, periodIndex) => (classIndex === 0 && periodIndex === 0 ? "-" : ""));
+      });
+      state.specialSchedules[date] = schedule;
+    });
+    await saveState(`나이스 주말 행사 ${dates.length}일의 특별시간표를 생성했습니다.`, "update_special");
+  }
+
   async function refreshNeisAcademicEvents({ showError = false } = {}) {
     if (typeof readAcademicEvents !== "function") return;
     try {
@@ -4394,6 +4424,7 @@
       }
       await refreshNeisAcademicEvents({ showError: true });
       await materializeNeisDiscretionaryHolidays();
+      await materializeNeisWeekendSpecialSchedules();
       setControlDisabled(els.syncNeisButton, !canRole("sync_neis_calendar"));
     });
 
