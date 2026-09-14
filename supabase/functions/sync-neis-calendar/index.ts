@@ -52,6 +52,9 @@ async function fetchPage(
   pageIndex: number,
 ) {
   const value: unknown = await ky.get("https://open.neis.go.kr/hub/SchoolSchedule", {
+    // ky defaults to `accept: application/json` for .json(), and NEIS answers a
+    // single-type Accept with 500. Any list containing */* negotiates fine.
+    headers: { accept: "application/json, text/plain, */*" },
     searchParams: {
       KEY: apiKey,
       Type: "json",
