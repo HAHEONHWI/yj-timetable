@@ -1,5 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// allow: SIZE_OK — one deployable Edge Function owns auth, validation, audit logging, and the state write transaction.
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -21,6 +23,7 @@ const rolePermissions: Record<string, string[]> = {
   update_change: ["dev", "manager", "teacher"],
   update_event: ["dev", "manager", "teacher"],
   update_notice: ["dev", "manager", "teacher"],
+  call_student: ["dev", "manager", "teacher"],
   update_slide_runtime: ["dev", "manager", "teacher"],
   update_slide_typography: ["dev", "manager"],
   force_reload: ["dev"],
@@ -98,6 +101,7 @@ function changedActions(beforeState: unknown, afterState: Record<string, unknown
   addChangedAction(actions, before, afterState, "changes", "update_change");
   addChangedAction(actions, before, afterState, "events", "update_event");
   addChangedAction(actions, before, afterState, "notices", "update_notice");
+  addChangedAction(actions, before, afterState, "studentCall", "call_student");
   if (eventTypographyChanged(before.events, afterState.events)) {
     actions.add("update_slide_typography");
   }
@@ -156,6 +160,26 @@ Deno.serve(async (req) => {
       `| content-length: ${contentLength ?? "unknown"}`,
     );
     return json({ ok: false, error: "Invalid state" }, 400);
+  }
+
+  const studentCall = (state as Record<string, unknown>).studentCall;
+  if (studentCall !== null && studentCall !== undefined) {
+    if (!studentCall || typeof studentCall !== "object" || Array.isArray(studentCall)) {
+      return json({ ok: false, error: "Invalid student call" }, 400);
+    }
+    const call = studentCall as Record<string, unknown>;
+    const allowedClasses = new Set(["1-1", "1-2", "2-1", "2-2", "3-1", "3-2"]);
+    const createdAt = Date.parse(String(call.createdAt || ""));
+    const expiresAt = Date.parse(String(call.expiresAt || ""));
+    const valid =
+      typeof call.id === "string" && call.id.length > 0 && call.id.length <= 80 &&
+      typeof call.className === "string" && allowedClasses.has(call.className) &&
+      typeof call.studentName === "string" && call.studentName.trim().length > 0 && call.studentName.length <= 30 &&
+      typeof call.destination === "string" && call.destination.trim().length > 0 && call.destination.length <= 40 &&
+      (call.message === undefined || (typeof call.message === "string" && call.message.length <= 80)) &&
+      Number.isFinite(createdAt) && Number.isFinite(expiresAt) &&
+      expiresAt > createdAt && expiresAt - createdAt <= 10 * 60_000;
+    if (!valid) return json({ ok: false, error: "Invalid student call" }, 400);
   }
 
   const supabaseAdmin = createClient(

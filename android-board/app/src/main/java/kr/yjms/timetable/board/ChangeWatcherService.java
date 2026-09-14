@@ -7,6 +7,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TimeZone;
 
 /**
  * 화면이 꺼져 있어도 교과 변경을 알리는 포그라운드 서비스.
@@ -47,11 +50,13 @@ public class ChangeWatcherService extends Service {
 
     private static final long POLL_INTERVAL_MS = 60_000L;
     private static final int ONGOING_NOTIFICATION_ID = 1;
-    private static final int ALERT_NOTIFICATION_ID = 2;
+    private static final int CHANGE_NOTIFICATION_ID = 2;
+    private static final int NOTICE_NOTIFICATION_ID = 3;
+    private static final int STUDENT_CALL_NOTIFICATION_ID = 4;
 
     private static final String CHANNEL_ONGOING = "board-watch";
-    private static final String CHANNEL_ALERT_SOUND = "board-change-sound";
-    private static final String CHANNEL_ALERT_SILENT = "board-change-silent";
+    private static final String CHANNEL_ALERT_SOUND = "board-change-sound-v2";
+    private static final String CHANNEL_ALERT_SILENT = "board-change-silent-v2";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean running = false;
@@ -114,18 +119,60 @@ public class ChangeWatcherService extends Service {
         String className = BoardPrefs.className(this);
         if (className.length() == 0) return;
 
-        JSONObject changes = fetchChanges();
-        if (changes == null) return;
+        JSONObject data = fetchState();
+        if (data == null) return;
 
+        JSONObject changes = data.optJSONObject("changes");
+        if (changes == null) changes = new JSONObject();
+        JSONArray notices = data.optJSONArray("notices");
+        if (notices == null) notices = new JSONArray();
+
+        processChanges(changes, className);
+        processNotices(notices);
+        processStudentCall(data.optJSONObject("studentCall"), className);
+    }
+
+    private void processStudentCall(JSONObject call, String className) {
+        if (call == null) return;
+        String callId = call.optString("id", "");
+        String targetClass = call.optString("className", "");
+        long expiresAtMs = parseUtc(call.optString("expiresAt", ""));
+        if (!StudentCallPolicy.shouldNotify(
+            className,
+            targetClass,
+            callId,
+            BoardPrefs.studentCallId(this),
+            expiresAtMs,
+            System.currentTimeMillis()
+        )) return;
+
+        Log.i(TAG, "student call matched class=" + className + " id=" + callId
+            + " boardVisible=" + MainActivity.isBoardVisible());
+        if (MainActivity.isBoardVisible()) return;
+        notifyStudentCall(call);
+        BoardPrefs.setStudentCallId(this, callId);
+    }
+
+    private long parseUtc(String value) {
+        if (value == null || value.length() == 0) return 0L;
+        try {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date parsed = format.parse(value);
+            return parsed == null ? 0L : parsed.getTime();
+        } catch (Exception error) {
+            return 0L;
+        }
+    }
+
+    private void processChanges(JSONObject changes, String className) {
         Map<String, String> current = collectChanges(changes, className);
         String snapshot = encode(current);
         String previousRaw = BoardPrefs.snapshot(this);
-        if (snapshot.equals(previousRaw)) return;
+        boolean hasSnapshot = BoardPrefs.hasSnapshot(this);
 
         BoardPrefs.setSnapshot(this, snapshot);
-
-        // 최초 1회는 기준만 잡고 알리지 않는다. 앱을 처음 켰을 때 밀린 알림이 쏟아지지 않게 한다.
-        if (previousRaw.length() == 0) return;
+        if (!NotificationDiff.shouldCompare(hasSnapshot, previousRaw, snapshot)) return;
 
         List<String> lines = describe(decode(previousRaw), current);
         if (lines.isEmpty()) return;
@@ -136,7 +183,23 @@ public class ChangeWatcherService extends Service {
         notifyChanges(className, lines);
     }
 
-    private JSONObject fetchChanges() throws Exception {
+    private void processNotices(JSONArray notices) {
+        Map<String, String> current = collectNotices(notices);
+        String snapshot = encodeNotices(current);
+        String previousRaw = BoardPrefs.noticeSnapshot(this);
+        boolean hasSnapshot = BoardPrefs.hasNoticeSnapshot(this);
+
+        BoardPrefs.setNoticeSnapshot(this, snapshot);
+        if (!NotificationDiff.shouldCompare(hasSnapshot, previousRaw, snapshot)) return;
+
+        Map<String, String> previous = decodeNotices(previousRaw);
+        List<String> changedKeys = NotificationDiff.changedKeys(previous, current);
+        if (changedKeys.isEmpty()) return;
+
+        notifyNotices(changedKeys, current);
+    }
+
+    private JSONObject fetchState() throws Exception {
         HttpURLConnection connection = (HttpURLConnection) new URL(STATE_URL).openConnection();
         try {
             connection.setRequestMethod("GET");
@@ -166,9 +229,7 @@ public class ChangeWatcherService extends Service {
 
             JSONArray rows = new JSONArray(body.toString());
             if (rows.length() == 0) return null;
-            JSONObject data = rows.getJSONObject(0).optJSONObject("data");
-            if (data == null) return null;
-            return data.optJSONObject("changes");
+            return rows.getJSONObject(0).optJSONObject("data");
         } finally {
             connection.disconnect();
         }
@@ -197,6 +258,20 @@ public class ChangeWatcherService extends Service {
         return result;
     }
 
+    private Map<String, String> collectNotices(JSONArray notices) {
+        Map<String, String> result = new TreeMap<String, String>();
+        for (int index = 0; index < notices.length(); index++) {
+            JSONObject notice = notices.optJSONObject(index);
+            if (notice == null) continue;
+            String title = notice.optString("title", "").trim();
+            String body = notice.optString("body", "").trim();
+            if (title.length() == 0 && body.length() == 0) continue;
+            String id = notice.optString("id", "notice-" + index);
+            result.put(id, title + '\u001f' + body);
+        }
+        return result;
+    }
+
     private String encode(Map<String, String> values) {
         StringBuilder builder = new StringBuilder();
         for (Map.Entry<String, String> entry : values.entrySet()) {
@@ -217,17 +292,46 @@ public class ChangeWatcherService extends Service {
         return values;
     }
 
+    private String encodeNotices(Map<String, String> values) {
+        JSONArray rows = new JSONArray();
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            JSONObject row = new JSONObject();
+            try {
+                row.put("id", entry.getKey());
+                row.put("value", entry.getValue());
+                rows.put(row);
+            } catch (Exception error) {
+                Log.w(TAG, "notice snapshot encode failed: " + error.getMessage());
+            }
+        }
+        return rows.toString();
+    }
+
+    private Map<String, String> decodeNotices(String raw) {
+        Map<String, String> values = new TreeMap<String, String>();
+        if (raw.length() == 0) return values;
+        try {
+            JSONArray rows = new JSONArray(raw);
+            for (int index = 0; index < rows.length(); index++) {
+                JSONObject row = rows.optJSONObject(index);
+                if (row == null) continue;
+                values.put(row.optString("id", ""), row.optString("value", ""));
+            }
+        } catch (Exception error) {
+            Log.w(TAG, "notice snapshot decode failed: " + error.getMessage());
+        }
+        return values;
+    }
+
     private List<String> describe(Map<String, String> previous, Map<String, String> current) {
         List<String> lines = new ArrayList<String>();
 
-        for (Map.Entry<String, String> entry : current.entrySet()) {
-            String before = previous.get(entry.getKey());
-            if (entry.getValue().equals(before)) continue;
-            lines.add(line(entry.getKey(), entry.getValue(), false));
+        for (String key : NotificationDiff.changedKeys(previous, current)) {
+            lines.add(line(key, current.get(key), false));
         }
-        for (Map.Entry<String, String> entry : previous.entrySet()) {
-            if (current.containsKey(entry.getKey())) continue;
-            lines.add(line(entry.getKey(), entry.getValue(), true));
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(new Date());
+        for (String key : NotificationDiff.removedKeysOnOrAfter(previous, current, today)) {
+            lines.add(line(key, previous.get(key), true));
         }
         return lines;
     }
@@ -272,29 +376,57 @@ public class ChangeWatcherService extends Service {
         NotificationChannel ongoing = new NotificationChannel(
             CHANNEL_ONGOING, "시간표 감시", NotificationManager.IMPORTANCE_LOW
         );
-        ongoing.setDescription("화면이 꺼져 있어도 교과 변경을 확인합니다.");
+        ongoing.setDescription("화면이 꺼져 있어도 교과 변경, 공지, 학생 호출을 확인합니다.");
         manager.createNotificationChannel(ongoing);
 
         NotificationChannel withSound = new NotificationChannel(
-            CHANNEL_ALERT_SOUND, "교과 변경 알림", NotificationManager.IMPORTANCE_HIGH
+            CHANNEL_ALERT_SOUND, "시간표 알림", NotificationManager.IMPORTANCE_HIGH
+        );
+        withSound.setSound(
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+            new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
         );
         manager.createNotificationChannel(withSound);
 
         NotificationChannel silent = new NotificationChannel(
-            CHANNEL_ALERT_SILENT, "교과 변경 알림 (무음)", NotificationManager.IMPORTANCE_HIGH
+            CHANNEL_ALERT_SILENT, "시간표 알림 (무음)", NotificationManager.IMPORTANCE_HIGH
         );
         silent.setSound(null, null);
         manager.createNotificationChannel(silent);
     }
 
     private PendingIntent boardIntent() {
+        return boardIntent(false);
+    }
+
+    private PendingIntent boardIntent(boolean studentCallFullScreen) {
         Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        if (studentCallFullScreen) {
+            intent.putExtra("student_call_full_screen", true);
+        }
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags = flags | PendingIntent.FLAG_IMMUTABLE;
+        }
+        return PendingIntent.getActivity(this, studentCallFullScreen ? 4 : 0, intent, flags);
+    }
+
+    private PendingIntent studentCallIntent(JSONObject call) {
+        Intent intent = new Intent(this, StudentCallActivity.class);
+        intent.putExtra("student_name", call.optString("studentName", "학생"));
+        intent.putExtra("destination", call.optString("destination", "교무실"));
+        intent.putExtra("message", call.optString("message", ""));
+        intent.putExtra("class_name", call.optString("className", ""));
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             flags = flags | PendingIntent.FLAG_IMMUTABLE;
         }
-        return PendingIntent.getActivity(this, 0, intent, flags);
+        return PendingIntent.getActivity(this, 5, intent, flags);
     }
 
     @SuppressWarnings("deprecation")
@@ -305,7 +437,7 @@ public class ChangeWatcherService extends Service {
 
         return builder
             .setContentTitle("시간표 감시 중")
-            .setContentText(BoardPrefs.className(this) + " 교과 변경을 확인합니다.")
+            .setContentText(BoardPrefs.className(this) + " 교과 변경, 공지, 학생 호출을 확인합니다.")
             .setSmallIcon(R.drawable.app_icon)
             .setContentIntent(boardIntent())
             .setOngoing(true)
@@ -348,7 +480,93 @@ public class ChangeWatcherService extends Service {
         NotificationManager manager =
             (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
-            manager.notify(ALERT_NOTIFICATION_ID, builder.build());
+            manager.notify(CHANGE_NOTIFICATION_ID, builder.build());
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void notifyNotices(List<String> changedKeys, Map<String, String> notices) {
+        boolean sound = BoardPrefs.soundEnabled(this);
+        String channel = sound ? CHANNEL_ALERT_SOUND : CHANNEL_ALERT_SILENT;
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? new Notification.Builder(this, channel)
+            : new Notification.Builder(this);
+
+        List<String> lines = new ArrayList<String>();
+        for (String key : changedKeys) {
+            String[] fields = notices.get(key).split("\u001f", -1);
+            String title = fields.length > 0 ? fields[0] : "";
+            String body = fields.length > 1 ? fields[1] : "";
+            lines.add(title.length() == 0 ? body : title + (body.length() == 0 ? "" : " · " + body));
+        }
+
+        StringBuilder body = new StringBuilder();
+        for (String line : lines) {
+            if (body.length() > 0) body.append('\n');
+            body.append(line);
+        }
+        String title = lines.size() > 1 ? "학교 공지 " + lines.size() + "건" : "학교 공지";
+
+        builder.setContentTitle(title)
+            .setContentText(lines.get(0))
+            .setStyle(new Notification.BigTextStyle().bigText(body.toString()))
+            .setSmallIcon(R.drawable.app_icon)
+            .setContentIntent(boardIntent())
+            .setAutoCancel(true);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            builder.setPriority(Notification.PRIORITY_HIGH);
+            if (sound) builder.setDefaults(Notification.DEFAULT_SOUND);
+        }
+
+        NotificationManager manager =
+            (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.notify(NOTICE_NOTIFICATION_ID, builder.build());
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void notifyStudentCall(JSONObject call) {
+        boolean sound = BoardPrefs.soundEnabled(this);
+        String channel = sound ? CHANNEL_ALERT_SOUND : CHANNEL_ALERT_SILENT;
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? new Notification.Builder(this, channel)
+            : new Notification.Builder(this);
+
+        String studentName = call.optString("studentName", "학생").trim();
+        String destination = call.optString("destination", "교무실").trim();
+        String message = call.optString("message", "").trim();
+        String body = destination + "로 와 주세요." + (message.length() == 0 ? "" : " " + message);
+
+        builder.setContentTitle("학생 호출 · " + studentName)
+            .setContentText(body)
+            .setStyle(new Notification.BigTextStyle().bigText(body))
+            .setSmallIcon(R.drawable.app_icon)
+            .setContentIntent(boardIntent())
+            .setFullScreenIntent(
+                studentCallIntent(call),
+                StudentCallPolicy.shouldUseFullScreen(MainActivity.isBoardVisible())
+            )
+            .setCategory(Notification.CATEGORY_CALL)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setTimeoutAfter(5 * 60_000L)
+            .setAutoCancel(true);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            builder.setPriority(Notification.PRIORITY_HIGH);
+            if (sound) builder.setDefaults(Notification.DEFAULT_SOUND);
+        }
+
+        NotificationManager manager =
+            (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            boolean fullScreen = Build.VERSION.SDK_INT < 34
+                || manager.canUseFullScreenIntent();
+            Log.i(TAG, "student call notification posted sound=" + sound
+                + " notificationsEnabled=" + manager.areNotificationsEnabled()
+                + " fullScreen=" + fullScreen);
+            manager.notify(STUDENT_CALL_NOTIFICATION_ID, builder.build());
         }
     }
 }

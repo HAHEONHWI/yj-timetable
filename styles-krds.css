@@ -108,6 +108,19 @@
   --blue-tint: var(--krds-primary-5);
   --blue-tint-strong: var(--krds-primary-10);
   --blue-text: var(--krds-primary-60);
+  --student-call-backdrop: color-mix(in srgb, var(--krds-gray-95) 96%, transparent);
+  --student-call-panel: var(--krds-secondary-70);
+  --student-call-ink: var(--krds-gray-0);
+  --student-call-muted: var(--krds-primary-20);
+  --student-call-detail: var(--krds-primary-10);
+  --student-call-form-class-min: 120px;
+  --student-call-form-field-min: 180px;
+  --student-call-form-message-min: 260px;
+  --student-call-action-min: 150px;
+  --student-call-overlay-max: 1500px;
+  --student-call-name-max: 180px;
+  --student-call-destination-max: 78px;
+  --student-call-close-min: 160px;
   --st-holiday: var(--krds-danger-50);
   --holiday-bg: var(--krds-danger-5);
   --holiday-text: var(--krds-danger-60);
@@ -297,13 +310,25 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 15;
-  align-items: center;
-  gap: var(--space-32);
-  min-height: var(--space-80);
+  display: grid;
+  gap: 0;
+  min-height: 0;
   border-bottom-color: var(--line-soft);
   background: color-mix(in srgb, var(--panel) 96%, transparent);
-  padding-inline: max(var(--page-gutter), calc((100vw - var(--content-max)) / 2));
+  padding: 0;
   backdrop-filter: blur(var(--space-12));
+}
+
+.topbar-utility,
+.topbar .nav {
+  width: min(var(--content-max), calc(100% - (var(--page-gutter) * 2)));
+  margin-inline: auto;
+}
+
+.topbar-utility {
+  display: flex;
+  align-items: center;
+  min-height: var(--space-80);
 }
 
 .brand {
@@ -341,8 +366,10 @@ textarea {
 }
 
 .nav {
+  grid-row: 2;
   align-self: stretch;
-  gap: var(--space-4);
+  justify-content: space-between;
+  gap: var(--space-16);
   flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
@@ -354,12 +381,12 @@ textarea {
 
 .nav-button {
   position: relative;
-  min-height: var(--space-48);
+  min-height: var(--space-64);
   border-bottom-width: var(--space-3);
   color: var(--ink);
-  padding-inline: var(--space-12);
-  font-size: var(--text-15);
-  font-weight: 500;
+  padding-inline: var(--space-16);
+  font-size: var(--text-18);
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -371,6 +398,111 @@ textarea {
 .nav-button.is-active {
   border-bottom-color: var(--blue);
   color: var(--blue-dark);
+  font-weight: 700;
+}
+
+.student-call-form {
+  display: grid;
+  grid-template-columns: minmax(var(--student-call-form-class-min), 0.55fr) minmax(var(--student-call-form-field-min), 0.9fr) minmax(var(--student-call-form-field-min), 0.9fr) minmax(var(--student-call-form-message-min), 1.5fr);
+  gap: var(--space-16);
+}
+
+.student-call-send {
+  justify-self: start;
+  min-width: var(--student-call-action-min);
+}
+
+.student-call-status {
+  border: var(--space-1) solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel-strong);
+  color: var(--muted);
+  padding: var(--space-12);
+  font-size: var(--text-14);
+  line-height: 1.5;
+}
+
+.board-student-call {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: clamp(var(--space-10), 2vh, var(--space-28));
+  background: var(--student-call-backdrop);
+  color: var(--student-call-ink);
+  text-align: center;
+}
+
+.board-student-call-card {
+  display: grid;
+  place-items: center;
+  gap: clamp(var(--space-6), 1.2vh, var(--space-18));
+  width: min(100%, var(--student-call-overlay-max));
+  max-height: calc(100dvh - var(--space-56));
+  min-width: 0;
+  overflow-y: auto;
+  border: var(--space-3) solid var(--blue);
+  border-radius: var(--radius-lg);
+  background: var(--student-call-panel);
+  padding: clamp(var(--space-16), 3vh, var(--space-40)) clamp(var(--space-20), 5vw, var(--space-80));
+  box-shadow: var(--shadow-lg);
+}
+
+.board-student-call-label,
+.board-student-call-class,
+.board-student-call-message,
+.board-student-call-destination {
+  margin: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.board-student-call-label {
+  color: var(--student-call-muted);
+  font-size: clamp(var(--text-18), min(3vw, 6vh), var(--space-48));
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.board-student-call h2 {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--student-call-ink);
+  font-size: clamp(var(--space-48), min(11vw, 18vh), var(--student-call-name-max));
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.board-student-call-destination {
+  color: var(--student-call-ink);
+  font-size: clamp(var(--space-28), min(5vw, 9vh), var(--student-call-destination-max));
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.board-student-call-message {
+  color: var(--student-call-detail);
+  font-size: clamp(var(--text-20), min(3vw, 6vh), var(--space-48));
+  line-height: 1.4;
+}
+
+.board-student-call-class {
+  color: var(--student-call-muted);
+  font-size: clamp(var(--text-18), min(2vw, 4.5vh), var(--space-34));
+  font-weight: 600;
+}
+
+.board-student-call-close {
+  min-width: var(--student-call-close-min);
+  min-height: var(--space-56);
+  border: var(--space-1) solid var(--student-call-ink);
+  border-radius: var(--radius-md);
+  background: var(--student-call-ink);
+  color: var(--student-call-panel);
+  padding-inline: var(--space-24);
+  font-size: var(--text-18);
   font-weight: 700;
 }
 
@@ -883,16 +1015,15 @@ body.board-mode .board-lesson.is-merge small {
 
 @media (max-width: 1024px) {
   .topbar {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0 var(--space-12);
-    padding-block: var(--space-8) 0;
+    padding: 0;
   }
 
   .nav {
-    grid-column: 1 / -1;
-    order: 3;
     min-width: 0;
+  }
+
+  .student-call-form {
+    grid-template-columns: 1fr 1fr;
   }
 
   .nav-button {
@@ -914,6 +1045,10 @@ body.board-mode .board-lesson.is-merge small {
     min-height: 0;
   }
 
+  .topbar-utility {
+    min-height: var(--space-64);
+  }
+
   .brand-logo {
     width: var(--space-34);
     height: var(--space-34);
@@ -933,13 +1068,20 @@ body.board-mode .board-lesson.is-merge small {
   }
 
   .nav {
-    margin-inline: calc(var(--page-gutter) * -1);
+    width: 100%;
+    margin-inline: 0;
+    justify-content: flex-start;
     padding-inline: var(--page-gutter);
   }
 
   .nav-button {
+    min-height: var(--space-48);
     padding-inline: var(--space-10);
     font-size: var(--text-14);
+  }
+
+  .student-call-form {
+    grid-template-columns: 1fr;
   }
 
   main {
