@@ -175,7 +175,21 @@ function maskedTeacherName(state, name) {
   return characters.join("");
 }
 
+// 나이스 공휴일·재량휴업일은 관리자 화면에서 neis-holiday: 접두사를 단
+// 하루 전체 행사로 자동 반영된다. 교사 시점에서는 담당 수업이 없어 칸이
+// 통째로 비어 보이므로, 그 날은 휴일명을 하루 종일 띄운다.
+function fullDayClosureForDate(state, date) {
+  return state.events.find((event) => {
+    return String(event.id).startsWith("neis-holiday:") && event.date === date;
+  }) || null;
+}
+
 function teacherLessonsForCell(state, teacher, date, period, periodIndex) {
+  const closure = fullDayClosureForDate(state, date);
+  if (closure && period >= closure.start && period <= closure.end) {
+    return [{ className: "", title: closure.title, note: "수업 없음", type: "event" }];
+  }
+
   const matches = [];
   for (const className of classes) {
     const lesson = lessonFor(state, date, className, period, periodIndex);
