@@ -1640,8 +1640,15 @@ body.board-mode .schedule-shell {
 }
 
 .academic-calendar-head h3,
+.academic-calendar-head h4,
 .academic-calendar-head p {
   margin: 0;
+}
+
+.academic-calendar-head h4 {
+  color: var(--muted);
+  font-size: var(--text-13);
+  font-weight: 500;
 }
 
 .academic-calendar-head p {
@@ -1792,7 +1799,7 @@ body.board-mode .schedule-shell {
 .academic-admin {
   display: grid;
   gap: var(--space-16);
-  margin-bottom: var(--space-24);
+  margin-top: var(--space-24);
 }
 
 .academic-admin .academic-calendar-head {
