@@ -46,9 +46,46 @@ Deno.test("NEIS 학사일정 응답을 별도 테이블 행으로 변환한다",
     content: "체험 활동",
     grades: [1],
     isSchoolDay: true,
+    holidayKind: "해당없음",
     sourceUpdatedAt: "2026-09-11",
   });
   assert.match(result.events[0]?.id ?? "", /^neis:8602013:20260901:/);
+});
+
+Deno.test("공휴일 행은 휴업일과 구분되는 holidayKind를 남긴다", async () => {
+  // Given
+  const rowOf = (title: string, kind: string) => ({
+    ATPT_OFCDC_SC_CODE: "Q10",
+    SD_SCHUL_CODE: "8602013",
+    AA_YMD: "20260301",
+    EVENT_NM: title,
+    EVENT_CNTNT: "",
+    ONE_GRADE_EVENT_YN: "Y",
+    TW_GRADE_EVENT_YN: "Y",
+    THREE_GRADE_EVENT_YN: "Y",
+    SBTR_DD_SC_NM: kind,
+    LOAD_DTM: "20260914",
+  });
+  const response = {
+    SchoolSchedule: [
+      {
+        head: [
+          { list_total_count: 2 },
+          { RESULT: { CODE: "INFO-000", MESSAGE: "정상 처리되었습니다." } },
+        ],
+      },
+      { row: [rowOf("3·1절", "공휴일"), rowOf("재량휴업일", "휴업일")] },
+    ],
+  };
+
+  // When
+  const result = await parseNeisSchedulePage(response);
+
+  // Then
+  assert.deepEqual(
+    result.events.map((event) => [event.title, event.holidayKind, event.isSchoolDay]),
+    [["3·1절", "공휴일", false], ["재량휴업일", "휴업일", false]],
+  );
 });
 
 Deno.test("NEIS 조회 결과 없음 응답을 정상 빈 페이지로 처리한다", async () => {
