@@ -756,11 +756,10 @@
         <section id="eventPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="eventTab" aria-hidden="true">
           <div class="list-head">
             <div>
-              <h3>NEIS 월간 학사일정</h3>
-              <p id="neisSyncStatus" class="muted" aria-live="polite">동기화 정보를 불러오는 중입니다.</p>
+              <h3>나이스 학사일정에서 행사 추가</h3>
+              <p class="muted">수업이 있는 날의 일정만 보여줍니다. 공휴일·휴업일은 학사일정 탭에서 하루 전체로 자동 반영됩니다.</p>
             </div>
             <div id="neisWeekFilter" class="filter-tabs" role="tablist" aria-label="나이스 학사일정 주 선택"></div>
-            <button id="syncNeisButton" class="ghost-button" type="button">지금 동기화</button>
           </div>
           <div id="neisEventList" class="list neis-event-list" aria-label="나이스 학사일정 행사 추가"></div>
           <p id="neisPrefillStatus" class="message is-hidden" aria-live="polite"></p>
@@ -823,6 +822,13 @@
                 <strong id="academicMonthLabel" class="academic-calendar-month" aria-live="polite"></strong>
                 <button class="ghost-button" data-academic-shift="1" type="button" aria-label="다음 달">다음</button>
               </div>
+            </div>
+            <div class="neis-sync-bar">
+              <div>
+                <strong>나이스 동기화</strong>
+                <p id="neisSyncStatus" class="muted" aria-live="polite">동기화 정보를 불러오는 중입니다.</p>
+              </div>
+              <button id="syncNeisButton" class="ghost-button" type="button">지금 동기화</button>
             </div>
             <div id="academicCalendar" class="academic-calendar-frame" role="grid"></div>
           </div>

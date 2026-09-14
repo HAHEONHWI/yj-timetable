@@ -1799,6 +1799,28 @@ body.board-mode .schedule-shell {
   margin: 0;
 }
 
+/* 동기화는 학사일정 탭에서 실행한다. 달력이 무엇으로 채워지는지 바로 위에서
+   알려주려고 달력 프레임 직전에 둔다. */
+.neis-sync-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  padding: var(--space-10) var(--space-12);
+}
+
+.neis-sync-bar strong {
+  font-size: var(--text-13);
+}
+
+.neis-sync-bar p {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-13);
+}
+
 .academic-admin-day {
   display: block;
   width: 100%;
