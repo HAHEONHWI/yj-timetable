@@ -281,7 +281,7 @@
     if (!isSupabaseEnabled()) return [];
     const { data, error } = await client()
       .from("academic_events")
-      .select("id, source, school_code, event_date, title, content, grades, is_school_day, source_updated_at, synced_at")
+      .select("id, source, school_code, event_date, title, content, grades, is_school_day, holiday_kind, source_updated_at, synced_at")
       .order("event_date", { ascending: true })
       .order("title", { ascending: true });
     if (error) throw new Error(`학사일정 조회 실패: ${error.message}`);
@@ -294,6 +294,7 @@
       content: event.content || "",
       grades: Array.isArray(event.grades) ? event.grades : [],
       isSchoolDay: event.is_school_day !== false,
+      holidayKind: event.holiday_kind || "",
       sourceUpdatedAt: event.source_updated_at,
       syncedAt: event.synced_at,
     }));

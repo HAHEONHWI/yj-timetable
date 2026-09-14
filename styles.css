@@ -41,6 +41,11 @@
   --event-bg-strong: rgba(75, 151, 121, 0.3);
   --event-text: #9bd0b7;
 
+  /* 공휴일 전용. 신설 수업 빨강과 값은 같지만 의미가 달라 별도 토큰으로 둔다. */
+  --st-holiday: #c06565;
+  --holiday-bg: rgba(192, 101, 101, 0.16);
+  --holiday-text: #de9595;
+
   --green: #4b9779;
   --green-soft: #9bd0b7;
   --danger: #c06565;
@@ -153,6 +158,10 @@ html[data-theme="light"] {
   --event-bg: rgba(15, 138, 99, 0.11);
   --event-bg-strong: rgba(15, 138, 99, 0.2);
   --event-text: #0b7252;
+
+  --st-holiday: #c23b5a;
+  --holiday-bg: rgba(194, 59, 90, 0.12);
+  --holiday-text: #a12c48;
 
   --green: #0f8a63;
   --green-soft: #0b7252;
@@ -1762,6 +1771,24 @@ body.board-mode .schedule-shell {
   color: var(--blue-text);
 }
 
+/* 공휴일은 나이스 파랑보다 우선한다: 그날은 수업이 없다는 신호가 먼저다. */
+.academic-calendar-event.is-holiday {
+  border-left-color: var(--st-holiday);
+  background: var(--holiday-bg);
+  color: var(--holiday-text);
+}
+
+.academic-calendar-day.is-holiday .academic-calendar-date,
+.academic-calendar-agenda li.is-holiday strong {
+  color: var(--holiday-text);
+}
+
+.academic-calendar-day.is-holiday .academic-calendar-day-count {
+  border-left-color: var(--st-holiday);
+  background: var(--holiday-bg);
+  color: var(--holiday-text);
+}
+
 .academic-admin {
   display: grid;
   gap: var(--space-16);
@@ -2821,6 +2848,15 @@ textarea {
 
 .list-item.is-neis {
   border-left: 3px solid var(--blue);
+}
+
+.list-item.is-neis.is-holiday {
+  border-left-color: var(--st-holiday);
+}
+
+.list-item.is-holiday .list-tag {
+  background: var(--holiday-bg);
+  color: var(--holiday-text);
 }
 
 /* `.list-item span` resets color/size for detail text, so the tag has to

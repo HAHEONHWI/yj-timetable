@@ -26,6 +26,7 @@
   let academicAdminMonth = toISO(new Date()).slice(0, 7);
   let selectedAcademicId = "";
   let neisAcademicEvents = [];
+  let neisEventWeek = "this";
   let currentRoute = "view";
   let selectedNoticeId = state.notices[0] ? state.notices[0].id : "";
   let selectedEventId = "";
@@ -228,6 +229,7 @@
     neisSyncStatus: $("#neisSyncStatus"),
     syncNeisButton: $("#syncNeisButton"),
     neisEventList: $("#neisEventList"),
+    neisWeekFilter: $("#neisWeekFilter"),
     neisPrefillStatus: $("#neisPrefillStatus"),
     noticeTitle: $("#noticeTitle"),
     noticeBody: $("#noticeBody"),
@@ -1693,16 +1695,26 @@
     );
   }
 
+  function isNeisPublicHoliday(event) {
+    return Boolean(event) && event.source === "neis" && event.holidayKind === "공휴일";
+  }
+
   function neisEventDetailParts(event) {
     const target = Array.isArray(event.grades) && event.grades.length ? `${event.grades.join(", ")}학년` : "전교";
-    return [target, event.isSchoolDay ? "" : "휴업일", event.content || ""].filter(Boolean);
+    const kind = event.holidayKind && event.holidayKind !== "해당없음"
+      ? event.holidayKind
+      : event.isSchoolDay ? "" : "휴업일";
+    return [target, kind, event.content || ""].filter(Boolean);
   }
 
   function renderAcademicCalendar(container, className) {
     if (!container) return;
     const days = buildMonthGrid(academicCalendarMonth);
+    // neis-holiday: 항목은 휴업일·공휴일을 시간표에서 덮기 위해 자동 생성한 사본이다.
+    // 달력에는 나이스 원본이 이미 있으므로 같은 날짜에 두 번 찍히지 않게 걸러낸다.
+    const manualEvents = state.events.filter((event) => !String(event.id).startsWith("neis-holiday:"));
     const academicEvents = eventsForMonth(
-      [...state.events, ...neisAcademicEvents],
+      [...manualEvents, ...neisAcademicEvents],
       academicCalendarMonth,
       className
     );
@@ -1729,7 +1741,7 @@
         const eventItems = dayEvents
           .map((event) => {
             const details = eventDetails(event);
-            return `<li class="academic-calendar-event">
+            return `<li class="academic-calendar-event${isNeisPublicHoliday(event) ? " is-holiday" : ""}">
               <strong>${escapeHtml(event.title || "학사일정")}</strong>
               ${details.length ? `<span>${escapeHtml(details.join(" · "))}</span>` : ""}
             </li>`;
@@ -1739,6 +1751,7 @@
           "academic-calendar-day",
           day.inMonth ? "" : "is-outside",
           day.iso === today ? "is-today" : "",
+          dayEvents.some(isNeisPublicHoliday) ? "is-holiday" : "",
         ].filter(Boolean).join(" ");
         return `<div class="${classes}" role="gridcell" aria-label="${year}년 ${Number(day.iso.slice(5, 7))}월 ${day.day}일${dayEvents.length ? `, 학사일정 ${dayEvents.length}건` : ""}">
           <span class="academic-calendar-date">${day.day}</span>
@@ -1751,7 +1764,7 @@
     const agendaItems = academicEvents
       .map((event) => {
         const details = eventDetails(event);
-        return `<li>
+        return `<li${isNeisPublicHoliday(event) ? ` class="is-holiday"` : ""}>
           <time datetime="${escapeHtml(event.date)}">${formatDate(event.date)} ${weekdayLabelForDate(event.date)}</time>
           <div><strong>${escapeHtml(event.title || "학사일정")}</strong>${details.length ? `<span>${escapeHtml(details.join(" · "))}</span>` : ""}</div>
         </li>`;
@@ -2520,10 +2533,33 @@
       : "아직 동기화된 나이스 학사일정이 없습니다.";
   }
 
+  const NEIS_WEEK_OPTIONS = [{ key: "this", label: "이번주", offset: 0 }, { key: "next", label: "다음주", offset: 1 }];
+
+  function neisWeekRange(offsetWeeks) {
+    const monday = mondayOf(new Date());
+    monday.setDate(monday.getDate() + offsetWeeks * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { from: toISO(monday), to: toISO(sunday) };
+  }
+
+  function renderNeisWeekFilter() {
+    if (!els.neisWeekFilter) return;
+    els.neisWeekFilter.innerHTML = NEIS_WEEK_OPTIONS
+      .map((option) => {
+        const isSelected = option.key === neisEventWeek;
+        return `<button class="filter-tab${isSelected ? " is-active" : ""}" data-neis-week="${option.key}" role="tab" aria-selected="${isSelected}" type="button">${option.label}</button>`;
+      })
+      .join("");
+  }
+
   function renderNeisEventList() {
     if (!els.neisEventList) return;
+    renderNeisWeekFilter();
+    const selected = NEIS_WEEK_OPTIONS.find((option) => option.key === neisEventWeek) || NEIS_WEEK_OPTIONS[0];
+    const { from, to } = neisWeekRange(selected.offset);
     const upcomingEvents = neisAcademicEvents
-      .filter((event) => event.date >= toISO(new Date()))
+      .filter((event) => event.date >= from && event.date <= to)
       .slice()
       .sort((first, second) => first.date.localeCompare(second.date));
     els.neisEventList.innerHTML = upcomingEvents.length
@@ -2541,7 +2577,7 @@
             </article>`;
           })
           .join("")
-      : `<p class="empty">추가할 예정 나이스 학사일정이 없습니다.</p>`;
+      : `<p class="empty">${selected.label}에 해당하는 나이스 학사일정이 없습니다.</p>`;
   }
 
   function isNeisDiscretionaryHoliday(event) {
@@ -2550,14 +2586,17 @@
 
   async function materializeNeisDiscretionaryHolidays() {
     if (!canRole("sync_neis_calendar")) return;
-    const holidays = neisAcademicEvents.filter(isNeisDiscretionaryHoliday);
+    // 재량휴업일과 공휴일은 둘 다 수업이 없는 날이라 하루 전체를 행사로 덮는다.
+    const holidays = neisAcademicEvents.filter(
+      (event) => isNeisDiscretionaryHoliday(event) || isNeisPublicHoliday(event)
+    );
     const generatedIds = new Set(holidays.map((event) => `neis-holiday:${event.id}`));
     const existingGenerated = state.events.filter((event) => String(event.id).startsWith("neis-holiday:"));
     if (!holidays.length && !existingGenerated.length) return;
     const nextGenerated = holidays.map((event) => ({
       id: `neis-holiday:${event.id}`,
       date: event.date,
-      title: "재량휴업일",
+      title: isNeisPublicHoliday(event) ? event.title || "공휴일" : "재량휴업일",
       start: periods[0],
       end: periods[periods.length - 1],
       classes: classes.slice(),
@@ -2574,7 +2613,7 @@
       if (index >= 0) state.events[index] = event;
       else state.events.push(event);
     });
-    await saveState("나이스 재량휴업일을 행사변경에 자동 반영했습니다.", "update_event");
+    await saveState("나이스 휴업일·공휴일을 행사변경에 자동 반영했습니다.", "update_event");
   }
 
   async function refreshNeisAcademicEvents({ showError = false } = {}) {
@@ -2693,7 +2732,8 @@
             const detail = isNeis
               ? `나이스 · ${neisEventDetailParts(event).join(" · ")}`
               : formatPeriodRange(event.start, event.end);
-            return `<span class="academic-calendar-event${isNeis ? " is-neis" : ""}">
+            const tone = isNeisPublicHoliday(event) ? " is-holiday" : isNeis ? " is-neis" : "";
+            return `<span class="academic-calendar-event${tone}">
               <strong>${escapeHtml(event.title || "학사일정")}</strong>
               <span>${escapeHtml(detail)}</span>
             </span>`;
@@ -2705,6 +2745,7 @@
           day.inMonth ? "" : "is-outside",
           day.iso === today ? "is-today" : "",
           day.iso === focusedDate ? "is-selected" : "",
+          dayEvents.some(isNeisPublicHoliday) ? "is-holiday" : "",
         ].filter(Boolean).join(" ");
         const label = `${day.iso.slice(0, 4)}년 ${Number(day.iso.slice(5, 7))}월 ${day.day}일${dayEvents.length ? `, 학사일정 ${dayEvents.length}건` : ""}, 이 날짜로 새 학사일정 입력`;
         return `<button class="${cellClasses}" type="button" role="gridcell" data-academic-date="${day.iso}" aria-label="${label}">
@@ -2745,12 +2786,13 @@
     const neisMarkup = neisMonthEvents.length
       ? neisMonthEvents
           .map((event) => {
-            return `<article class="list-item is-neis">
+            const holiday = isNeisPublicHoliday(event);
+            return `<article class="list-item is-neis${holiday ? " is-holiday" : ""}">
               <div>
                 <strong>${formatDate(event.date)} ${weekdayLabelForDate(event.date)}요일 · ${escapeHtml(event.title || "학사일정")}</strong>
                 <span>${escapeHtml(neisEventDetailParts(event).join(" · "))}</span>
               </div>
-              <span class="list-tag">나이스 · 읽기 전용</span>
+              <span class="list-tag">${holiday ? "공휴일 · 하루 전체" : "나이스 · 읽기 전용"}</span>
             </article>`;
           })
           .join("")
@@ -4334,6 +4376,15 @@
       await materializeNeisDiscretionaryHolidays();
       setControlDisabled(els.syncNeisButton, !canRole("sync_neis_calendar"));
     });
+
+    if (els.neisWeekFilter) {
+      els.neisWeekFilter.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-neis-week]");
+        if (!button) return;
+        neisEventWeek = button.dataset.neisWeek;
+        renderNeisEventList();
+      });
+    }
 
     els.neisEventList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-add-neis-event]");
