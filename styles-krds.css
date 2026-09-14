@@ -107,6 +107,10 @@
   --blue-soft: var(--krds-primary-20);
   --blue-tint: var(--krds-primary-5);
   --blue-tint-strong: var(--krds-primary-10);
+  --blue-text: var(--krds-primary-60);
+  --st-holiday: var(--krds-danger-50);
+  --holiday-bg: var(--krds-danger-5);
+  --holiday-text: var(--krds-danger-60);
   --st-change: var(--krds-warning-50);
   --st-change-tx: #614100;
   --change-bg: var(--krds-warning-5);
@@ -164,6 +168,10 @@ html[data-theme="light"] {
   --blue-soft: var(--krds-primary-20);
   --blue-tint: var(--krds-primary-5);
   --blue-tint-strong: var(--krds-primary-10);
+  --blue-text: var(--krds-primary-60);
+  --st-holiday: var(--krds-danger-50);
+  --holiday-bg: var(--krds-danger-5);
+  --holiday-text: var(--krds-danger-60);
   --st-change: var(--krds-warning-50);
   --st-change-tx: #614100;
   --change-bg: var(--krds-warning-5);
@@ -208,6 +216,10 @@ html[data-theme="dark"] {
   --blue-soft: #b1cefb;
   --blue-tint: rgb(37 110 244 / 18%);
   --blue-tint-strong: rgb(37 110 244 / 28%);
+  --blue-text: #b1cefb;
+  --st-holiday: #f48771;
+  --holiday-bg: rgb(222 52 18 / 18%);
+  --holiday-text: #fcdfd9;
   --st-change: #ffc95c;
   --st-change-tx: #ffe0a3;
   --change-bg: rgb(255 177 20 / 16%);
