@@ -811,26 +811,18 @@
         </section>
 
         <section id="academicPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="academicTab" aria-hidden="true">
-          <div class="academic-admin">
-            <div class="academic-calendar-head">
-              <div>
-                <h3>월간 학사일정</h3>
-                <p class="muted">조회·교사 화면의 월간 학사일정에 표시되는 행사를 달력에서 바로 등록·수정합니다. 교시 범위는 시간표에서 행사로 덮는 구간입니다. 나이스에서 동기화한 학사일정도 같은 달력에 읽기 전용으로 함께 표시됩니다.</p>
-              </div>
-              <div class="academic-calendar-controls" aria-label="월 이동">
-                <button class="ghost-button" data-academic-shift="-1" type="button" aria-label="이전 달">이전</button>
-                <strong id="academicMonthLabel" class="academic-calendar-month" aria-live="polite"></strong>
-                <button class="ghost-button" data-academic-shift="1" type="button" aria-label="다음 달">다음</button>
-              </div>
+          <div class="academic-calendar-head">
+            <div>
+              <h3>월간 학사일정</h3>
+              <p class="muted">조회·교사 화면의 월간 학사일정에 표시되는 행사를 등록·수정합니다. 교시 범위는 시간표에서 행사로 덮는 구간입니다. 나이스에서 동기화한 학사일정도 아래 달력에 읽기 전용으로 함께 표시됩니다.</p>
             </div>
-            <div class="neis-sync-bar">
-              <div>
-                <strong>나이스 동기화</strong>
-                <p id="neisSyncStatus" class="muted" aria-live="polite">동기화 정보를 불러오는 중입니다.</p>
-              </div>
-              <button id="syncNeisButton" class="ghost-button" type="button">지금 동기화</button>
+          </div>
+          <div class="neis-sync-bar">
+            <div>
+              <strong>나이스 동기화</strong>
+              <p id="neisSyncStatus" class="muted" aria-live="polite">동기화 정보를 불러오는 중입니다.</p>
             </div>
-            <div id="academicCalendar" class="academic-calendar-frame" role="grid"></div>
+            <button id="syncNeisButton" class="ghost-button" type="button">지금 동기화</button>
           </div>
           <div class="form-grid">
             <div class="field">
@@ -863,6 +855,17 @@
             <button id="cancelAcademicEditButton" class="ghost-button is-hidden" type="button">수정 취소</button>
           </div>
           <div id="academicList" class="list"></div>
+          <div class="academic-admin">
+            <div class="academic-calendar-head">
+              <h4>달력에서 날짜를 누르면 위 입력란에 바로 채워집니다</h4>
+              <div class="academic-calendar-controls" aria-label="월 이동">
+                <button class="ghost-button" data-academic-shift="-1" type="button" aria-label="이전 달">이전</button>
+                <strong id="academicMonthLabel" class="academic-calendar-month" aria-live="polite"></strong>
+                <button class="ghost-button" data-academic-shift="1" type="button" aria-label="다음 달">다음</button>
+              </div>
+            </div>
+            <div id="academicCalendar" class="academic-calendar-frame" role="grid"></div>
+          </div>
         </section>
 
         <section id="noticePanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="noticeTab" aria-hidden="true">
