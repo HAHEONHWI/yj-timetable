@@ -1705,6 +1705,14 @@
     return Boolean(event) && event.source === "neis" && event.holidayKind === "공휴일";
   }
 
+  // 하루 전체가 행사로 덮이는 날. 달력에서도 같은 집합을 빨간색으로 표시해
+  // "이 날은 수업이 통째로 없다"는 신호가 시간표와 어긋나지 않게 한다.
+  // 토요휴업일은 시간표에 없는 요일이라 여기 포함하지 않는다.
+  function isNeisClosedDay(event) {
+    if (!event || event.source !== "neis") return false;
+    return isNeisPublicHoliday(event) || isNeisDiscretionaryHoliday(event);
+  }
+
   function neisEventDetailParts(event) {
     const target = Array.isArray(event.grades) && event.grades.length ? `${event.grades.join(", ")}학년` : "전교";
     const kind = event.holidayKind && event.holidayKind !== "해당없음"
@@ -1744,7 +1752,7 @@
         const eventItems = dayEvents
           .map((event) => {
             const details = eventDetails(event);
-            const tone = isNeisPublicHoliday(event)
+            const tone = isNeisClosedDay(event)
               ? " is-holiday"
               : event.source === "neis" ? " is-neis" : "";
             return `<li class="academic-calendar-event${tone}">
@@ -1757,7 +1765,7 @@
           "academic-calendar-day",
           day.inMonth ? "" : "is-outside",
           day.iso === today ? "is-today" : "",
-          dayEvents.some(isNeisPublicHoliday) ? "is-holiday" : "",
+          dayEvents.some(isNeisClosedDay) ? "is-holiday" : "",
         ].filter(Boolean).join(" ");
         return `<div class="${classes}" role="gridcell" aria-label="${year}년 ${Number(day.iso.slice(5, 7))}월 ${day.day}일${dayEvents.length ? `, 학사일정 ${dayEvents.length}건` : ""}">
           <span class="academic-calendar-date">${day.day}</span>
@@ -1770,7 +1778,7 @@
     const agendaItems = academicEvents
       .map((event) => {
         const details = eventDetails(event);
-        return `<li${isNeisPublicHoliday(event) ? ` class="is-holiday"` : ""}>
+        return `<li${isNeisClosedDay(event) ? ` class="is-holiday"` : ""}>
           <time datetime="${escapeHtml(event.date)}">${formatDate(event.date)} ${weekdayLabelForDate(event.date)}</time>
           <div><strong>${escapeHtml(event.title || "학사일정")}</strong>${details.length ? `<span>${escapeHtml(details.join(" · "))}</span>` : ""}</div>
         </li>`;
@@ -2566,6 +2574,8 @@
     const { from, to } = neisWeekRange(selected.offset);
     const upcomingEvents = neisAcademicEvents
       .filter((event) => event.date >= from && event.date <= to)
+      // 공휴일·휴업일·연휴는 하루 전체 행사로 자동 반영되므로 수동 추가 대상이 아니다.
+      .filter((event) => event.isSchoolDay)
       .slice()
       .sort((first, second) => first.date.localeCompare(second.date));
     els.neisEventList.innerHTML = upcomingEvents.length
@@ -2593,9 +2603,8 @@
   async function materializeNeisDiscretionaryHolidays() {
     if (!canRole("sync_neis_calendar")) return;
     // 재량휴업일과 공휴일은 둘 다 수업이 없는 날이라 하루 전체를 행사로 덮는다.
-    const holidays = neisAcademicEvents.filter(
-      (event) => isNeisDiscretionaryHoliday(event) || isNeisPublicHoliday(event)
-    );
+    // 달력의 빨간색 표시와 같은 집합을 쓴다.
+    const holidays = neisAcademicEvents.filter(isNeisClosedDay);
     const generatedIds = new Set(holidays.map((event) => `neis-holiday:${event.id}`));
     const existingGenerated = state.events.filter((event) => String(event.id).startsWith("neis-holiday:"));
     if (!holidays.length && !existingGenerated.length) return;
@@ -2744,7 +2753,7 @@
             const detail = isNeis
               ? `나이스 · ${neisEventDetailParts(event).join(" · ")}`
               : formatPeriodRange(event.start, event.end);
-            const tone = isNeisPublicHoliday(event) ? " is-holiday" : isNeis ? " is-neis" : "";
+            const tone = isNeisClosedDay(event) ? " is-holiday" : isNeis ? " is-neis" : "";
             return `<span class="academic-calendar-event${tone}">
               <strong>${escapeHtml(event.title || "학사일정")}</strong>
               <span>${escapeHtml(detail)}</span>
@@ -2757,7 +2766,7 @@
           day.inMonth ? "" : "is-outside",
           day.iso === today ? "is-today" : "",
           day.iso === focusedDate ? "is-selected" : "",
-          dayEvents.some(isNeisPublicHoliday) ? "is-holiday" : "",
+          dayEvents.some(isNeisClosedDay) ? "is-holiday" : "",
         ].filter(Boolean).join(" ");
         const label = `${day.iso.slice(0, 4)}년 ${Number(day.iso.slice(5, 7))}월 ${day.day}일${dayEvents.length ? `, 학사일정 ${dayEvents.length}건` : ""}, 이 날짜로 새 학사일정 입력`;
         return `<button class="${cellClasses}" type="button" role="gridcell" data-academic-date="${day.iso}" aria-label="${label}">
@@ -2798,13 +2807,13 @@
     const neisMarkup = neisMonthEvents.length
       ? neisMonthEvents
           .map((event) => {
-            const holiday = isNeisPublicHoliday(event);
+            const holiday = isNeisClosedDay(event);
             return `<article class="list-item is-neis${holiday ? " is-holiday" : ""}">
               <div>
                 <strong>${formatDate(event.date)} ${weekdayLabelForDate(event.date)}요일 · ${escapeHtml(event.title || "학사일정")}</strong>
                 <span>${escapeHtml(neisEventDetailParts(event).join(" · "))}</span>
               </div>
-              <span class="list-tag">${holiday ? "공휴일 · 하루 전체" : "나이스 · 읽기 전용"}</span>
+              <span class="list-tag">${holiday ? `${escapeHtml(event.holidayKind || "휴업일")} · 하루 전체` : "나이스 · 읽기 전용"}</span>
             </article>`;
           })
           .join("")
