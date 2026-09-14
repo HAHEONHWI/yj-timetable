@@ -1,8 +1,16 @@
 package kr.yjms.timetable.board;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
+import android.app.NotificationManager;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
+import android.util.Log;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -23,10 +31,16 @@ public class SettingsActivity extends Activity {
 
     private RadioGroup classGroup;
     private CheckBox soundBox;
+    private Button overlayPermissionButton;
+    private Button fullScreenPermissionButton;
+    private Button soundTestButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -63,16 +77,81 @@ public class SettingsActivity extends Activity {
         root.addView(classGroup);
 
         soundBox = new CheckBox(this);
-        soundBox.setText("교과 변경 시 알림음 재생");
+        soundBox.setText("교과 변경·공지·학생 호출 알림음 재생");
         soundBox.setTextSize(21);
         soundBox.setPadding(12, 44, 12, 14);
         soundBox.setChecked(BoardPrefs.soundEnabled(this));
         root.addView(soundBox);
 
+        soundTestButton = new Button(this);
+        soundTestButton.setText("알림음 테스트");
+        soundTestButton.setTextSize(18);
+        soundTestButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
+                Log.i("YJBoard", "settings test beep started="
+                    + tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420));
+                new android.os.Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.i("YJBoard", "settings test beep started="
+                            + tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420));
+                        new android.os.Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.i("YJBoard", "settings test beep started="
+                                    + tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 420));
+                                new android.os.Handler().postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        tone.release();
+                                    }
+                                }, 500L);
+                            }
+                        }, 650L);
+                    }
+                }, 650L);
+            }
+        });
+        root.addView(soundTestButton);
+
+        overlayPermissionButton = new Button(this);
+        overlayPermissionButton.setTextSize(18);
+        LinearLayout.LayoutParams overlayParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        overlayParams.topMargin = 24;
+        overlayPermissionButton.setLayoutParams(overlayParams);
+        overlayPermissionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openOverlayPermission();
+            }
+        });
+        root.addView(overlayPermissionButton);
+
+        fullScreenPermissionButton = new Button(this);
+        fullScreenPermissionButton.setTextSize(18);
+        LinearLayout.LayoutParams fullScreenParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        fullScreenParams.topMargin = 12;
+        fullScreenPermissionButton.setLayoutParams(fullScreenParams);
+        fullScreenPermissionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openFullScreenPermission();
+            }
+        });
+        root.addView(fullScreenPermissionButton);
+
         TextView hint = new TextView(this);
-        hint.setText("설정을 다시 열려면 시간표 화면 왼쪽 위 모서리를 3초간 길게 누르세요.");
+        hint.setText("설정 열기: 시간표 화면 오른쪽 위의 설정 버튼을 누르세요.");
         hint.setTextSize(15);
-        hint.setTextColor(Color.parseColor("#8a93a6"));
+        hint.setTextColor(Color.parseColor("#5f687a"));
         hint.setPadding(0, 36, 0, 0);
         root.addView(hint);
 
@@ -96,6 +175,41 @@ public class SettingsActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.addView(root);
         setContentView(scroll);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (overlayPermissionButton == null) return;
+        boolean granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this);
+        overlayPermissionButton.setText(granted
+            ? "다른 앱 위 표시 권한: 허용됨"
+            : "다른 앱 위 표시 권한 허용");
+        overlayPermissionButton.setEnabled(!granted);
+        boolean fullScreenGranted = Build.VERSION.SDK_INT < 34
+            || getSystemService(NotificationManager.class).canUseFullScreenIntent();
+        fullScreenPermissionButton.setText(fullScreenGranted
+            ? "다른 앱 위 호출 권한: 허용됨"
+            : "다른 앱 위 호출 권한 허용");
+        fullScreenPermissionButton.setEnabled(!fullScreenGranted);
+    }
+
+    private void openOverlayPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
+        Intent intent = new Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:" + getPackageName())
+        );
+        startActivity(intent);
+    }
+
+    private void openFullScreenPermission() {
+        if (Build.VERSION.SDK_INT < 34) return;
+        Intent intent = new Intent(
+            Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+            Uri.parse("package:" + getPackageName())
+        );
+        startActivity(intent);
     }
 
     private void save() {
