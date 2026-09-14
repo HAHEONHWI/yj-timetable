@@ -21,6 +21,7 @@
   --blue-soft: #8fb6de;
   --blue-tint: rgba(91, 147, 207, 0.12);
   --blue-tint-strong: rgba(91, 147, 207, 0.22);
+  --blue-text: #8fb6de;
 
   --st-change: #c2913f;
   --st-change-tx: #ddb46b;
@@ -133,6 +134,7 @@ html[data-theme="light"] {
   --blue-soft: #6b83e3;
   --blue-tint: rgba(59, 91, 219, 0.08);
   --blue-tint-strong: rgba(59, 91, 219, 0.15);
+  --blue-text: #2c46b3;
 
   --st-change: #9a6a00;
   --st-change-tx: #7d5600;
@@ -1752,6 +1754,14 @@ body.board-mode .schedule-shell {
   opacity: 0.82;
 }
 
+/* NEIS-sourced rows are read-only, so they take the blue informational tint
+   instead of the green "editable event" tint used by manually added events. */
+.academic-calendar-event.is-neis {
+  border-left-color: var(--blue);
+  background: var(--blue-tint);
+  color: var(--blue-text);
+}
+
 .academic-admin {
   display: grid;
   gap: var(--space-16);
@@ -2807,6 +2817,36 @@ textarea {
 
 .list-item.is-disabled {
   opacity: 0.62;
+}
+
+.list-item.is-neis {
+  border-left: 3px solid var(--blue);
+}
+
+/* `.list-item span` resets color/size for detail text, so the tag has to
+   out-specify it rather than sit at plain class specificity. */
+.list-item .list-tag {
+  flex: 0 0 auto;
+  align-self: center;
+  border-radius: var(--radius-sm);
+  background: var(--blue-tint);
+  color: var(--blue-text);
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.academic-list-heading {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.academic-list-heading:first-child {
+  margin-top: 0;
 }
 
 .list-head {

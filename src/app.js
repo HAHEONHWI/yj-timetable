@@ -768,6 +768,28 @@
     });
   }
 
+  function applyAcademicPermissions() {
+    const canEvent = canRole("update_event");
+    [
+      els.academicDate,
+      els.academicStart,
+      els.academicEnd,
+      els.academicTitle,
+      els.academicMemo,
+      els.saveAcademicButton,
+      els.cancelAcademicEditButton,
+    ].forEach((control) => setControlDisabled(control, !canEvent));
+    setContainerDisabled("#academicClassChecks", !canEvent);
+    if (els.academicCalendar) {
+      els.academicCalendar.querySelectorAll("[data-academic-date]").forEach((button) => setControlDisabled(button, !canEvent));
+    }
+    if (els.academicList) {
+      els.academicList
+        .querySelectorAll("[data-edit-academic], [data-delete-academic]")
+        .forEach((button) => setControlDisabled(button, !canEvent));
+    }
+  }
+
   function applyAdminPermissions() {
     if (!els.adminWorkspace || els.adminWorkspace.classList.contains("is-hidden")) return;
     renderAdminUserBadge();
@@ -828,25 +850,7 @@
         : "강제 새로고침 실행은 dev 계정만 가능합니다.";
     }
 
-    const canEvent = canRole("update_event");
-    [
-      els.academicDate,
-      els.academicStart,
-      els.academicEnd,
-      els.academicTitle,
-      els.academicMemo,
-      els.saveAcademicButton,
-      els.cancelAcademicEditButton,
-    ].forEach((control) => setControlDisabled(control, !canEvent));
-    setContainerDisabled("#academicClassChecks", !canEvent);
-    if (els.academicCalendar) {
-      els.academicCalendar.querySelectorAll("[data-academic-date]").forEach((button) => setControlDisabled(button, !canEvent));
-    }
-    if (els.academicList) {
-      els.academicList
-        .querySelectorAll("[data-edit-academic], [data-delete-academic]")
-        .forEach((button) => setControlDisabled(button, !canEvent));
-    }
+    applyAcademicPermissions();
 
     const canManageAccounts = canRole("manage_accounts");
     [els.accountDisplayName, els.accountRole, els.accountPassword, els.accountActive, els.saveAccountButton, els.newAccountButton].forEach((control) =>
@@ -1689,6 +1693,11 @@
     );
   }
 
+  function neisEventDetailParts(event) {
+    const target = Array.isArray(event.grades) && event.grades.length ? `${event.grades.join(", ")}학년` : "전교";
+    return [target, event.isSchoolDay ? "" : "휴업일", event.content || ""].filter(Boolean);
+  }
+
   function renderAcademicCalendar(container, className) {
     if (!container) return;
     const days = buildMonthGrid(academicCalendarMonth);
@@ -1707,8 +1716,7 @@
     const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
     const eventDetails = (event) => {
       if (event.source === "neis") {
-        const target = event.grades.length ? `${event.grades.join(", ")}학년` : "전교";
-        return ["나이스", target, event.isSchoolDay ? "" : "휴업일", event.content || ""].filter(Boolean);
+        return ["나이스", ...neisEventDetailParts(event)];
       }
       return [
         className === "all" && Array.isArray(event.classes) ? event.classes.join(", ") : "",
@@ -2575,6 +2583,7 @@
       neisAcademicEvents = await readAcademicEvents();
       renderView();
       if (currentRoute === "teachers") renderTeacherView();
+      renderAcademicAdmin();
       renderNeisSyncStatus();
       renderNeisEventList();
     } catch (error) {
@@ -2653,14 +2662,16 @@
   function renderAcademicAdmin() {
     renderAcademicAdminCalendar();
     renderAcademicList();
+    applyAcademicPermissions();
   }
 
   function renderAcademicAdminCalendar() {
     if (!els.academicCalendar) return;
     const days = buildMonthGrid(academicAdminMonth);
     const monthEvents = eventsForMonth(state.events, academicAdminMonth, "all");
+    const neisMonthEvents = eventsForMonth(neisAcademicEvents, academicAdminMonth, "all");
     const eventsByDate = new Map();
-    monthEvents.forEach((event) => {
+    [...monthEvents, ...neisMonthEvents].forEach((event) => {
       if (!eventsByDate.has(event.date)) eventsByDate.set(event.date, []);
       eventsByDate.get(event.date).push(event);
     });
@@ -2668,18 +2679,23 @@
     const today = toISO(new Date());
     const focusedDate = els.academicDate ? els.academicDate.value : "";
     const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+    const countLabel = `등록 ${monthEvents.length}건 · 나이스 ${neisMonthEvents.length}건`;
     if (els.academicMonthLabel) {
-      els.academicMonthLabel.textContent = `${year}년 ${month}월 · ${monthEvents.length}건`;
+      els.academicMonthLabel.textContent = `${year}년 ${month}월 · ${countLabel}`;
     }
-    els.academicCalendar.setAttribute("aria-label", `${year}년 ${month}월 학사일정 관리, ${monthEvents.length}건`);
+    els.academicCalendar.setAttribute("aria-label", `${year}년 ${month}월 학사일정 관리, ${countLabel}`);
     const weekRows = Array.from({ length: 6 }, (_, weekIndex) => {
       const dayCells = days.slice(weekIndex * 7, weekIndex * 7 + 7).map((day) => {
         const dayEvents = eventsByDate.get(day.iso) || [];
         const eventItems = dayEvents
           .map((event) => {
-            return `<span class="academic-calendar-event">
+            const isNeis = event.source === "neis";
+            const detail = isNeis
+              ? `나이스 · ${neisEventDetailParts(event).join(" · ")}`
+              : formatPeriodRange(event.start, event.end);
+            return `<span class="academic-calendar-event${isNeis ? " is-neis" : ""}">
               <strong>${escapeHtml(event.title || "학사일정")}</strong>
-              <span>${formatPeriodRange(event.start, event.end)}</span>
+              <span>${escapeHtml(detail)}</span>
             </span>`;
           })
           .join("");
@@ -2709,7 +2725,8 @@
     if (!els.academicList) return;
     const [year, month] = academicAdminMonth.split("-").map(Number);
     const monthEvents = eventsForMonth(state.events, academicAdminMonth, "all");
-    els.academicList.innerHTML = monthEvents.length
+    const neisMonthEvents = eventsForMonth(neisAcademicEvents, academicAdminMonth, "all");
+    const manualMarkup = monthEvents.length
       ? monthEvents
           .map((event) => {
             return `<article class="list-item${event.id === selectedAcademicId ? " is-active" : ""}">
@@ -2725,6 +2742,23 @@
           })
           .join("")
       : `<p class="empty">${year}년 ${month}월에 등록된 학사일정이 없습니다.</p>`;
+    const neisMarkup = neisMonthEvents.length
+      ? neisMonthEvents
+          .map((event) => {
+            return `<article class="list-item is-neis">
+              <div>
+                <strong>${formatDate(event.date)} ${weekdayLabelForDate(event.date)}요일 · ${escapeHtml(event.title || "학사일정")}</strong>
+                <span>${escapeHtml(neisEventDetailParts(event).join(" · "))}</span>
+              </div>
+              <span class="list-tag">나이스 · 읽기 전용</span>
+            </article>`;
+          })
+          .join("")
+      : `<p class="empty">${year}년 ${month}월에 동기화된 나이스 학사일정이 없습니다.</p>`;
+    els.academicList.innerHTML = `<h4 class="academic-list-heading">등록 학사일정 ${monthEvents.length}건</h4>
+      ${manualMarkup}
+      <h4 class="academic-list-heading">나이스 학사일정 ${neisMonthEvents.length}건</h4>
+      ${neisMarkup}`;
   }
 
   function resetAcademicForm(date = "") {
