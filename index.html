@@ -6,10 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>용정시간표 - 조회</title>
   <link rel="icon" href="./assets/logo.png" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="stylesheet"
-    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles-krds.css" />
   <script>
     // set before first paint so the themed tokens never flash the wrong palette
     document.documentElement.setAttribute(
@@ -29,10 +27,14 @@
 </head>
 
 <body>
+  <a class="skip-link" href="#mainContent">본문 바로가기</a>
   <header class="topbar">
     <button id="homeButton" class="brand" type="button" aria-label="조회 화면으로 이동">
       <img class="brand-logo" src="./assets/logo.png" alt="" />
-      <span class="brand-name">용정시간표</span>
+      <span class="brand-copy">
+        <span class="brand-name">용정시간표</span>
+        <span class="brand-description">수업과 학사일정을 한곳에서 확인하세요</span>
+      </span>
     </button>
     <nav class="nav">
       <button class="nav-button is-active" data-route="view" type="button">조회</button>
@@ -46,33 +48,34 @@
     <button id="themeButton" class="theme-button" type="button" aria-label="화면 모드 전환"></button>
   </header>
 
-  <main>
-    <section id="viewPage" class="page page-view">
-      <div class="view-tools">
+  <main id="mainContent" tabindex="-1">
+    <section id="viewPage" class="page page-view krds-page">
+      <div class="view-tools krds-page-header">
         <div>
           <h2>이번주-다음주 시간표</h2>
           <p id="todayLabel" class="muted"></p>
           <p id="rangeLabel" class="muted"></p>
         </div>
-        <div class="field compact">
+        <div class="field compact krds-field">
           <label for="viewClass">학급</label>
           <select id="viewClass"></select>
         </div>
-        <div id="homeVariantToggle" class="segmented" role="group" aria-label="변경 표시 방식">
+        <div id="homeVariantToggle" class="segmented krds-segmented" role="group" aria-label="변경 표시 방식">
           <button class="segmented-option" data-variant="line" type="button">표식</button>
           <button class="segmented-option is-active" data-variant="shade" type="button">음영</button>
         </div>
         <button id="boardThemeButton" class="board-theme-button" type="button" aria-label="화면 모드 전환"></button>
       </div>
-      <div id="dayTabs" class="day-tabs" role="tablist"></div>
-      <div id="viewSchedule" class="schedule-shell"></div>
+      <div id="dayTabs" class="day-tabs krds-tabs" role="tablist"></div>
+      <div id="viewSchedule" class="schedule-shell krds-table"></div>
       <div id="mobileSchedule" class="mobile-schedule"></div>
-      <div class="legend">
+      <div class="legend krds-badge-group">
         <span class="legend-item"><span class="legend-swatch" data-kind="change"></span>교과 변경</span>
         <span class="legend-item"><span class="legend-swatch" data-kind="new"></span>신설 수업</span>
         <span class="legend-item"><span class="legend-swatch" data-kind="event"></span>행사</span>
         <span id="variantNote" class="legend-note"></span>
       </div>
+      <div id="viewAcademicCalendar"></div>
     </section>
 
     <section id="teachersPage" class="page teachers-page is-hidden">
@@ -93,6 +96,7 @@
         <span class="legend-item"><span class="legend-swatch" data-kind="change"></span>교과 변경</span>
         <span class="legend-item"><span class="legend-swatch" data-kind="new"></span>신설 수업</span>
       </div>
+      <div id="teacherAcademicCalendar"></div>
     </section>
 
     <section id="slideshowPage" class="page slideshow-page is-hidden">
@@ -537,6 +541,7 @@
           <button id="specialTab" class="admin-tab" data-admin-tab="special" type="button" role="tab" aria-controls="specialPanel" aria-selected="false" tabindex="-1">특별시간표</button>
           <button id="changeTab" class="admin-tab is-active" data-admin-tab="change" type="button" role="tab" aria-controls="changePanel" aria-selected="true" tabindex="0">단일교과 변경</button>
           <button id="eventTab" class="admin-tab" data-admin-tab="event" type="button" role="tab" aria-controls="eventPanel" aria-selected="false" tabindex="-1">행사 변경</button>
+          <button id="academicTab" class="admin-tab" data-admin-tab="academic" type="button" role="tab" aria-controls="academicPanel" aria-selected="false" tabindex="-1">학사일정</button>
           <button id="noticeTab" class="admin-tab" data-admin-tab="notice" type="button" role="tab" aria-controls="noticePanel" aria-selected="false" tabindex="-1">안내사항</button>
           <button id="slideshowSettingsTab" class="admin-tab" data-admin-tab="slideshowSettings" type="button" role="tab" aria-controls="slideshowSettingsPanel" aria-selected="false" tabindex="-1">슬라이드쇼 설정</button>
           <div class="admin-nav-divider" aria-hidden="true"></div>
@@ -743,6 +748,15 @@
         </section>
 
         <section id="eventPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="eventTab" aria-hidden="true">
+          <div class="list-head">
+            <div>
+              <h3>NEIS 월간 학사일정</h3>
+              <p id="neisSyncStatus" class="muted" aria-live="polite">동기화 정보를 불러오는 중입니다.</p>
+            </div>
+            <button id="syncNeisButton" class="ghost-button" type="button">지금 동기화</button>
+          </div>
+          <div id="neisEventList" class="list neis-event-list" aria-label="나이스 학사일정 행사 추가"></div>
+          <p id="neisPrefillStatus" class="message is-hidden" aria-live="polite"></p>
           <div class="form-grid">
             <div class="field">
               <label for="eventDate">날짜</label>
@@ -788,6 +802,54 @@
             <button id="cancelEventEditButton" class="ghost-button is-hidden" type="button">수정 취소</button>
           </div>
           <div id="eventList" class="list"></div>
+        </section>
+
+        <section id="academicPanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="academicTab" aria-hidden="true">
+          <div class="academic-admin">
+            <div class="academic-calendar-head">
+              <div>
+                <h3>월간 학사일정</h3>
+                <p class="muted">조회·교사 화면의 월간 학사일정에 표시되는 행사를 달력에서 바로 등록·수정합니다. 교시 범위는 시간표에서 행사로 덮는 구간입니다.</p>
+              </div>
+              <div class="academic-calendar-controls" aria-label="월 이동">
+                <button class="ghost-button" data-academic-shift="-1" type="button" aria-label="이전 달">이전</button>
+                <strong id="academicMonthLabel" class="academic-calendar-month" aria-live="polite"></strong>
+                <button class="ghost-button" data-academic-shift="1" type="button" aria-label="다음 달">다음</button>
+              </div>
+            </div>
+            <div id="academicCalendar" class="academic-calendar-frame" role="grid"></div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="academicDate">날짜</label>
+              <input id="academicDate" type="date" />
+            </div>
+            <div class="field">
+              <label for="academicStart">시작 교시</label>
+              <select id="academicStart"></select>
+            </div>
+            <div class="field">
+              <label for="academicEnd">끝 교시</label>
+              <select id="academicEnd"></select>
+            </div>
+            <div class="field">
+              <label for="academicTitle">일정명</label>
+              <input id="academicTitle" type="text" placeholder="예: 개학식" />
+            </div>
+          </div>
+          <div class="field">
+            <label>적용 학급</label>
+            <div id="academicClassChecks" class="check-grid"></div>
+          </div>
+          <div class="field">
+            <label for="academicMemo">메모</label>
+            <input id="academicMemo" type="text" placeholder="예: 전 학년 강당 이동" />
+          </div>
+          <div class="button-row">
+            <button id="saveAcademicButton" class="primary-button" type="button">학사일정 저장</button>
+            <button id="cancelAcademicEditButton" class="ghost-button is-hidden" type="button">수정 취소</button>
+          </div>
+          <div id="academicList" class="list"></div>
         </section>
 
         <section id="noticePanel" class="admin-panel is-hidden" role="tabpanel" aria-labelledby="noticeTab" aria-hidden="true">
@@ -1008,8 +1070,15 @@
   </main>
 
   <footer class="footer">
-    <span>© 2026 23기 하헌휘. All rights reserved.</span>
-    <button class="footer-link" data-route="privacy" type="button">개인정보처리방침</button>
+    <div>
+      <strong>용정시간표</strong>
+      <span>용정중학교 수업·학사일정 안내 서비스</span>
+      <span class="footer-disclosure">KRDS 디자인 시스템을 활용해 제작했습니다.</span>
+    </div>
+    <div class="footer-meta">
+      <button class="footer-link" data-route="privacy" type="button">개인정보처리방침</button>
+      <span>© 2026 23기 하헌휘</span>
+    </div>
   </footer>
 
   <div id="confirmDialog" class="modal-overlay is-hidden">
@@ -1029,6 +1098,7 @@
   <script src="./src/supabase-config.js"></script>
   <script src="./src/storage.js"></script>
   <script src="./src/timetable-import.js"></script>
+  <script src="./src/calendar.js"></script>
   <script src="./src/app.js"></script>
 </body>
 

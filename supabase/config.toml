@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.api-key-apply]
 verify_jwt = false
+
+[functions.sync-neis-calendar]
+verify_jwt = false

@@ -277,6 +277,34 @@
     return remoteState;
   }
 
+  async function readAcademicEvents() {
+    if (!isSupabaseEnabled()) return [];
+    const { data, error } = await client()
+      .from("academic_events")
+      .select("id, source, school_code, event_date, title, content, grades, is_school_day, source_updated_at, synced_at")
+      .order("event_date", { ascending: true })
+      .order("title", { ascending: true });
+    if (error) throw new Error(`학사일정 조회 실패: ${error.message}`);
+    return (data || []).map((event) => ({
+      id: event.id,
+      source: event.source,
+      schoolCode: event.school_code,
+      date: event.event_date,
+      title: event.title,
+      content: event.content || "",
+      grades: Array.isArray(event.grades) ? event.grades : [],
+      isSchoolDay: event.is_school_day !== false,
+      sourceUpdatedAt: event.source_updated_at,
+      syncedAt: event.synced_at,
+    }));
+  }
+
+  async function syncNeisCalendarRequest(body = {}) {
+    const accessToken = await authAccessToken();
+    if (!accessToken) return { ok: false, error: "관리자 로그인 세션이 없습니다." };
+    return invokeFunction("sync-neis-calendar", body, { accessToken });
+  }
+
   function subscribeRemoteChanges(onChange) {
     if (!isSupabaseEnabled() || typeof onChange !== "function") {
       return () => {};
@@ -544,11 +572,13 @@
     read,
     write,
     readRemote,
+    readAcademicEvents,
     subscribeRemoteChanges,
     verifyAdminPassword,
     adminAccountsRequest,
     apiKeysRequest,
     apiApplicationRequest,
+    syncNeisCalendarRequest,
     clearAdminPassword,
     getAdminProfile,
     restoreAdminSession,

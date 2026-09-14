@@ -6,19 +6,26 @@
     read,
     write,
     readRemote,
+    readAcademicEvents,
     subscribeRemoteChanges,
     verifyAdminPassword,
     adminAccountsRequest,
     apiKeysRequest,
     apiApplicationRequest,
+    syncNeisCalendarRequest,
     clearAdminPassword,
     getAdminProfile,
     restoreAdminSession,
     isSupabaseEnabled,
     changeKey,
   } = window.TimetableStore;
+  const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, upsertEvent } = window.TimetableCalendar;
   let state = read();
   let selectedDate = "";
+  let academicCalendarMonth = toISO(new Date()).slice(0, 7);
+  let academicAdminMonth = toISO(new Date()).slice(0, 7);
+  let selectedAcademicId = "";
+  let neisAcademicEvents = [];
   let currentRoute = "view";
   let selectedNoticeId = state.notices[0] ? state.notices[0].id : "";
   let selectedEventId = "";
@@ -91,6 +98,7 @@
     manage_accounts: ["dev", "manager"],
     manage_api_keys: ["dev"],
     read_audit_logs: ["dev", "manager", "teacher"],
+    sync_neis_calendar: ["dev", "manager"],
   };
 
   const $ = (selector) => document.querySelector(selector);
@@ -119,6 +127,8 @@
     mobileSchedule: $("#mobileSchedule"),
     dayTabs: $("#dayTabs"),
     viewSchedule: $("#viewSchedule"),
+    viewAcademicCalendar: $("#viewAcademicCalendar"),
+    teacherAcademicCalendar: $("#teacherAcademicCalendar"),
     slideshowTitle: $("#slideshowTitle"),
     slideshowMeta: $("#slideshowMeta"),
     slideshowStage: $("#slideshowStage"),
@@ -204,6 +214,21 @@
     saveEventButton: $("#saveEventButton"),
     cancelEventEditButton: $("#cancelEventEditButton"),
     eventList: $("#eventList"),
+    academicCalendar: $("#academicCalendar"),
+    academicMonthLabel: $("#academicMonthLabel"),
+    academicDate: $("#academicDate"),
+    academicStart: $("#academicStart"),
+    academicEnd: $("#academicEnd"),
+    academicTitle: $("#academicTitle"),
+    academicMemo: $("#academicMemo"),
+    academicClassChecks: $("#academicClassChecks"),
+    saveAcademicButton: $("#saveAcademicButton"),
+    cancelAcademicEditButton: $("#cancelAcademicEditButton"),
+    academicList: $("#academicList"),
+    neisSyncStatus: $("#neisSyncStatus"),
+    syncNeisButton: $("#syncNeisButton"),
+    neisEventList: $("#neisEventList"),
+    neisPrefillStatus: $("#neisPrefillStatus"),
     noticeTitle: $("#noticeTitle"),
     noticeBody: $("#noticeBody"),
     noticeTitleFontSize: $("#noticeTitleFontSize"),
@@ -489,6 +514,9 @@
     if (/^429\b/i.test(text)) {
       return "저장 요청이 많아 잠시 제한됐습니다. 잠시 후 다시 저장하세요. (429)";
     }
+    if (/^502\s+NEIS\s+/i.test(text)) {
+      return `나이스 응답을 처리하지 못했습니다. ${text.replace(/^502\s+/i, "")}`;
+    }
     if (/^5\d\d\b/i.test(text)) {
       return "저장 서버에서 오류가 발생했습니다. 잠시 후 다시 저장하세요.";
     }
@@ -749,6 +777,17 @@
     const canSlideTypography = canRole("update_slide_typography");
     const canForceReload = canRole("force_reload");
     const canManageApiKeys = canRole("manage_api_keys");
+    const canCallStudent = canRole("call_student");
+    const canSyncNeisCalendar = canRole("sync_neis_calendar");
+
+    [
+      els.studentCallClass,
+      els.studentCallName,
+      els.studentCallDestination,
+      els.studentCallMessage,
+      els.sendStudentCallButton,
+    ].forEach((control) => setControlDisabled(control, !canCallStudent));
+    setControlDisabled(els.syncNeisButton, !canSyncNeisCalendar);
 
     setContainerDisabled("#baseEditor", !canBase);
     setControlDisabled(els.saveBaseButton, !canBase);
@@ -787,6 +826,26 @@
       els.forceSlideReloadPermission.textContent = canForceReload
         ? "현재 dev 계정으로 즉시 실행할 수 있습니다."
         : "강제 새로고침 실행은 dev 계정만 가능합니다.";
+    }
+
+    const canEvent = canRole("update_event");
+    [
+      els.academicDate,
+      els.academicStart,
+      els.academicEnd,
+      els.academicTitle,
+      els.academicMemo,
+      els.saveAcademicButton,
+      els.cancelAcademicEditButton,
+    ].forEach((control) => setControlDisabled(control, !canEvent));
+    setContainerDisabled("#academicClassChecks", !canEvent);
+    if (els.academicCalendar) {
+      els.academicCalendar.querySelectorAll("[data-academic-date]").forEach((button) => setControlDisabled(button, !canEvent));
+    }
+    if (els.academicList) {
+      els.academicList
+        .querySelectorAll("[data-edit-academic], [data-delete-academic]")
+        .forEach((button) => setControlDisabled(button, !canEvent));
     }
 
     const canManageAccounts = canRole("manage_accounts");
@@ -1389,7 +1448,7 @@
     const hint = light ? "라이트 모드 사용 중, 다크 모드로 전환" : "다크 모드 사용 중, 라이트 모드로 전환";
     [els.boardThemeButton, els.themeButton].forEach((button) => {
       if (!button) return;
-      button.textContent = light ? "☀" : "☾";
+      button.textContent = light ? "선명" : "기본";
       button.setAttribute("aria-label", hint);
       button.setAttribute("aria-pressed", String(light));
       button.title = label;
@@ -1624,6 +1683,95 @@
     if (els.mobileSchedule) {
       els.mobileSchedule.innerHTML = renderMobileList(selectedDate, visibleClasses);
     }
+    renderAcademicCalendar(
+      els.viewAcademicCalendar,
+      visibleClasses.length === 1 ? visibleClasses[0] : "all"
+    );
+  }
+
+  function renderAcademicCalendar(container, className) {
+    if (!container) return;
+    const days = buildMonthGrid(academicCalendarMonth);
+    const academicEvents = eventsForMonth(
+      [...state.events, ...neisAcademicEvents],
+      academicCalendarMonth,
+      className
+    );
+    const eventsByDate = new Map();
+    academicEvents.forEach((event) => {
+      if (!eventsByDate.has(event.date)) eventsByDate.set(event.date, []);
+      eventsByDate.get(event.date).push(event);
+    });
+    const [year, month] = academicCalendarMonth.split("-").map(Number);
+    const today = toISO(new Date());
+    const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+    const eventDetails = (event) => {
+      if (event.source === "neis") {
+        const target = event.grades.length ? `${event.grades.join(", ")}학년` : "전교";
+        return ["나이스", target, event.isSchoolDay ? "" : "휴업일", event.content || ""].filter(Boolean);
+      }
+      return [
+        className === "all" && Array.isArray(event.classes) ? event.classes.join(", ") : "",
+        event.memo || "",
+      ].filter(Boolean);
+    };
+    const weekRows = Array.from({ length: 6 }, (_, weekIndex) => {
+      const dayCells = days.slice(weekIndex * 7, weekIndex * 7 + 7).map((day) => {
+        const dayEvents = eventsByDate.get(day.iso) || [];
+        const eventItems = dayEvents
+          .map((event) => {
+            const details = eventDetails(event);
+            return `<li class="academic-calendar-event">
+              <strong>${escapeHtml(event.title || "학사일정")}</strong>
+              ${details.length ? `<span>${escapeHtml(details.join(" · "))}</span>` : ""}
+            </li>`;
+          })
+          .join("");
+        const classes = [
+          "academic-calendar-day",
+          day.inMonth ? "" : "is-outside",
+          day.iso === today ? "is-today" : "",
+        ].filter(Boolean).join(" ");
+        return `<div class="${classes}" role="gridcell" aria-label="${year}년 ${Number(day.iso.slice(5, 7))}월 ${day.day}일${dayEvents.length ? `, 학사일정 ${dayEvents.length}건` : ""}">
+          <span class="academic-calendar-date">${day.day}</span>
+          ${dayEvents.length ? `<span class="academic-calendar-day-count" aria-hidden="true">${dayEvents.length}건</span>` : ""}
+          <ul class="academic-calendar-events">${eventItems}</ul>
+        </div>`;
+      }).join("");
+      return `<div class="academic-calendar-row" role="row">${dayCells}</div>`;
+    }).join("");
+    const agendaItems = academicEvents
+      .map((event) => {
+        const details = eventDetails(event);
+        return `<li>
+          <time datetime="${escapeHtml(event.date)}">${formatDate(event.date)} ${weekdayLabelForDate(event.date)}</time>
+          <div><strong>${escapeHtml(event.title || "학사일정")}</strong>${details.length ? `<span>${escapeHtml(details.join(" · "))}</span>` : ""}</div>
+        </li>`;
+      })
+      .join("");
+    container.innerHTML = `<section class="academic-calendar" aria-labelledby="${container.id}Title">
+      <div class="academic-calendar-head">
+        <div>
+          <h3 id="${container.id}Title">월간 학사일정</h3>
+          <p class="muted">수동 행사와 나이스 학사일정을 함께 표시합니다.</p>
+        </div>
+        <div class="academic-calendar-controls" aria-label="월 이동">
+          <button class="ghost-button" data-calendar-shift="-1" type="button" aria-label="이전 달">이전</button>
+          <strong class="academic-calendar-month" aria-live="polite">${year}년 ${month}월</strong>
+          <button class="ghost-button" data-calendar-shift="1" type="button" aria-label="다음 달">다음</button>
+        </div>
+      </div>
+      <div class="academic-calendar-frame" role="grid" aria-label="${year}년 ${month}월 학사일정, ${academicEvents.length}건">
+        <div class="academic-calendar-weekdays" role="row">
+          ${weekdayLabels.map((label) => `<span role="columnheader">${label}</span>`).join("")}
+        </div>
+        <div class="academic-calendar-grid" role="rowgroup">${weekRows}</div>
+      </div>
+      <div class="academic-calendar-agenda">
+        <h4>이번 달 일정</h4>
+        ${agendaItems ? `<ul>${agendaItems}</ul>` : `<p class="empty">등록된 학사일정이 없습니다.</p>`}
+      </div>
+    </section>`;
   }
 
   function teacherNames() {
@@ -1665,6 +1813,7 @@
 
   function renderTeacherView() {
     if (!els.teacherViewSelect || !els.teacherWeekSchedule) return;
+    renderAcademicCalendar(els.teacherAcademicCalendar, "all");
     const names = teacherNames();
     const storedTeacher = localStorage.getItem(TEACHER_VIEW_KEY) || "";
     const currentTeacher = names.includes(els.teacherViewSelect.value)
@@ -2349,6 +2498,92 @@
       : `<p class="empty">등록된 행사가 없습니다.</p>`;
   }
 
+  function renderNeisSyncStatus(message = "") {
+    if (!els.neisSyncStatus) return;
+    if (message) {
+      els.neisSyncStatus.textContent = message;
+      return;
+    }
+    const latestSync = neisAcademicEvents.reduce((latest, event) => {
+      return event.syncedAt && event.syncedAt > latest ? event.syncedAt : latest;
+    }, "");
+    els.neisSyncStatus.textContent = latestSync
+      ? `${neisAcademicEvents.length}건 · 마지막 동기화 ${formatDateTime(latestSync)}`
+      : "아직 동기화된 나이스 학사일정이 없습니다.";
+  }
+
+  function renderNeisEventList() {
+    if (!els.neisEventList) return;
+    const upcomingEvents = neisAcademicEvents
+      .filter((event) => event.date >= toISO(new Date()))
+      .slice()
+      .sort((first, second) => first.date.localeCompare(second.date));
+    els.neisEventList.innerHTML = upcomingEvents.length
+      ? upcomingEvents
+          .map((event) => {
+            const gradeLabel = event.grades.length
+              ? `${event.grades.join(", ")}학년`
+              : "전교";
+            return `<article class="list-item">
+              <div>
+                <strong>${event.date} · ${escapeHtml(event.title)}</strong>
+                <span>${gradeLabel}${event.content ? ` · ${escapeHtml(event.content)}` : ""}</span>
+              </div>
+              <button class="text-button neutral" data-add-neis-event="${escapeHtml(event.id)}" type="button">행사 추가</button>
+            </article>`;
+          })
+          .join("")
+      : `<p class="empty">추가할 예정 나이스 학사일정이 없습니다.</p>`;
+  }
+
+  function isNeisDiscretionaryHoliday(event) {
+    return /재량\s*휴업일/.test(`${event.title || ""} ${event.content || ""}`);
+  }
+
+  async function materializeNeisDiscretionaryHolidays() {
+    if (!canRole("sync_neis_calendar")) return;
+    const holidays = neisAcademicEvents.filter(isNeisDiscretionaryHoliday);
+    const generatedIds = new Set(holidays.map((event) => `neis-holiday:${event.id}`));
+    const existingGenerated = state.events.filter((event) => String(event.id).startsWith("neis-holiday:"));
+    if (!holidays.length && !existingGenerated.length) return;
+    const nextGenerated = holidays.map((event) => ({
+      id: `neis-holiday:${event.id}`,
+      date: event.date,
+      title: "재량휴업일",
+      start: periods[0],
+      end: periods[periods.length - 1],
+      classes: classes.slice(),
+      memo: event.content ? `NEIS · ${event.content}` : "NEIS 자동 반영",
+    }));
+    const unchanged = existingGenerated.length === nextGenerated.length && nextGenerated.every((event) => {
+      const current = state.events.find((item) => item.id === event.id);
+      return current && JSON.stringify(current) === JSON.stringify(event);
+    });
+    if (unchanged) return;
+    state.events = state.events.filter((event) => !String(event.id).startsWith("neis-holiday:") || generatedIds.has(event.id));
+    nextGenerated.forEach((event) => {
+      const index = state.events.findIndex((item) => item.id === event.id);
+      if (index >= 0) state.events[index] = event;
+      else state.events.push(event);
+    });
+    await saveState("나이스 재량휴업일을 행사변경에 자동 반영했습니다.", "update_event");
+  }
+
+  async function refreshNeisAcademicEvents({ showError = false } = {}) {
+    if (typeof readAcademicEvents !== "function") return;
+    try {
+      neisAcademicEvents = await readAcademicEvents();
+      renderView();
+      if (currentRoute === "teachers") renderTeacherView();
+      renderNeisSyncStatus();
+      renderNeisEventList();
+    } catch (error) {
+      console.warn("NEIS academic calendar refresh failed:", error);
+      renderNeisSyncStatus("나이스 학사일정을 불러오지 못했습니다.");
+      if (showError) showGlobalError(friendlyRemoteError(error));
+    }
+  }
+
   function syncEventCustomFontControls() {
     const enabled = Boolean(els.eventCustomFontEnabled && els.eventCustomFontEnabled.checked);
     const scale = clamp(Number(els.eventCustomFontScale && els.eventCustomFontScale.value) || 100, 70, 150);
@@ -2372,6 +2607,8 @@
     });
     els.saveEventButton.textContent = "행사 저장";
     els.cancelEventEditButton.classList.add("is-hidden");
+    els.neisPrefillStatus.textContent = "";
+    els.neisPrefillStatus.classList.add("is-hidden");
     renderEventList();
   }
 
@@ -2395,8 +2632,161 @@
     });
     els.saveEventButton.textContent = "행사 수정 저장";
     els.cancelEventEditButton.classList.remove("is-hidden");
+    els.neisPrefillStatus.textContent = "";
+    els.neisPrefillStatus.classList.add("is-hidden");
     renderEventList();
     showMessage(els.adminMessage, "행사 내용을 불러왔습니다. 수정 후 저장하세요.");
+  }
+
+  function renderAcademicClassChecks() {
+    if (!els.academicClassChecks) return;
+    els.academicClassChecks.innerHTML = classes
+      .map((className) => {
+        return `<label class="check-item">
+          <input type="checkbox" value="${className}" checked />
+          <span>${className}</span>
+        </label>`;
+      })
+      .join("");
+  }
+
+  function renderAcademicAdmin() {
+    renderAcademicAdminCalendar();
+    renderAcademicList();
+  }
+
+  function renderAcademicAdminCalendar() {
+    if (!els.academicCalendar) return;
+    const days = buildMonthGrid(academicAdminMonth);
+    const monthEvents = eventsForMonth(state.events, academicAdminMonth, "all");
+    const eventsByDate = new Map();
+    monthEvents.forEach((event) => {
+      if (!eventsByDate.has(event.date)) eventsByDate.set(event.date, []);
+      eventsByDate.get(event.date).push(event);
+    });
+    const [year, month] = academicAdminMonth.split("-").map(Number);
+    const today = toISO(new Date());
+    const focusedDate = els.academicDate ? els.academicDate.value : "";
+    const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+    if (els.academicMonthLabel) {
+      els.academicMonthLabel.textContent = `${year}년 ${month}월 · ${monthEvents.length}건`;
+    }
+    els.academicCalendar.setAttribute("aria-label", `${year}년 ${month}월 학사일정 관리, ${monthEvents.length}건`);
+    const weekRows = Array.from({ length: 6 }, (_, weekIndex) => {
+      const dayCells = days.slice(weekIndex * 7, weekIndex * 7 + 7).map((day) => {
+        const dayEvents = eventsByDate.get(day.iso) || [];
+        const eventItems = dayEvents
+          .map((event) => {
+            return `<span class="academic-calendar-event">
+              <strong>${escapeHtml(event.title || "학사일정")}</strong>
+              <span>${formatPeriodRange(event.start, event.end)}</span>
+            </span>`;
+          })
+          .join("");
+        const cellClasses = [
+          "academic-calendar-day",
+          "academic-admin-day",
+          day.inMonth ? "" : "is-outside",
+          day.iso === today ? "is-today" : "",
+          day.iso === focusedDate ? "is-selected" : "",
+        ].filter(Boolean).join(" ");
+        const label = `${day.iso.slice(0, 4)}년 ${Number(day.iso.slice(5, 7))}월 ${day.day}일${dayEvents.length ? `, 학사일정 ${dayEvents.length}건` : ""}, 이 날짜로 새 학사일정 입력`;
+        return `<button class="${cellClasses}" type="button" role="gridcell" data-academic-date="${day.iso}" aria-label="${label}">
+          <span class="academic-calendar-date">${day.day}</span>
+          ${dayEvents.length ? `<span class="academic-calendar-day-count" aria-hidden="true">${dayEvents.length}건</span>` : ""}
+          <span class="academic-calendar-events">${eventItems}</span>
+        </button>`;
+      }).join("");
+      return `<div class="academic-calendar-row" role="row">${dayCells}</div>`;
+    }).join("");
+    els.academicCalendar.innerHTML = `<div class="academic-calendar-weekdays" role="row">
+      ${weekdayLabels.map((label) => `<span role="columnheader">${label}</span>`).join("")}
+    </div>
+    <div class="academic-calendar-grid" role="rowgroup">${weekRows}</div>`;
+  }
+
+  function renderAcademicList() {
+    if (!els.academicList) return;
+    const [year, month] = academicAdminMonth.split("-").map(Number);
+    const monthEvents = eventsForMonth(state.events, academicAdminMonth, "all");
+    els.academicList.innerHTML = monthEvents.length
+      ? monthEvents
+          .map((event) => {
+            return `<article class="list-item${event.id === selectedAcademicId ? " is-active" : ""}">
+              <div>
+                <strong>${formatDate(event.date)} ${weekdayLabelForDate(event.date)}요일 · ${escapeHtml(event.title || "학사일정")}</strong>
+                <span>${escapeHtml((event.classes || []).join(", "))} · ${formatPeriodRange(event.start, event.end)}${event.memo ? ` · ${escapeHtml(event.memo)}` : ""}</span>
+              </div>
+              <div class="list-actions">
+                <button class="text-button neutral" data-edit-academic="${event.id}" type="button">수정</button>
+                <button class="text-button" data-delete-academic="${event.id}" type="button">삭제</button>
+              </div>
+            </article>`;
+          })
+          .join("")
+      : `<p class="empty">${year}년 ${month}월에 등록된 학사일정이 없습니다.</p>`;
+  }
+
+  function resetAcademicForm(date = "") {
+    selectedAcademicId = "";
+    if (date) els.academicDate.value = date;
+    els.academicTitle.value = "";
+    els.academicMemo.value = "";
+    els.academicStart.value = "7";
+    els.academicEnd.value = "9";
+    $$("#academicClassChecks input").forEach((input) => {
+      input.checked = true;
+    });
+    els.saveAcademicButton.textContent = "학사일정 저장";
+    els.cancelAcademicEditButton.classList.add("is-hidden");
+    renderAcademicAdmin();
+  }
+
+  function loadAcademicEditor(eventId) {
+    const item = state.events.find((event) => event.id === eventId);
+    if (!item) {
+      showMessage(els.adminMessage, "수정할 학사일정을 찾을 수 없습니다.");
+      return;
+    }
+    selectedAcademicId = item.id;
+    academicAdminMonth = monthKeyOf(item.date) || academicAdminMonth;
+    els.academicDate.value = item.date;
+    els.academicStart.value = String(item.start);
+    els.academicEnd.value = String(item.end);
+    els.academicTitle.value = item.title || "";
+    els.academicMemo.value = item.memo || "";
+    $$("#academicClassChecks input").forEach((input) => {
+      input.checked = Array.isArray(item.classes) && item.classes.includes(input.value);
+    });
+    els.saveAcademicButton.textContent = "학사일정 수정 저장";
+    els.cancelAcademicEditButton.classList.remove("is-hidden");
+    renderAcademicAdmin();
+    showMessage(els.adminMessage, "학사일정을 불러왔습니다. 수정 후 저장하세요.");
+  }
+
+  function loadNeisEventEditor(eventId) {
+    const item = neisAcademicEvents.find((event) => event.id === eventId);
+    if (!item) {
+      showMessage(els.adminMessage, "불러올 나이스 학사일정을 찾을 수 없습니다.");
+      return;
+    }
+    selectedEventId = "";
+    els.eventDate.value = item.date;
+    els.eventTitle.value = item.title || "";
+    els.eventMemo.value = item.content || "";
+    els.eventCustomFontEnabled.checked = false;
+    els.eventCustomFontScale.value = String(clamp(Number(state.slideshow && state.slideshow.eventFontScale) || 100, 70, 150));
+    syncEventCustomFontControls();
+    $$("#eventClassChecks input").forEach((input) => {
+      const grade = Number(input.value.split("-")[0]);
+      input.checked = item.grades.length === 0 || item.grades.includes(grade);
+    });
+    els.saveEventButton.textContent = "행사 저장";
+    els.cancelEventEditButton.classList.add("is-hidden");
+    els.neisPrefillStatus.textContent = "날짜·행사명·학년을 채웠습니다. 시작·끝 교시를 선택하고 저장하세요.";
+    els.neisPrefillStatus.classList.remove("is-hidden");
+    renderEventList();
+    els.eventStart.focus();
   }
 
   function renderNoticeList() {
@@ -2473,6 +2863,7 @@
       api_key_create: "API key 발급",
       api_key_revoke: "API key 폐기",
       api_key_delete: "API key 삭제",
+      sync_neis_calendar: "나이스 학사일정 동기화",
     };
     return labels[action] || action || "unknown";
   }
@@ -2686,6 +3077,9 @@
     renderChangeWeekdayFilter();
     renderChangeList();
     renderEventList();
+    renderAcademicAdmin();
+    renderNeisSyncStatus();
+    renderNeisEventList();
     renderNoticeList();
     renderSlideScheduleDateOptions();
     els.slideInterval.value = state.slideshow.intervalSeconds;
@@ -2996,6 +3390,8 @@
     fillSelect(els.baseMergeEnd, periods, (period) => `${period}교시`);
     fillSelect(els.eventStart, periods, (period) => `${period}교시`);
     fillSelect(els.eventEnd, periods, (period) => `${period}교시`);
+    fillSelect(els.academicStart, periods, (period) => `${period}교시`);
+    fillSelect(els.academicEnd, periods, (period) => `${period}교시`);
 
     const today = toISO(new Date());
     if (isBoardMode) {
@@ -3016,6 +3412,9 @@
     els.baseMergeEnd.value = "2";
     els.eventStart.value = "7";
     els.eventEnd.value = "9";
+    els.academicDate.value = today;
+    els.academicStart.value = "7";
+    els.academicEnd.value = "9";
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
     els.slideLessonFontScale.value = clamp(Number(state.slideshow && state.slideshow.lessonFontScale) || 100, 70, 150);
@@ -3032,6 +3431,7 @@
     renderSpecialDateHint();
     renderBaseMergeClassChecks();
     renderEventClassChecks();
+    renderAcademicClassChecks();
     loadNoticeEditor(selectedNoticeId);
   }
 
@@ -3155,6 +3555,16 @@
         moveSlideshow(-1, true);
         startSlideshow();
       }
+    });
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-calendar-shift]");
+      if (!button) return;
+      const calendarHost = button.closest("#viewAcademicCalendar, #teacherAcademicCalendar");
+      const direction = Number(button.dataset.calendarShift);
+      academicCalendarMonth = shiftMonth(academicCalendarMonth, direction);
+      renderView();
+      if (currentRoute === "teachers") renderTeacherView();
+      if (calendarHost) calendarHost.querySelector(`[data-calendar-shift="${direction}"]`)?.focus();
     });
     window.addEventListener("popstate", () => {
       routeTo(routeFromPath(), { replace: true });
@@ -3874,6 +4284,30 @@
       saveState("해당 교과 변경을 되돌렸습니다.", "update_change");
     });
 
+    els.syncNeisButton.addEventListener("click", async () => {
+      if (!ensurePermission("sync_neis_calendar", "나이스 학사일정 동기화")) return;
+      setControlDisabled(els.syncNeisButton, true);
+      renderNeisSyncStatus("나이스 학사일정을 동기화하는 중입니다.");
+      const result = await syncNeisCalendarRequest({});
+      if (!result || result.ok === false) {
+        setControlDisabled(els.syncNeisButton, false);
+        const detail = friendlyRemoteError(result && result.error);
+        renderNeisSyncStatus(`동기화 실패 · ${detail}`);
+        showGlobalError(`나이스 학사일정 동기화 실패: ${detail}`);
+        return;
+      }
+      await refreshNeisAcademicEvents({ showError: true });
+      await materializeNeisDiscretionaryHolidays();
+      setControlDisabled(els.syncNeisButton, !canRole("sync_neis_calendar"));
+    });
+
+    els.neisEventList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-add-neis-event]");
+      if (!button) return;
+      if (!ensurePermission("update_event", "행사 추가")) return;
+      loadNeisEventEditor(button.dataset.addNeisEvent);
+    });
+
     els.saveEventButton.addEventListener("click", () => {
       if (!ensurePermission("update_event", "행사 수정")) return;
       const title = els.eventTitle.value.trim();
@@ -3933,6 +4367,80 @@
         resetEventForm();
       }
       saveState("행사를 삭제했습니다.", "update_event");
+    });
+
+    if (els.academicCalendar) {
+      els.academicCalendar.addEventListener("click", (event) => {
+        const cell = event.target.closest("[data-academic-date]");
+        if (!cell || cell.disabled) return;
+        academicAdminMonth = monthKeyOf(cell.dataset.academicDate) || academicAdminMonth;
+        resetAcademicForm(cell.dataset.academicDate);
+        els.academicTitle.focus();
+      });
+    }
+
+    $$("[data-academic-shift]").forEach((button) => {
+      button.addEventListener("click", () => {
+        academicAdminMonth = shiftMonth(academicAdminMonth, Number(button.dataset.academicShift));
+        renderAcademicAdmin();
+      });
+    });
+
+    els.academicDate.addEventListener("change", () => {
+      academicAdminMonth = monthKeyOf(els.academicDate.value) || academicAdminMonth;
+      renderAcademicAdmin();
+    });
+
+    els.saveAcademicButton.addEventListener("click", () => {
+      if (!ensurePermission("update_event", "학사일정 수정")) return;
+      const title = els.academicTitle.value.trim();
+      const start = Number(els.academicStart.value);
+      const end = Number(els.academicEnd.value);
+      const eventClasses = $$("#academicClassChecks input:checked").map((input) => input.value);
+      if (!els.academicDate.value || !title || eventClasses.length === 0 || start > end) {
+        showMessage(els.adminMessage, "학사일정 날짜, 이름, 학급, 교시 범위를 확인하세요.");
+        return;
+      }
+      const currentEvent = state.events.find((item) => item.id === selectedAcademicId) || null;
+      const nextEvent = {
+        id: selectedAcademicId || `${Date.now()}`,
+        date: els.academicDate.value,
+        title,
+        start,
+        end,
+        classes: eventClasses,
+        memo: els.academicMemo.value.trim(),
+        ...(currentEvent && currentEvent.useCustomSlideFontScale === true
+          ? { useCustomSlideFontScale: true, slideFontScale: eventSlideFontScale(currentEvent) }
+          : {}),
+      };
+      const wasEditing = Boolean(selectedAcademicId);
+      state.events = upsertEvent(state.events, nextEvent);
+      academicAdminMonth = monthKeyOf(nextEvent.date) || academicAdminMonth;
+      resetAcademicForm(nextEvent.date);
+      saveState(wasEditing ? "학사일정을 수정했습니다." : "학사일정을 저장했습니다.", "update_event");
+    });
+
+    els.cancelAcademicEditButton.addEventListener("click", () => {
+      resetAcademicForm();
+      showMessage(els.adminMessage, "학사일정 수정을 취소했습니다.");
+    });
+
+    els.academicList.addEventListener("click", async (event) => {
+      const editButton = event.target.closest("[data-edit-academic]");
+      if (editButton) {
+        loadAcademicEditor(editButton.dataset.editAcademic);
+        return;
+      }
+      const button = event.target.closest("[data-delete-academic]");
+      if (!button) return;
+      if (!ensurePermission("update_event", "학사일정 수정")) return;
+      if (!(await confirmAction("학사일정을 삭제할까요?"))) return;
+      state.events = state.events.filter((item) => item.id !== button.dataset.deleteAcademic);
+      if (selectedAcademicId === button.dataset.deleteAcademic) {
+        resetAcademicForm();
+      }
+      saveState("학사일정을 삭제했습니다.", "update_event");
     });
 
     els.slideEventFontScale.addEventListener("input", () => {
@@ -4186,6 +4694,7 @@
     syncRemoteForRoute();
     if (isBoardMode) startBoardRefreshTimer();
     refreshFromRemote();
+    await refreshNeisAcademicEvents();
   }
 
   init();
