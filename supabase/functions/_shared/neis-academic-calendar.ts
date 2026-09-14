@@ -43,6 +43,8 @@ export type NeisAcademicEvent = {
   readonly content: string;
   readonly grades: readonly number[];
   readonly isSchoolDay: boolean;
+  /** NEIS SBTR_DD_SC_NM 원본값. "공휴일" / "휴업일" / "해당없음" 등. */
+  readonly holidayKind: string;
   readonly sourceUpdatedAt: string;
 };
 
@@ -128,6 +130,7 @@ export async function parseNeisSchedulePage(
       content: row.EVENT_CNTNT,
       grades,
       isSchoolDay: row.SBTR_DD_SC_NM === "해당없음",
+      holidayKind: row.SBTR_DD_SC_NM,
       sourceUpdatedAt: isoDate((row.LOAD_DTM ?? row.AA_YMD).slice(0, 8)),
     };
   }));

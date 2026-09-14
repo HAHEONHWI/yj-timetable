@@ -52,6 +52,9 @@ async function fetchPage(
   pageIndex: number,
 ) {
   const value: unknown = await ky.get("https://open.neis.go.kr/hub/SchoolSchedule", {
+    // ky defaults to `accept: application/json` for .json(), and NEIS answers a
+    // single-type Accept with 500. Any list containing */* negotiates fine.
+    headers: { accept: "application/json, text/plain, */*" },
     searchParams: {
       KEY: apiKey,
       Type: "json",
@@ -161,6 +164,7 @@ async function handleRequest(req: Request): Promise<Response> {
     content: event.content,
     grades: event.grades,
     is_school_day: event.isSchoolDay,
+    holiday_kind: event.holidayKind,
     source_updated_at: event.sourceUpdatedAt,
   }));
   const { data: insertedCount, error: replaceError } = await supabaseAdmin.rpc(

@@ -21,6 +21,7 @@
   --blue-soft: #8fb6de;
   --blue-tint: rgba(91, 147, 207, 0.12);
   --blue-tint-strong: rgba(91, 147, 207, 0.22);
+  --blue-text: #8fb6de;
 
   --st-change: #c2913f;
   --st-change-tx: #ddb46b;
@@ -39,6 +40,11 @@
   --event-bg: rgba(75, 151, 121, 0.2);
   --event-bg-strong: rgba(75, 151, 121, 0.3);
   --event-text: #9bd0b7;
+
+  /* 공휴일 전용. 신설 수업 빨강과 값은 같지만 의미가 달라 별도 토큰으로 둔다. */
+  --st-holiday: #c06565;
+  --holiday-bg: rgba(192, 101, 101, 0.16);
+  --holiday-text: #de9595;
 
   --green: #4b9779;
   --green-soft: #9bd0b7;
@@ -133,6 +139,7 @@ html[data-theme="light"] {
   --blue-soft: #6b83e3;
   --blue-tint: rgba(59, 91, 219, 0.08);
   --blue-tint-strong: rgba(59, 91, 219, 0.15);
+  --blue-text: #2c46b3;
 
   --st-change: #9a6a00;
   --st-change-tx: #7d5600;
@@ -151,6 +158,10 @@ html[data-theme="light"] {
   --event-bg: rgba(15, 138, 99, 0.11);
   --event-bg-strong: rgba(15, 138, 99, 0.2);
   --event-text: #0b7252;
+
+  --st-holiday: #c23b5a;
+  --holiday-bg: rgba(194, 59, 90, 0.12);
+  --holiday-text: #a12c48;
 
   --green: #0f8a63;
   --green-soft: #0b7252;
@@ -1752,6 +1763,32 @@ body.board-mode .schedule-shell {
   opacity: 0.82;
 }
 
+/* NEIS-sourced rows are read-only, so they take the blue informational tint
+   instead of the green "editable event" tint used by manually added events. */
+.academic-calendar-event.is-neis {
+  border-left-color: var(--blue);
+  background: var(--blue-tint);
+  color: var(--blue-text);
+}
+
+/* 공휴일은 나이스 파랑보다 우선한다: 그날은 수업이 없다는 신호가 먼저다. */
+.academic-calendar-event.is-holiday {
+  border-left-color: var(--st-holiday);
+  background: var(--holiday-bg);
+  color: var(--holiday-text);
+}
+
+.academic-calendar-day.is-holiday .academic-calendar-date,
+.academic-calendar-agenda li.is-holiday strong {
+  color: var(--holiday-text);
+}
+
+.academic-calendar-day.is-holiday .academic-calendar-day-count {
+  border-left-color: var(--st-holiday);
+  background: var(--holiday-bg);
+  color: var(--holiday-text);
+}
+
 .academic-admin {
   display: grid;
   gap: var(--space-16);
@@ -2807,6 +2844,45 @@ textarea {
 
 .list-item.is-disabled {
   opacity: 0.62;
+}
+
+.list-item.is-neis {
+  border-left: 3px solid var(--blue);
+}
+
+.list-item.is-neis.is-holiday {
+  border-left-color: var(--st-holiday);
+}
+
+.list-item.is-holiday .list-tag {
+  background: var(--holiday-bg);
+  color: var(--holiday-text);
+}
+
+/* `.list-item span` resets color/size for detail text, so the tag has to
+   out-specify it rather than sit at plain class specificity. */
+.list-item .list-tag {
+  flex: 0 0 auto;
+  align-self: center;
+  border-radius: var(--radius-sm);
+  background: var(--blue-tint);
+  color: var(--blue-text);
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.academic-list-heading {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.academic-list-heading:first-child {
+  margin-top: 0;
 }
 
 .list-head {
