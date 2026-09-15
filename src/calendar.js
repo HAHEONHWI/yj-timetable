@@ -66,7 +66,24 @@
     return list.sort((first, second) => String(first.date).localeCompare(String(second.date)) || String(first.title || "").localeCompare(String(second.title || ""), "ko"));
   }
 
-  const api = { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, upsertEvent };
+  function specialSaturdayDatesFromSundayEvents(events, cutoffDate, specialSchedules) {
+    const existing = specialSchedules && typeof specialSchedules === "object" ? specialSchedules : {};
+    const saturdayDates = new Set();
+    (Array.isArray(events) ? events : []).forEach((event) => {
+      if (!event || event.source !== "neis" || !event.isSchoolDay) return;
+      const match = String(event.date || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return;
+      const sunday = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      if (toISO(sunday) !== event.date || sunday.getDay() !== 0) return;
+      const saturday = new Date(sunday);
+      saturday.setDate(sunday.getDate() + 6);
+      const saturdayISO = toISO(saturday);
+      if (saturdayISO >= cutoffDate && !existing[saturdayISO]) saturdayDates.add(saturdayISO);
+    });
+    return [...saturdayDates].sort();
+  }
+
+  const api = { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, specialSaturdayDatesFromSundayEvents, upsertEvent };
   global.TimetableCalendar = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
