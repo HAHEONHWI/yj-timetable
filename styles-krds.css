@@ -331,6 +331,21 @@ textarea {
   min-height: var(--space-80);
 }
 
+.admin-login-button {
+  min-height: var(--space-40);
+  border-color: var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--ink-strong);
+  padding-inline: var(--space-16);
+  font-size: var(--text-14);
+  font-weight: 700;
+}
+
+.topbar-utility .theme-button {
+  margin-left: var(--space-8);
+}
+
 .brand {
   flex: none;
   gap: var(--space-12);
@@ -1065,6 +1080,12 @@ body.board-mode .board-lesson.is-merge small {
   .theme-button {
     min-width: var(--space-58);
     height: var(--control-touch);
+  }
+
+  .admin-login-button {
+    min-height: var(--space-40);
+    padding-inline: var(--space-10);
+    font-size: var(--text-13);
   }
 
   .nav {
