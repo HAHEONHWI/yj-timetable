@@ -259,30 +259,6 @@ button {
   line-height: 1.4;
 }
 
-.admin-login-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  align-self: center;
-  min-height: var(--control-compact);
-  margin-left: auto;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--ink);
-  padding: 0 var(--space-14);
-  font-size: var(--text-14);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.admin-login-button:hover {
-  border-color: var(--blue);
-  background: var(--blue-tint);
-  color: var(--blue-dark);
-}
-
 .theme-button:hover {
   border-color: var(--blue);
   color: var(--ink);
