@@ -19,7 +19,7 @@
     isSupabaseEnabled,
     changeKey,
   } = window.TimetableStore;
-  const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, upsertEvent } = window.TimetableCalendar;
+  const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, specialSaturdayDatesFromSundayEvents, upsertEvent } = window.TimetableCalendar;
   let state = read();
   let selectedDate = "";
   // 조회 화면 하단과 관리자 학사일정 탭이 같은 달을 보도록 상태를 하나만 둔다.
@@ -2733,24 +2733,15 @@
   }
 
   // 주말은 특별시간표가 있어야 조회 화면에 뜬다. 나이스에 수업일로 표시된
-  // 주말 행사(공휴일·휴업일 라벨이 아닌 것)가 있으면 그 날짜를 열어둔다.
+  // 일요일 행사가 있으면 그 다음 토요일을 열어둔다.
   // 교과를 하나도 안 넣으면 저장이 거부되므로 첫 학급 1교시에만 "-"를 둔다.
   // 관리자가 이미 짜둔 특별시간표는 절대 덮어쓰지 않는다.
-  function isNeisWeekendActivity(event) {
-    return Boolean(event)
-      && event.source === "neis"
-      && event.isSchoolDay
-      && isWeekend(event.date);
-  }
-
-  async function materializeNeisWeekendSpecialSchedules() {
+  async function materializeSaturdaySpecialSchedulesFromSundayEvents() {
     if (!canRole("update_special")) return;
     // cleanupExpiredScheduleData와 같은 기준을 써서, 만들자마자 지워질
     // 지난 날짜는 애초에 만들지 않는다.
     const cutoffDate = toISO(mondayOf(new Date()));
-    const dates = [...new Set(neisAcademicEvents.filter(isNeisWeekendActivity).map((event) => event.date))]
-      .filter((date) => date >= cutoffDate && !state.specialSchedules[date])
-      .sort();
+    const dates = specialSaturdayDatesFromSundayEvents(neisAcademicEvents, cutoffDate, state.specialSchedules);
     if (!dates.length) return;
     dates.forEach((date) => {
       const schedule = {};
@@ -2759,7 +2750,7 @@
       });
       state.specialSchedules[date] = schedule;
     });
-    await saveState(`나이스 주말 행사 ${dates.length}일의 특별시간표를 생성했습니다.`, "update_special");
+    await saveState(`나이스 일요일 행사 ${dates.length}건의 토요일 특별시간표를 생성했습니다.`, "update_special");
   }
 
   async function refreshNeisAcademicEvents({ showError = false } = {}) {
@@ -4545,7 +4536,7 @@
       }
       await refreshNeisAcademicEvents({ showError: true });
       await materializeNeisDiscretionaryHolidays();
-      await materializeNeisWeekendSpecialSchedules();
+      await materializeSaturdaySpecialSchedulesFromSundayEvents();
       setControlDisabled(els.syncNeisButton, !canRole("sync_neis_calendar"));
     });
 
