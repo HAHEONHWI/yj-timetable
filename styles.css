@@ -820,6 +820,7 @@ button:focus-visible {
   display: flex;
   gap: 2px;
   overflow-x: auto;
+  overflow-y: hidden;
   border-bottom: 1px solid var(--line);
   margin-bottom: 14px;
 }
