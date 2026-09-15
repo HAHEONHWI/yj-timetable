@@ -66,8 +66,13 @@
     return list.sort((first, second) => String(first.date).localeCompare(String(second.date)) || String(first.title || "").localeCompare(String(second.title || ""), "ko"));
   }
 
-  function specialSaturdayDatesFromSundayEvents(events, cutoffDate, specialSchedules) {
+  function specialSaturdayDatesFromSundayEvents(events, cutoffDate, specialSchedules, generationDate = cutoffDate) {
     const existing = specialSchedules && typeof specialSchedules === "object" ? specialSchedules : {};
+    const generation = new Date(`${generationDate}T00:00:00`);
+    if (Number.isNaN(generation.getTime())) return [];
+    const generationWindowEnd = new Date(generation);
+    generationWindowEnd.setDate(generation.getDate() + 7);
+    const latestEventDate = toISO(generationWindowEnd);
     const saturdayDates = new Set();
     (Array.isArray(events) ? events : []).forEach((event) => {
       if (!event || event.source !== "neis" || !event.isSchoolDay) return;
@@ -75,6 +80,7 @@
       if (!match) return;
       const sunday = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
       if (toISO(sunday) !== event.date || sunday.getDay() !== 0) return;
+      if (event.date < generationDate || event.date > latestEventDate) return;
       const saturday = new Date(sunday);
       saturday.setDate(sunday.getDate() + 6);
       const saturdayISO = toISO(saturday);

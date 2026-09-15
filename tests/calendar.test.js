@@ -93,24 +93,29 @@ const sundayEvents = [
 
 // Given: NEIS에 수업일인 일요일 행사가 있다.
 // When: 자동 생성할 특별 토요일을 계산한다.
-// Then: 각 일요일의 다음 토요일만 중복 없이 반환한다.
+// Then: 행사 1주 전부터 각 일요일의 다음 토요일만 중복 없이 반환한다.
 assert.deepEqual(
-  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", {}),
-  ["2026-10-31", "2027-01-16"]
+  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", {}, "2026-10-18"),
+  ["2026-10-31"]
+);
+assert.deepEqual(
+  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", {}, "2026-10-17"),
+  []
 );
 
 // Given: 관리자가 이미 만든 토요일 특별시간표와 지난 주 일요일 행사가 있다.
 // When: 자동 생성 대상을 계산한다.
 // Then: 기존 시간표와 cutoff 이전 날짜는 건너뛴다.
 assert.deepEqual(
-  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", { "2026-10-31": {} }),
-  ["2027-01-16"]
+  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", { "2026-10-31": {} }, "2026-10-18"),
+  []
 );
 assert.deepEqual(
   specialSaturdayDatesFromSundayEvents(
     [{ source: "neis", isSchoolDay: true, date: "2026-09-06", title: "지난 일요일 행사" }],
     "2026-09-14",
-    {}
+    {},
+    "2026-09-14"
   ),
   []
 );
