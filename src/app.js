@@ -2737,7 +2737,7 @@
   // 교과를 하나도 안 넣으면 저장이 거부되므로 첫 학급 1교시에만 "-"를 둔다.
   // 관리자가 이미 짜둔 특별시간표는 절대 덮어쓰지 않는다.
   async function materializeSaturdaySpecialSchedulesFromSundayEvents() {
-    if (!canRole("update_special")) return;
+    if (!isLoggedIn() || !canRole("update_special")) return;
     // cleanupExpiredScheduleData와 같은 기준을 써서, 만들자마자 지워질
     // 지난 날짜는 애초에 만들지 않는다.
     const cutoffDate = toISO(mondayOf(new Date()));
@@ -2750,7 +2750,7 @@
       });
       state.specialSchedules[date] = schedule;
     });
-    await saveState(`나이스 일요일 행사 ${dates.length}건의 토요일 특별시간표를 생성했습니다.`, "update_special");
+    await saveState(`나이스 일요일 행사 ${dates.length}건의 토요일 특별시간표를 생성했습니다.`, "update_special", { silent: true });
   }
 
   async function refreshNeisAcademicEvents({ showError = false } = {}) {
@@ -3555,7 +3555,7 @@
     return /Invalid state|Failed to fetch|NetworkError|Load failed|연결|network error/i.test(text) || /^5\d\d/.test(text.trim());
   }
 
-  async function saveState(message, action = "save_state") {
+  async function saveState(message, action = "save_state", options = {}) {
     pendingRetryMessage = message;
     pendingRetryAction = action;
     updateLastSaveStatus("saving");
@@ -3587,8 +3587,10 @@
     pendingRetryMessage = "";
     pendingRetryAction = "save_state";
     markLastSaveSuccess();
-    showGlobalStatus(message, "success", { autoHide: true });
-    showMessage(els.adminMessage, `${message} · ${isSupabaseEnabled && isSupabaseEnabled() ? "원격 동기화 완료" : "이 브라우저에 저장됨"}`);
+    if (!options.silent) {
+      showGlobalStatus(message, "success", { autoHide: true });
+      showMessage(els.adminMessage, `${message} · ${isSupabaseEnabled && isSupabaseEnabled() ? "원격 동기화 완료" : "이 브라우저에 저장됨"}`);
+    }
     return result || { ok: true };
   }
 
@@ -4990,8 +4992,9 @@
     analyticsRouteTrackingReady = true;
     syncRemoteForRoute();
     if (isBoardMode) startBoardRefreshTimer();
-    refreshFromRemote();
+    await refreshFromRemote();
     await refreshNeisAcademicEvents();
+    await materializeSaturdaySpecialSchedulesFromSundayEvents();
   }
 
   init();
