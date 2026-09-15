@@ -2006,7 +2006,7 @@ body.board-mode .schedule-shell {
 .base-merge-cell {
   z-index: 2;
   background: var(--line);
-  color: var(--blue-soft);
+  color: var(--ink-strong);
   box-shadow: var(--shadow-overlay);
 }
 
