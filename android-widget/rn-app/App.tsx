@@ -527,7 +527,9 @@ function AppContent() {
               <Text numberOfLines={1} style={[styles.subtitle, {color: colors.secondary}]}>
                 {activeTab === '시간표'
                   ? (selectedClass ? selectedClass + '반 · ' : '') + '이번 주 시간표'
-                  : teacherTitle + ' · ' + subjectSummary + ' · 주간 ' + weeklyHours + '시간'}
+                  : firstRun
+                    ? '시간표를 볼 교사를 선택하세요'
+                    : teacherTitle + ' · ' + subjectSummary + ' · 주간 ' + weeklyHours + '시간'}
               </Text>
             </View>
             {activeTab === '시간표' ? null : (
@@ -536,7 +538,7 @@ function AppContent() {
               onPress={openTeacherModal}
               style={[styles.teacherPicker, {borderColor: colors.accent}]}>
               <Text numberOfLines={1} style={[styles.teacherPickerText, {color: colors.primary}]}>
-                {teacherTitle + ' (' + (subjects[0] || '교사') + ')'}
+                {firstRun ? teacherTitle : teacherTitle + ' (' + (subjects[0] || '교사') + ')'}
               </Text>
               <Text style={[styles.chevron, {color: colors.secondary}]}>⌄</Text>
             </Pressable>
