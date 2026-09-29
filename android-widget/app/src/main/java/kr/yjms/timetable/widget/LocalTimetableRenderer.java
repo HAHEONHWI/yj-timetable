@@ -5,425 +5,488 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class LocalTimetableRenderer {
+public final class LocalTimetableRenderer {
 
-    // 칩 가로폭에 맞게 글씨 크기를 조절하며, 길 경우 자동으로 2줄 분리(Multi-line)하여 큼직하게 그리는 고출력 드로잉 엔진
-    private static void drawTextFitWidth(Canvas canvas, String text, float centerX, float centerY, Paint paint, float maxWidth) {
-        if (text == null || text.isEmpty()) return;
-        
-        float originalSize = paint.getTextSize();
-        
-        // 1. 한 줄에 들어오면 원본 크기로 중앙에 깨끗이 드로잉
-        if (paint.measureText(text) <= maxWidth) {
-            Paint.FontMetrics fm = paint.getFontMetrics();
-            float offset = (fm.descent + fm.ascent) / 2f;
-            canvas.drawText(text, centerX, centerY - offset, paint);
-            return;
+    private static final String[] START_TIMES = {
+        "08:50", "09:50", "10:50", "11:50", "13:30", "14:30", "15:30", "16:30", "17:30"
+    };
+    private static final String[] END_TIMES = {
+        "09:35", "10:35", "11:35", "12:35", "14:15", "15:15", "16:15", "17:15", "18:15"
+    };
+
+    private LocalTimetableRenderer() {}
+
+    private static final class LessonRow {
+        final int index;
+        final int period;
+        final String classes;
+        final String type;
+
+        LessonRow(int index, int period, String classes, String type) {
+            this.index = index;
+            this.period = period;
+            this.classes = classes;
+            this.type = type;
         }
-
-        // 2. 너비를 넘어서는 경우 자연스러운 공백 경계 혹은 중앙 지점에서 2줄 분리
-        String line1 = text;
-        String line2 = "";
-        
-        int center = text.length() / 2;
-        int spaceIdx = -1;
-        int minDiff = Integer.MAX_VALUE;
-        int searchIdx = text.indexOf(' ');
-        while (searchIdx != -1) {
-            int diff = Math.abs(searchIdx - center);
-            if (diff < minDiff) {
-                minDiff = diff;
-                spaceIdx = searchIdx;
-            }
-            searchIdx = text.indexOf(' ', searchIdx + 1);
-        }
-
-        if (spaceIdx != -1) {
-            line1 = text.substring(0, spaceIdx);
-            line2 = text.substring(spaceIdx + 1);
-        } else {
-            // 공백이 없는 긴 단어는 절반 지점에서 잘라 2줄로 배치
-            line1 = text.substring(0, center);
-            line2 = text.substring(center);
-        }
-
-        // 2줄로 나눈 뒤에도 너비를 초과하면 폰트 크기를 단계적 감쇄
-        float size = originalSize;
-        while ((paint.measureText(line1) > maxWidth || paint.measureText(line2) > maxWidth) && size > originalSize * 0.4f) {
-            size -= 1.0f;
-            paint.setTextSize(size);
-        }
-
-        // 2줄 행간 간격 산정 및 드로잉
-        Paint.FontMetrics fm = paint.getFontMetrics();
-        float lineHeight = fm.descent - fm.ascent;
-        float y1 = centerY - (lineHeight * 0.28f);
-        float y2 = centerY + (lineHeight * 0.45f);
-
-        Paint.FontMetrics fm1 = paint.getFontMetrics();
-        float offset1 = (fm1.descent + fm1.ascent) / 2f;
-        canvas.drawText(line1, centerX, y1 - offset1, paint);
-
-        if (!line2.isEmpty()) {
-            Paint.FontMetrics fm2 = paint.getFontMetrics();
-            float offset2 = (fm2.descent + fm2.ascent) / 2f;
-            canvas.drawText(line2, centerX, y2 - offset2, paint);
-        }
-
-        // 페인트 크기 복원
-        paint.setTextSize(originalSize);
     }
 
-    public static Bitmap drawTimetable(Context context, String jsonString, int width, int height) {
-        if (width < 300) width = 300;
-        if (height < 300) height = 300;
+    private static final class Timeline {
+        final List<LessonRow> lessons;
+        final int activeIndex;
+        final int firstRemainingIndex;
+        final int nextLessonIndex;
+        final String status;
 
-        // 위젯 테마 설정 로드
-        SharedPreferences prefs = context.getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
-        String theme = prefs.getString("widget_theme", "dark");
-        boolean isLight = "light".equals(theme);
+        Timeline(List<LessonRow> lessons, int activeIndex, int firstRemainingIndex, int nextLessonIndex, String status) {
+            this.lessons = lessons;
+            this.activeIndex = activeIndex;
+            this.firstRemainingIndex = firstRemainingIndex;
+            this.nextLessonIndex = nextLessonIndex;
+            this.status = status;
+        }
+    }
 
-        // 1. 위젯 실제 해상도에 맞춘 동적 비트맵 생성
+    private static final class Palette {
+        int card;
+        int border;
+        int primary;
+        int secondary;
+        int muted;
+        int divider;
+        int accent;
+        int change;
+        int added;
+        int event;
+    }
+
+    public static Bitmap drawTeacherWidget(Context context, String jsonString, int widthPx, int heightPx) {
+        int width = Math.max(1, widthPx);
+        int height = Math.max(1, heightPx);
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(0x00000000, PorterDuff.Mode.CLEAR);
 
-        // 2. 브러시 및 페인트 설정
+        float density = context.getResources().getDisplayMetrics().density;
+        canvas.save();
+        canvas.scale(density, density);
+        float widthDp = width / density;
+        float heightDp = height / density;
+
+        SharedPreferences prefs = context.getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
+        String theme = prefs.getString("widget_theme", "dark");
+        String teacherName = prefs.getString("name", "최세영").trim();
+        if (teacherName.isEmpty()) teacherName = "최세영";
+
+        Palette palette = palette("light".equals(theme));
+        Timeline timeline = buildTimeline(jsonString);
+        float inset = Math.min(3f, Math.max(1f, Math.min(widthDp, heightDp) * 0.015f));
+        RectF card = new RectF(inset, inset, widthDp - inset, heightDp - inset);
+
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setStyle(Paint.Style.FILL);
+        paint.setColor(palette.card);
+        canvas.drawRoundRect(card, 18f, 18f, paint);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(1f);
+        paint.setColor(palette.border);
+        canvas.drawRoundRect(card, 18f, 18f, paint);
+        paint.setStyle(Paint.Style.FILL);
 
-        // 3. 테마별 배경색 채우기
-        int bgMainColor = isLight ? 0xFFF8FAFC : 0xFF0F172A;
-        paint.setColor(bgMainColor);
-        canvas.drawRect(0, 0, width, height, paint);
+        float horizontalPadding = Math.min(20f, Math.max(14f, widthDp * 0.055f));
+        boolean showAgenda = heightDp >= 190f && heightDp / Math.max(widthDp, 1f) >= 0.62f;
+        String title = "용정시간표 · " + teacherName;
 
-        // 동적 척도 계산
-        float scaleX = width / 800f;
-        float scaleY = height / 800f;
-        float fontScale = Math.min(scaleX, scaleY);
+        if (showAgenda) {
+            drawExpanded(canvas, paint, card, title, timeline, palette, horizontalPadding);
+        } else {
+            drawCompact(canvas, paint, card, title, timeline, palette, horizontalPadding);
+        }
+
+        canvas.restore();
+        return bitmap;
+    }
+
+    private static Palette palette(boolean light) {
+        Palette colors = new Palette();
+        if (light) {
+            colors.card = 0xFFF8F8FA;
+            colors.border = 0xFFE0E1E5;
+            colors.primary = 0xFF202127;
+            colors.secondary = 0xFF777982;
+            colors.muted = 0xFFAAABB1;
+            colors.divider = 0xFFE3E4E8;
+            colors.accent = 0xFF397FC0;
+            colors.change = 0xFFB7852E;
+            colors.added = 0xFFB85C5C;
+            colors.event = 0xFF39866A;
+        } else {
+            colors.card = 0xFF1D1E23;
+            colors.border = 0xFF303137;
+            colors.primary = 0xFFF2F2F4;
+            colors.secondary = 0xFFA0A1A8;
+            colors.muted = 0xFF62646C;
+            colors.divider = 0xFF303137;
+            colors.accent = 0xFF5E9BD8;
+            colors.change = 0xFFD5A64B;
+            colors.added = 0xFFD07474;
+            colors.event = 0xFF55A484;
+        }
+        return colors;
+    }
+
+    private static Timeline buildTimeline(String jsonString) {
+        List<LessonRow> lessons = new ArrayList<>();
+        int currentIndex = -1;
+        int firstRemaining = 0;
+        int nextLesson = -1;
+        String status;
 
         try {
-            JSONObject root = new JSONObject(jsonString);
-            JSONArray gridArr = root.getJSONArray("grid");
+            if (jsonString != null && !jsonString.trim().isEmpty()) {
+                JSONObject root = new JSONObject(jsonString);
+                JSONArray days = root.optJSONArray("days");
+                JSONArray grid = root.optJSONArray("grid");
+                int todayIndex = findTodayIndex(days);
+                if (todayIndex >= 0 && grid != null && todayIndex < grid.length()) {
+                    JSONArray today = grid.optJSONArray(todayIndex);
+                    JSONArray periods = root.optJSONArray("periods");
+                    if (today != null) {
+                        for (int i = 0; i < today.length(); i++) {
+                            JSONArray matches = today.optJSONArray(i);
+                            if (matches == null || matches.length() == 0) continue;
 
-            // 격자 오프셋 산정
-            float leftMargin = 85f * scaleX;
-            float topMargin = 75f * scaleY;
-            float gridWidth = width - leftMargin;
-            float gridHeight = height - topMargin;
-            float colWidth = gridWidth / 5f;
-            float rowHeight = gridHeight / 9f;
-
-            // 4. 테마별 격자선 도색
-            int gridLineColor = isLight ? 0xFFCBD5E1 : 0xFF1E293B;
-            paint.setColor(gridLineColor);
-            paint.setStrokeWidth(2f * fontScale);
-            paint.setStyle(Paint.Style.STROKE);
-            
-            // 세로선 그리기
-            for (int i = 0; i <= 5; i++) {
-                float x = leftMargin + i * colWidth;
-                canvas.drawLine(x, 0, x, height, paint);
-            }
-            // 가로선 그리기
-            for (int i = 0; i <= 9; i++) {
-                float y = topMargin + i * rowHeight;
-                canvas.drawLine(0, y, width, y, paint);
-            }
-
-            // 5. 헤더 텍스트 드로잉 (요일 및 교시 라벨)
-            paint.setStyle(Paint.Style.FILL);
-            paint.setTextAlign(Paint.Align.CENTER);
-            paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
-
-            // 요일 그리기
-            int headerTextColor = isLight ? 0xFF334155 : 0xFFF8FAFC;
-            paint.setColor(headerTextColor);
-            paint.setTextSize(28f * fontScale);
-            String[] dayLabels = {"월", "화", "수", "목", "금"};
-            for (int i = 0; i < 5; i++) {
-                float x = leftMargin + i * colWidth + (colWidth / 2f);
-                float y = topMargin / 2f + (10f * scaleY);
-                canvas.drawText(dayLabels[i], x, y, paint);
-            }
-
-            // 교시 그리기
-            int labelTextColor = isLight ? 0xFF64748B : 0xFF94A3B8;
-            paint.setColor(labelTextColor);
-            paint.setTextSize(26f * fontScale);
-            for (int i = 0; i < 9; i++) {
-                float x = leftMargin / 2f;
-                float y = topMargin + i * rowHeight + (rowHeight / 2f) + (8f * scaleY);
-                canvas.drawText(String.valueOf(i + 1), x, y, paint);
-            }
-
-            // 6. 2차원 시간표 셀 병합 렌더링
-            boolean[][] visited = new boolean[5][9];
-
-            for (int d = 0; d < 5; d++) {
-                JSONArray dayRow = gridArr.optJSONArray(d);
-                if (dayRow == null) continue;
-
-                for (int p = 0; p < 9; p++) {
-                    if (visited[d][p]) continue;
-
-                    JSONArray cellMatches = dayRow.optJSONArray(p);
-                    if (cellMatches == null || cellMatches.length() == 0) continue;
-
-                    JSONObject match = cellMatches.getJSONObject(0);
-                    String title = match.getString("title");
-                    String note = match.optString("note", "");
-                    String className = match.optString("className", "");
-                    if (note.isEmpty() && !className.isEmpty()) {
-                        note = className;
-                    }
-                    String type = match.optString("type", "");
-
-                    // 연속된 세로 교시 병합(rowspan) 감지
-                    int spanRows = 1;
-                    for (int p2 = p + 1; p2 < 9; p2++) {
-                        JSONArray nextMatches = dayRow.optJSONArray(p2);
-                        if (nextMatches == null || nextMatches.length() == 0) break;
-                        JSONObject nextMatch = nextMatches.getJSONObject(0);
-                        
-                        if (title.equals(nextMatch.getString("title")) &&
-                            type.equals(nextMatch.optString("type", "")) &&
-                            note.equals(nextMatch.optString("note", ""))) {
-                            spanRows++;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    // 칩 RectF 영역 계산
-                    float gap = 5f * fontScale;
-                    float left = leftMargin + d * colWidth + gap;
-                    float top = topMargin + p * rowHeight + gap;
-                    float right = leftMargin + (d + 1) * colWidth - gap;
-                    float bottom = topMargin + (p + spanRows) * rowHeight - gap;
-                    RectF rect = new RectF(left, top, right, bottom);
-
-                    // 테마별 색상 설정
-                    int bgColor;
-                    int textColor;
-                    
-                    if (isLight) {
-                        if ("event".equals(type)) {
-                            bgColor = 0xFFCCFBF1;
-                            textColor = 0xFF0F766E;
-                        } else if ("change".equals(type)) {
-                            bgColor = 0xFFFEF3C7;
-                            textColor = 0xFFB45309;
-                        } else if ("original".equals(type)) {
-                            bgColor = 0x22F1F5F9; // 반투명 연회색 (사라진 수업)
-                            textColor = 0x4D475569; // 30% 불투명 연회색
-                        } else {
-                            bgColor = 0xFFE2E8F0;
-                            textColor = 0xFF0F172A;
-                        }
-                    } else {
-                        if ("event".equals(type)) {
-                            bgColor = 0xFF0A252B;
-                            textColor = 0xFF2DD4BF;
-                        } else if ("change".equals(type)) {
-                            bgColor = 0xFF2B1B0A;
-                            textColor = 0xFFF59E0B;
-                        } else if ("original".equals(type)) {
-                            bgColor = 0x22171D26; // 반투명 어두운회색 (사라진 수업)
-                            textColor = 0x4D94A3B8; // 30% 불투명 연회색
-                        } else {
-                            bgColor = 0xFF1E293B;
-                            textColor = 0xFFF8FAFC;
-                        }
-                    }
-
-                    // 칩 드로잉
-                    paint.setStyle(Paint.Style.FILL);
-                    paint.setColor(bgColor);
-                    canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
-
-                    // 칩 테두리 드로잉
-                    paint.setStyle(Paint.Style.STROKE);
-                    int strokeColor = isLight ? 0x22000000 : 0x44FFFFFF;
-                    if ("original".equals(type)) {
-                        strokeColor = isLight ? 0x11000000 : 0x22FFFFFF;
-                        // 사라진 수업은 테두리를 점선(Dash)으로 표출
-                        paint.setPathEffect(new android.graphics.DashPathEffect(new float[]{6f * fontScale, 4f * fontScale}, 0));
-                    }
-                    paint.setColor(strokeColor);
-                    paint.setStrokeWidth(1.5f * fontScale);
-                    canvas.drawRoundRect(rect, 10f * fontScale, 10f * fontScale, paint);
-                    paint.setPathEffect(null); // 원복
-
-                    // 텍스트 기입 페인트 설정 및 동적 비례 높이 정렬
-                    float centerX = rect.centerX();
-                    float centerY = rect.centerY();
-                    float maxTextWidth = rect.width() - (10f * fontScale); // 칩 테두리와의 여백 여유값 확보
-
-                    float titleSize = (spanRows > 1) ? (42f * fontScale) : (34f * fontScale);
-                    if (spanRows == 1 && note.isEmpty()) {
-                        titleSize = 36f * fontScale;
-                    }
-                    
-                    paint.setTextSize(titleSize);
-                    boolean isTitleMultiLine = paint.measureText(title) > maxTextWidth;
-                    int titleLines = isTitleMultiLine ? 2 : 1;
-
-                    float noteSize = (spanRows > 1) ? (26f * fontScale) : (22f * fontScale);
-                    paint.setTextSize(noteSize);
-                    
-                    boolean hasNote = !note.isEmpty();
-                    boolean isNoteMultiLine = false;
-                    if (hasNote) {
-                        isNoteMultiLine = paint.measureText(note) > maxTextWidth;
-                    }
-                    int noteLines = hasNote ? (isNoteMultiLine ? 2 : 1) : 0;
-
-                    // 각 블록의 실질 가늠 높이 산정
-                    paint.setTextSize(titleSize);
-                    Paint.FontMetrics fmTitle = paint.getFontMetrics();
-                    float titleLineHeight = fmTitle.descent - fmTitle.ascent;
-                    float titleBlockHeight = titleLines * titleLineHeight * 0.82f;
-
-                    float noteBlockHeight = 0;
-                    float noteLineHeight = 0;
-                    if (hasNote) {
-                        paint.setTextSize(noteSize);
-                        Paint.FontMetrics fmNote = paint.getFontMetrics();
-                        noteLineHeight = fmNote.descent - fmNote.ascent;
-                        noteBlockHeight = noteLines * noteLineHeight * 0.82f;
-                    }
-
-                    // 칩 높이에 비례한 간격(textGap) 산정 및 총합 높이 계산
-                    float textGap = (spanRows > 1) ? (14f * scaleY) : (4f * scaleY);
-                    float totalHeight = titleBlockHeight + (hasNote ? (noteBlockHeight + textGap) : 0);
-
-                    // 정중앙 정렬을 위한 시작 오프셋 Y
-                    float startY = centerY - (totalHeight / 2f);
-
-                    // A. 과목명/행사제목 그리기
-                    paint.setTextSize(titleSize);
-                    paint.setStyle(Paint.Style.FILL);
-                    paint.setColor(textColor);
-                    paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
-                    if ("original".equals(type)) {
-                        paint.setStrikeThruText(true);
-                    }
-
-                    if (isTitleMultiLine) {
-                        float y1 = startY + (titleLineHeight * 0.35f);
-                        float y2 = startY + (titleLineHeight * 1.25f);
-                        
-                        String line1 = title;
-                        String line2 = "";
-                        int center = title.length() / 2;
-                        int spaceIdx = -1;
-                        int minDiff = Integer.MAX_VALUE;
-                        int searchIdx = title.indexOf(' ');
-                        while (searchIdx != -1) {
-                            int diff = Math.abs(searchIdx - center);
-                            if (diff < minDiff) {
-                                minDiff = diff;
-                                spaceIdx = searchIdx;
-                            }
-                            searchIdx = title.indexOf(' ', searchIdx + 1);
-                        }
-                        if (spaceIdx != -1) {
-                            line1 = title.substring(0, spaceIdx);
-                            line2 = title.substring(spaceIdx + 1);
-                        } else {
-                            line1 = title.substring(0, center);
-                            line2 = title.substring(center);
-                        }
-
-                        float originalTitleSize = titleSize;
-                        float curSize = titleSize;
-                        while ((paint.measureText(line1) > maxTextWidth || paint.measureText(line2) > maxTextWidth) && curSize > originalTitleSize * 0.4f) {
-                            curSize -= 1.0f;
-                            paint.setTextSize(curSize);
-                        }
-                        
-                        Paint.FontMetrics fm1 = paint.getFontMetrics();
-                        canvas.drawText(line1, centerX, y1 - (fm1.descent + fm1.ascent)/2f, paint);
-                        if (!line2.isEmpty()) {
-                            Paint.FontMetrics fm2 = paint.getFontMetrics();
-                            canvas.drawText(line2, centerX, y2 - (fm2.descent + fm2.ascent)/2f, paint);
-                        }
-                        paint.setTextSize(titleSize);
-                    } else {
-                        float y = startY + (titleBlockHeight / 2f);
-                        Paint.FontMetrics fm = paint.getFontMetrics();
-                        canvas.drawText(title, centerX, y - (fm.descent + fm.ascent)/2f, paint);
-                    }
-                    paint.setStrikeThruText(false);
-
-                    // B. 학급명/메모(note) 그리기
-                    if (hasNote) {
-                        paint.setTextSize(noteSize);
-                        paint.setColor(textColor & 0xCCFFFFFF);
-                        
-                        float noteStartY = startY + titleBlockHeight + textGap;
-                        
-                        if (isNoteMultiLine) {
-                            float y1 = noteStartY + (noteLineHeight * 0.35f);
-                            float y2 = noteStartY + (noteLineHeight * 1.25f);
-                            
-                            String line1 = note;
-                            String line2 = "";
-                            int center = note.length() / 2;
-                            int spaceIdx = -1;
-                            int minDiff = Integer.MAX_VALUE;
-                            int searchIdx = note.indexOf(' ');
-                            while (searchIdx != -1) {
-                                int diff = Math.abs(searchIdx - center);
-                                if (diff < minDiff) {
-                                    minDiff = diff;
-                                    spaceIdx = searchIdx;
+                            LinkedHashMap<String, String> classTypes = new LinkedHashMap<>();
+                            for (int j = 0; j < matches.length(); j++) {
+                                JSONObject match = matches.optJSONObject(j);
+                                if (match == null) continue;
+                                String className = match.optString("className", "").trim();
+                                String type = match.optString("type", "base");
+                                if (className.isEmpty() && "event".equals(type)) {
+                                    String note = match.optString("note", "").trim();
+                                    if (note.matches("\\d-\\d(?:\\s*,\\s*\\d-\\d)*")) className = note;
                                 }
-                                searchIdx = note.indexOf(' ', searchIdx + 1);
-                            }
-                            if (spaceIdx != -1) {
-                                line1 = note.substring(0, spaceIdx);
-                                line2 = note.substring(spaceIdx + 1);
-                            } else {
-                                line1 = note.substring(0, center);
-                                line2 = note.substring(center);
-                            }
+                                if (className.isEmpty()) continue;
 
-                            float originalNoteSize = noteSize;
-                            float curSize = noteSize;
-                            while ((paint.measureText(line1) > maxTextWidth || paint.measureText(line2) > maxTextWidth) && curSize > originalNoteSize * 0.4f) {
-                                curSize -= 1.0f;
-                                paint.setTextSize(curSize);
+                                String previousType = classTypes.get(className);
+                                if (previousType == null || typePriority(type) > typePriority(previousType)) {
+                                    classTypes.put(className, type);
+                                }
                             }
-                            
-                            Paint.FontMetrics fm1 = paint.getFontMetrics();
-                            canvas.drawText(line1, centerX, y1 - (fm1.descent + fm1.ascent)/2f, paint);
-                            if (!line2.isEmpty()) {
-                                Paint.FontMetrics fm2 = paint.getFontMetrics();
-                                canvas.drawText(line2, centerX, y2 - (fm2.descent + fm2.ascent)/2f, paint);
+                            if (classTypes.isEmpty()) continue;
+
+                            StringBuilder classNames = new StringBuilder();
+                            String rowType = "base";
+                            for (String className : classTypes.keySet()) {
+                                if (classNames.length() > 0) classNames.append(", ");
+                                classNames.append(className);
+                                String type = classTypes.get(className);
+                                if (typePriority(type) > typePriority(rowType)) rowType = type;
                             }
-                            paint.setTextSize(noteSize);
-                        } else {
-                            float y = noteStartY + (noteBlockHeight / 2f);
-                            Paint.FontMetrics fm = paint.getFontMetrics();
-                            canvas.drawText(note, centerX, y - (fm.descent + fm.ascent)/2f, paint);
+                            int period = periods == null ? i + 1 : periods.optInt(i, i + 1);
+                            lessons.add(new LessonRow(i, period, classNames.toString(), rowType));
                         }
-                    }
-
-                    // 병합된 모든 셀 방문 기록 마킹
-                    for (int r = 0; r < spanRows; r++) {
-                        visited[d][p + r] = true;
                     }
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception ignored) {
+            lessons.clear();
         }
-        return bitmap;
+
+        int now = kstMinutesNow();
+        for (int i = 0; i < START_TIMES.length; i++) {
+            int start = toMinutes(START_TIMES[i]);
+            int end = toMinutes(END_TIMES[i]);
+            if (now >= start && now <= end) {
+                currentIndex = i;
+                firstRemaining = i;
+                break;
+            }
+            if (now > end) firstRemaining = i + 1;
+        }
+
+        if (currentIndex >= 0) {
+            status = (currentIndex + 1) + "교시 진행 중";
+            nextLesson = nextLessonAtOrAfter(lessons, currentIndex + 1);
+        } else if (firstRemaining == 0) {
+            status = "수업 전";
+            nextLesson = nextLessonAtOrAfter(lessons, 0);
+        } else if (firstRemaining >= START_TIMES.length) {
+            status = "오늘 수업 종료";
+        } else {
+            status = "쉬는 시간";
+            nextLesson = nextLessonAtOrAfter(lessons, firstRemaining);
+        }
+
+        return new Timeline(lessons, currentIndex, firstRemaining, nextLesson, status);
+    }
+
+    private static int findTodayIndex(JSONArray days) {
+        if (days == null) return -1;
+        SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA);
+        iso.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
+        String today = iso.format(Calendar.getInstance().getTime());
+        for (int i = 0; i < days.length(); i++) {
+            JSONObject day = days.optJSONObject(i);
+            if (day != null && today.equals(day.optString("iso", ""))) return i;
+        }
+        return -1;
+    }
+
+    private static int kstMinutesNow() {
+        SimpleDateFormat time = new SimpleDateFormat("HH:mm", Locale.US);
+        time.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
+        return toMinutes(time.format(Calendar.getInstance().getTime()));
+    }
+
+    private static int toMinutes(String time) {
+        String[] parts = time.split(":");
+        return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
+    }
+
+    private static int nextLessonAtOrAfter(List<LessonRow> lessons, int startIndex) {
+        for (LessonRow lesson : lessons) {
+            if (lesson.index >= startIndex) return lesson.index;
+        }
+        return -1;
+    }
+
+    private static int typePriority(String type) {
+        if ("new".equals(type)) return 4;
+        if ("change".equals(type)) return 3;
+        if ("event".equals(type)) return 2;
+        if ("original".equals(type)) return 1;
+        return 0;
+    }
+
+    private static void drawCompact(
+        Canvas canvas,
+        Paint paint,
+        RectF card,
+        String title,
+        Timeline timeline,
+        Palette colors,
+        float padding
+    ) {
+        float width = card.width();
+        float top = card.top;
+        float bottom = card.bottom;
+        float headerY = top + Math.min(22f, card.height() * 0.2f);
+        float labelY = top + Math.min(44f, card.height() * 0.4f);
+        float titleY = top + Math.min(67f, card.height() * 0.61f);
+        float timeY = top + Math.min(88f, card.height() * 0.81f);
+        float footerY = bottom - Math.min(12f, card.height() * 0.13f);
+
+        drawHeader(canvas, paint, title, timeline.status, card.left + padding, card.right - padding, headerY, colors);
+        drawFittedText(canvas, "다음 수업", card.left + padding, labelY, width - padding * 2f, 13f, 11f, colors.secondary, Paint.Align.LEFT, false, paint);
+
+        LessonRow next = lessonAt(timeline.lessons, timeline.nextLessonIndex);
+        String mainText = next == null ? (timeline.lessons.isEmpty() ? "오늘 수업 없음" : "오늘 수업 끝")
+            : next.period + "교시 · " + next.classes;
+        String timeText = next == null ? "예정된 수업이 없습니다"
+            : START_TIMES[next.index] + "–" + END_TIMES[next.index];
+        drawFittedText(canvas, mainText, card.left + padding, titleY, width - padding * 2f, 25f, 16f, colors.primary, Paint.Align.LEFT, true, paint);
+        drawFittedText(canvas, timeText, card.left + padding, timeY, width - padding * 2f, 15f, 11f, colors.secondary, Paint.Align.LEFT, false, paint);
+
+        drawFooter(canvas, paint, card, timeline, colors, padding, footerY, false);
+    }
+
+    private static void drawExpanded(
+        Canvas canvas,
+        Paint paint,
+        RectF card,
+        String title,
+        Timeline timeline,
+        Palette colors,
+        float padding
+    ) {
+        boolean dense = timeline.lessons.size() > 5;
+        float top = card.top;
+        float width = card.width();
+        float headerY = top + 22f;
+        float labelY = top + (dense ? 40f : 48f);
+        float titleY = top + (dense ? 63f : 76f);
+        float timeY = top + (dense ? 81f : 98f);
+        float dividerY = top + (dense ? 91f : 110f);
+        float listTop = dividerY + 5f;
+        float footerY = card.bottom - 12f;
+
+        drawHeader(canvas, paint, title, timeline.status, card.left + padding, card.right - padding, headerY, colors);
+
+        LessonRow next = lessonAt(timeline.lessons, timeline.nextLessonIndex);
+        String mainText = next == null ? (timeline.lessons.isEmpty() ? "오늘 수업 없음" : "오늘 수업 끝")
+            : next.period + "교시 · " + next.classes;
+        String timeText = next == null ? "예정된 수업이 없습니다"
+            : START_TIMES[next.index] + "–" + END_TIMES[next.index];
+        drawFittedText(canvas, "다음 수업", card.left + padding, labelY, width - padding * 2f, 13f, 11f, colors.secondary, Paint.Align.LEFT, false, paint);
+        drawFittedText(canvas, mainText, card.left + padding, titleY, width - padding * 2f, dense ? 21f : 25f, 15f, colors.primary, Paint.Align.LEFT, true, paint);
+        drawFittedText(canvas, timeText, card.left + padding, timeY, width - padding * 2f, 15f, 11f, colors.secondary, Paint.Align.LEFT, false, paint);
+
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(colors.divider);
+        canvas.drawRect(card.left + padding, dividerY, card.right - padding, dividerY + 1f, paint);
+
+        if (!timeline.lessons.isEmpty()) {
+            float availableHeight = Math.max(1f, footerY - listTop - 7f);
+            float rowHeight = availableHeight / timeline.lessons.size();
+            for (int i = 0; i < timeline.lessons.size(); i++) {
+                LessonRow lesson = timeline.lessons.get(i);
+                float rowTop = listTop + i * rowHeight;
+                float centerY = rowTop + rowHeight / 2f;
+                boolean current = lesson.index == timeline.activeIndex;
+                boolean past = lesson.index < timeline.firstRemainingIndex && !current;
+                int textColor = past ? colors.muted : colors.primary;
+                int periodColor = past ? colors.muted : colors.secondary;
+                float textSize = Math.max(9f, Math.min(15f, rowHeight * 0.55f));
+
+                if (i > 0) {
+                    paint.setColor(colors.divider);
+                    canvas.drawRect(card.left + padding + 6f, rowTop, card.right - padding, rowTop + 0.7f, paint);
+                }
+
+                int markerColor = current ? colors.accent : typeColor(lesson.type, colors);
+                if (current || !"base".equals(lesson.type)) {
+                    paint.setColor(markerColor);
+                    canvas.drawRect(card.left + padding, rowTop + 2f, card.left + padding + (current ? 2.5f : 2f), rowTop + rowHeight - 2f, paint);
+                }
+
+                float periodX = card.left + padding + 9f;
+                float classX = card.left + padding + Math.min(72f, Math.max(50f, width * 0.19f));
+                float timeX = card.right - padding - 2f;
+                float timeWidth = Math.min(54f, width * 0.19f);
+                drawFittedText(canvas, lesson.period + "교시", periodX, centerY + textSize * 0.34f, classX - periodX - 7f, textSize, 8f, periodColor, Paint.Align.LEFT, false, paint);
+                drawFittedText(canvas, lesson.classes, classX, centerY + textSize * 0.34f, timeX - classX - timeWidth, textSize, 8f, textColor, Paint.Align.LEFT, true, paint);
+                drawFittedText(canvas, START_TIMES[lesson.index], timeX, centerY + textSize * 0.34f, timeWidth, textSize, 8f, periodColor, Paint.Align.RIGHT, false, paint);
+            }
+        } else {
+            drawFittedText(canvas, "오늘 수업이 없습니다", card.left + padding, listTop + 18f, width - padding * 2f, 14f, 11f, colors.secondary, Paint.Align.LEFT, false, paint);
+        }
+
+        drawFooter(canvas, paint, card, timeline, colors, padding, footerY, true);
+    }
+
+    private static void drawHeader(
+        Canvas canvas,
+        Paint paint,
+        String title,
+        String status,
+        float left,
+        float right,
+        float baseline,
+        Palette colors
+    ) {
+        paint.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        paint.setTextSize(13f);
+        paint.setTextAlign(Paint.Align.RIGHT);
+        float statusWidth = Math.min(right - left - 10f, paint.measureText(status));
+        float titleWidth = Math.max(20f, right - left - statusWidth - 12f);
+        drawFittedText(canvas, title, left, baseline, titleWidth, 13f, 9f, colors.secondary, Paint.Align.LEFT, true, paint);
+        drawFittedText(canvas, status, right, baseline, statusWidth, 13f, 9f, colors.accent, Paint.Align.RIGHT, false, paint);
+    }
+
+    private static void drawFooter(
+        Canvas canvas,
+        Paint paint,
+        RectF card,
+        Timeline timeline,
+        Palette colors,
+        float padding,
+        float baseline,
+        boolean expanded
+    ) {
+        int remaining = 0;
+        for (LessonRow lesson : timeline.lessons) {
+            if (lesson.index >= timeline.firstRemainingIndex) remaining++;
+        }
+        String summary = "남은 수업 " + remaining + "개 · 오늘 " + timeline.lessons.size() + "개";
+        float sizeLabelWidth = expanded ? 40f : 42f;
+        drawFittedText(
+            canvas,
+            summary,
+            card.left + padding,
+            baseline,
+            card.width() - padding * 2f - sizeLabelWidth - 8f,
+            12f,
+            8f,
+            colors.secondary,
+            Paint.Align.LEFT,
+            false,
+            paint
+        );
+        drawFittedText(
+            canvas,
+            expanded ? "4 × 4" : "4 × 2",
+            card.right - padding,
+            baseline,
+            sizeLabelWidth,
+            12f,
+            9f,
+            colors.secondary,
+            Paint.Align.RIGHT,
+            false,
+            paint
+        );
+    }
+
+    private static void drawFittedText(
+        Canvas canvas,
+        String text,
+        float x,
+        float baseline,
+        float maxWidth,
+        float textSize,
+        float minTextSize,
+        int color,
+        Paint.Align align,
+        boolean bold,
+        Paint paint
+    ) {
+        if (text == null || text.isEmpty() || maxWidth <= 0f) return;
+        paint.setStyle(Paint.Style.FILL);
+        paint.setTypeface(Typeface.create("sans-serif", bold ? Typeface.BOLD : Typeface.NORMAL));
+        paint.setTextAlign(align);
+        paint.setColor(color);
+        float size = textSize;
+        paint.setTextSize(size);
+        while (paint.measureText(text) > maxWidth && size > minTextSize) {
+            size -= 0.5f;
+            paint.setTextSize(size);
+        }
+
+        String visibleText = text;
+        if (paint.measureText(visibleText) > maxWidth) {
+            while (visibleText.length() > 1 && paint.measureText(visibleText + "…") > maxWidth) {
+                visibleText = visibleText.substring(0, visibleText.length() - 1);
+            }
+            visibleText += "…";
+        }
+        canvas.drawText(visibleText, x, baseline, paint);
+    }
+
+    private static LessonRow lessonAt(List<LessonRow> lessons, int index) {
+        if (index < 0) return null;
+        for (LessonRow lesson : lessons) {
+            if (lesson.index == index) return lesson;
+        }
+        return null;
+    }
+
+    private static int typeColor(String type, Palette colors) {
+        if ("new".equals(type)) return colors.added;
+        if ("change".equals(type)) return colors.change;
+        if ("event".equals(type)) return colors.event;
+        return colors.divider;
     }
 }
