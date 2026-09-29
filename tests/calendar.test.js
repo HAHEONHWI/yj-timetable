@@ -1,5 +1,12 @@
 const assert = require("node:assert/strict");
-const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, upsertEvent } = require("../src/calendar.js");
+const {
+  buildMonthGrid,
+  eventsForMonth,
+  monthKeyOf,
+  shiftMonth,
+  specialSaturdayDatesFromSundayEvents,
+  upsertEvent,
+} = require("../src/calendar.js");
 
 // Given: 2026년 9월
 // When: 월간 달력 칸을 만든다.
@@ -74,5 +81,43 @@ assert.deepEqual(edited.map((event) => event.id), ["all", "second", "neis-first"
 // When: 저장을 시도한다.
 // Then: 목록을 망가뜨리지 않고 즉시 실패한다.
 assert.throws(() => upsertEvent(events, { date: "2026-09-01", title: "잘못된 일정" }), /id/);
+
+const sundayEvents = [
+  { source: "neis", isSchoolDay: true, date: "2026-10-25", title: "학교 행사" },
+  { source: "neis", isSchoolDay: true, date: "2026-10-25", title: "중복 행사" },
+  { source: "neis", isSchoolDay: true, date: "2027-01-10", title: "졸업 행사" },
+  { source: "neis", isSchoolDay: true, date: "2026-10-24", title: "토요일 행사는 기준 아님" },
+  { source: "manual", isSchoolDay: true, date: "2026-11-01", title: "수동 행사" },
+  { source: "neis", isSchoolDay: false, date: "2026-11-08", title: "휴업일" },
+];
+
+// Given: NEIS에 수업일인 일요일 행사가 있다.
+// When: 자동 생성할 특별 토요일을 계산한다.
+// Then: 행사 1주 전부터 각 일요일의 다음 토요일만 중복 없이 반환한다.
+assert.deepEqual(
+  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", {}, "2026-10-18"),
+  ["2026-10-31"]
+);
+assert.deepEqual(
+  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", {}, "2026-10-17"),
+  []
+);
+
+// Given: 관리자가 이미 만든 토요일 특별시간표와 지난 주 일요일 행사가 있다.
+// When: 자동 생성 대상을 계산한다.
+// Then: 기존 시간표와 cutoff 이전 날짜는 건너뛴다.
+assert.deepEqual(
+  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", { "2026-10-31": {} }, "2026-10-18"),
+  []
+);
+assert.deepEqual(
+  specialSaturdayDatesFromSundayEvents(
+    [{ source: "neis", isSchoolDay: true, date: "2026-09-06", title: "지난 일요일 행사" }],
+    "2026-09-14",
+    {},
+    "2026-09-14"
+  ),
+  []
+);
 
 console.log("calendar tests passed");

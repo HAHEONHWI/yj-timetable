@@ -21,9 +21,11 @@ function response(status, payload) {
   return { ok: status >= 200 && status < 300, status, statusText: "Gateway error", text: async () => JSON.stringify(payload) };
 }
 
-function harness({ profileResult, sessionError = null, responses = [response(200, { ok: true })] } = {}) {
+function harness({ profileResult, sessionError = null, responses = [response(200, { ok: true })], savedState = null } = {}) {
   const calls = { fetch: [], refresh: 0, signOut: 0 };
-  const localStorage = memoryStorage({ [PROFILE_KEY]: savedProfile, "timetable-admin-keep-session": "true" });
+  const initialStorage = { [PROFILE_KEY]: savedProfile, "timetable-admin-keep-session": "true" };
+  if (savedState) initialStorage["school-timetable-v1"] = JSON.stringify(savedState);
+  const localStorage = memoryStorage(initialStorage);
   const sessionStorage = memoryStorage({ [PROFILE_KEY]: savedProfile });
   let session = { access_token: "old-token", user: { id: "test-user" } };
   const client = {
@@ -54,6 +56,22 @@ function harness({ profileResult, sessionError = null, responses = [response(200
   });
   return { store: window.TimetableStore, calls, localStorage, sessionStorage };
 }
+
+test("student call survives local state normalization and rejects invalid shapes", () => {
+  const studentCall = {
+    id: "call-1",
+    className: "2-1",
+    studentName: "김학생",
+    destination: "교무실",
+    message: "보호자 방문",
+    createdAt: "2026-09-14T06:00:00.000Z",
+    expiresAt: "2026-09-14T06:05:00.000Z",
+  };
+  const h = harness({ savedState: { base: {}, studentCall } });
+  assert.equal(JSON.stringify(h.store.read().studentCall), JSON.stringify(studentCall));
+  const invalid = harness({ savedState: { base: {}, studentCall: [] } });
+  assert.equal(invalid.store.read().studentCall, null);
+});
 
 const state = { base: { "1-1": { mon: ["수학"] } }, notices: [], adminPassword: "never-send" };
 

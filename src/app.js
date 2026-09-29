@@ -19,7 +19,7 @@
     isSupabaseEnabled,
     changeKey,
   } = window.TimetableStore;
-  const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, upsertEvent } = window.TimetableCalendar;
+  const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, specialSaturdayDatesFromSundayEvents, upsertEvent } = window.TimetableCalendar;
   let state = read();
   let selectedDate = "";
   // 조회 화면 하단과 관리자 학사일정 탭이 같은 달을 보도록 상태를 하나만 둔다.
@@ -47,6 +47,9 @@
   let isMealLoading = false;
   let boardRefreshTimer = null;
   let boardAlertTimer = null;
+  let studentCallTimer = null;
+  let studentCallEscapeHandler = null;
+  let studentCallPreviousFocus = null;
   const boardRecentChanges = new Map();
   const BOARD_HIGHLIGHT_MS = 10 * 60 * 1000;
   let boardAudioContext = null;
@@ -93,6 +96,7 @@
     update_change: ["dev", "manager", "teacher"],
     update_event: ["dev", "manager", "teacher"],
     update_notice: ["dev", "manager", "teacher"],
+    call_student: ["dev", "manager", "teacher"],
     update_slide_runtime: ["dev", "manager", "teacher"],
     update_slide_typography: ["dev", "manager"],
     force_reload: ["dev"],
@@ -241,6 +245,12 @@
     addNoticeButton: $("#addNoticeButton"),
     saveNoticeButton: $("#saveNoticeButton"),
     noticeList: $("#noticeList"),
+    studentCallClass: $("#studentCallClass"),
+    studentCallName: $("#studentCallName"),
+    studentCallDestination: $("#studentCallDestination"),
+    studentCallMessage: $("#studentCallMessage"),
+    sendStudentCallButton: $("#sendStudentCallButton"),
+    studentCallStatus: $("#studentCallStatus"),
     slideLessonFontScale: $("#slideLessonFontScale"),
     slideLessonFontScaleLabel: $("#slideLessonFontScaleLabel"),
     slideClassHeaderFontScale: $("#slideClassHeaderFontScale"),
@@ -1396,6 +1406,97 @@
     applyBoardRecentHighlights();
     showBoardAlert(lines);
     playBoardAlertSound();
+  }
+
+  function isActiveStudentCall(call) {
+    if (!call || typeof call !== "object") return false;
+    if (!call.id || !classes.includes(call.className) || !String(call.studentName || "").trim()) return false;
+    const expiresAt = Date.parse(call.expiresAt || "");
+    return Number.isFinite(expiresAt) && expiresAt > Date.now();
+  }
+
+  function sendBoardCommand(command) {
+    const bridge = document.createElement("iframe");
+    bridge.hidden = true;
+    bridge.src = `yjboard://${command}`;
+    document.body.appendChild(bridge);
+    window.setTimeout(() => bridge.remove(), 1000);
+  }
+
+  function playStudentCallSound() {
+    if (navigator.userAgent.includes("YJBoardApp/")) {
+      sendBoardCommand("sound");
+      return;
+    }
+    playBoardAlertSound();
+    window.setTimeout(playBoardAlertSound, 700);
+  }
+
+  function closeStudentCall() {
+    const overlay = document.querySelector("#boardStudentCall");
+    if (overlay) {
+      overlay.remove();
+      if (navigator.userAgent.includes("YJBoardApp/")) sendBoardCommand("call-end");
+    }
+    window.clearTimeout(studentCallTimer);
+    if (studentCallEscapeHandler) {
+      document.removeEventListener("keydown", studentCallEscapeHandler);
+      studentCallEscapeHandler = null;
+    }
+    document.querySelectorAll("body > header, body > main, body > footer").forEach((element) => {
+      element.inert = false;
+    });
+    if (studentCallPreviousFocus && document.contains(studentCallPreviousFocus)) {
+      studentCallPreviousFocus.focus();
+    }
+    studentCallPreviousFocus = null;
+  }
+
+  function showStudentCall(call) {
+    closeStudentCall();
+    const destination = String(call.destination || "교무실").trim() || "교무실";
+    const message = String(call.message || "").trim();
+    const overlay = document.createElement("section");
+    overlay.id = "boardStudentCall";
+    overlay.className = "board-student-call";
+    overlay.setAttribute("role", "alertdialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "boardStudentCallName");
+    overlay.innerHTML = `<div class="board-student-call-card">
+      <p class="board-student-call-label">학생 호출</p>
+      <h2 id="boardStudentCallName">${escapeHtml(call.studentName)}</h2>
+      <p class="board-student-call-destination">${escapeHtml(destination)}로 와 주세요.</p>
+      ${message ? `<p class="board-student-call-message">${escapeHtml(message)}</p>` : ""}
+      <p class="board-student-call-class">${escapeHtml(call.className)} 학생</p>
+      <button class="board-student-call-close" type="button">확인</button>
+    </div>`;
+    overlay.querySelector("button").addEventListener("click", closeStudentCall);
+    studentCallPreviousFocus = document.activeElement;
+    document.body.appendChild(overlay);
+    document.querySelectorAll("body > header, body > main, body > footer").forEach((element) => {
+      element.inert = true;
+    });
+    studentCallEscapeHandler = (event) => {
+      if (event.key === "Escape") closeStudentCall();
+      if (event.key === "Tab") {
+        event.preventDefault();
+        overlay.querySelector("button").focus();
+      }
+    };
+    document.addEventListener("keydown", studentCallEscapeHandler);
+    overlay.querySelector("button").focus();
+    playStudentCallSound();
+    studentCallTimer = window.setTimeout(closeStudentCall, 60_000);
+  }
+
+  function notifyBoardStudentCall(call) {
+    if (!isBoardMode || !isActiveStudentCall(call)) return;
+    const className = boardClassParam || els.viewClass.value;
+    if (call.className !== className) return;
+    const seenKey = `board-student-call:${className}`;
+    if (sessionStorage.getItem(seenKey) === call.id) return;
+    sessionStorage.setItem(seenKey, call.id);
+    showStudentCall(call);
   }
 
   function adminNavLayout() {
@@ -2631,6 +2732,27 @@
     await saveState("나이스 휴업일·공휴일을 행사변경에 자동 반영했습니다.", "update_event");
   }
 
+  // 주말은 특별시간표가 있어야 조회 화면에 뜬다. 나이스에 수업일로 표시된
+  // 일요일 행사가 있으면 행사 1주 전부터 그 다음 토요일을 열어둔다.
+  // 교과를 하나도 안 넣으면 저장이 거부되므로 첫 학급 1교시에만 "-"를 둔다.
+  // 관리자가 이미 짜둔 특별시간표는 절대 덮어쓰지 않는다.
+  async function materializeSaturdaySpecialSchedulesFromSundayEvents() {
+    if (!isLoggedIn() || !canRole("update_special")) return;
+    // cleanupExpiredScheduleData와 같은 기준을 써서, 만들자마자 지워질
+    // 지난 날짜는 애초에 만들지 않는다.
+    const cutoffDate = toISO(mondayOf(new Date()));
+    const dates = specialSaturdayDatesFromSundayEvents(neisAcademicEvents, cutoffDate, state.specialSchedules, toISO(new Date()));
+    if (!dates.length) return;
+    dates.forEach((date) => {
+      const schedule = {};
+      classes.forEach((className, classIndex) => {
+        schedule[className] = periods.map((_, periodIndex) => (classIndex === 0 && periodIndex === 0 ? "-" : ""));
+      });
+      state.specialSchedules[date] = schedule;
+    });
+    await saveState(`나이스 일요일 행사 ${dates.length}건의 토요일 특별시간표를 생성했습니다.`, "update_special", { silent: true });
+  }
+
   async function refreshNeisAcademicEvents({ showError = false } = {}) {
     if (typeof readAcademicEvents !== "function") return;
     try {
@@ -2902,6 +3024,20 @@
       : `<p class="empty">등록된 안내사항이 없습니다.</p>`;
   }
 
+  function renderStudentCallStatus() {
+    if (!els.studentCallStatus) return;
+    const call = state.studentCall;
+    if (!call || typeof call !== "object") {
+      els.studentCallStatus.textContent = "아직 보낸 호출이 없습니다.";
+      return;
+    }
+    const createdAt = new Date(call.createdAt || "");
+    const time = Number.isNaN(createdAt.getTime())
+      ? "시간 정보 없음"
+      : createdAt.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    els.studentCallStatus.textContent = `마지막 호출 · ${call.className || "학급 미지정"} ${call.studentName || "이름 없음"} · ${time}`;
+  }
+
   function loadNoticeEditor(noticeId) {
     selectedNoticeId = noticeId || "";
     const notice = state.notices.find((item) => item.id === selectedNoticeId);
@@ -2951,6 +3087,7 @@
       update_change: "단일교과 변경",
       update_event: "행사 변경",
       update_notice: "안내사항 수정",
+      call_student: "학생 호출",
       update_slide_runtime: "슬라이드쇼 설정",
       update_slide_typography: "슬라이드쇼 글자 크기",
       force_reload: "강제 새로고침",
@@ -3178,6 +3315,7 @@
     renderNeisSyncStatus();
     renderNeisEventList();
     renderNoticeList();
+    renderStudentCallStatus();
     renderSlideScheduleDateOptions();
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
@@ -3275,6 +3413,7 @@
     if (previousChanges) {
       notifyBoardChanges(previousChanges);
     }
+    notifyBoardStudentCall(state.studentCall);
     if (currentRoute === "slideshow") {
       const slideshowTimingChanged =
         previousSlideSeconds !== nextSlideSeconds || previousRefreshSeconds !== nextRefreshSeconds;
@@ -3416,7 +3555,7 @@
     return /Invalid state|Failed to fetch|NetworkError|Load failed|연결|network error/i.test(text) || /^5\d\d/.test(text.trim());
   }
 
-  async function saveState(message, action = "save_state") {
+  async function saveState(message, action = "save_state", options = {}) {
     pendingRetryMessage = message;
     pendingRetryAction = action;
     updateLastSaveStatus("saving");
@@ -3443,13 +3582,16 @@
         retry: true,
       });
       showMessage(els.adminMessage, `브라우저에는 반영됨 · 원격 저장 실패: ${detail}`);
-      return;
+      return result;
     }
     pendingRetryMessage = "";
     pendingRetryAction = "save_state";
     markLastSaveSuccess();
-    showGlobalStatus(message, "success", { autoHide: true });
-    showMessage(els.adminMessage, `${message} · ${isSupabaseEnabled && isSupabaseEnabled() ? "원격 동기화 완료" : "이 브라우저에 저장됨"}`);
+    if (!options.silent) {
+      showGlobalStatus(message, "success", { autoHide: true });
+      showMessage(els.adminMessage, `${message} · ${isSupabaseEnabled && isSupabaseEnabled() ? "원격 동기화 완료" : "이 브라우저에 저장됨"}`);
+    }
+    return result || { ok: true };
   }
 
   function retrySaveState() {
@@ -3481,6 +3623,7 @@
 
     fillSelect(els.viewClass, isBoardMode ? classes : ["all", ...classes], (value) => (value === "all" ? "전체 학급 보기" : value));
     fillSelect(els.changeClass, classes);
+    fillSelect(els.studentCallClass, classes);
     fillSelect(els.baseWeekday, weekdays.map((day) => day.key), (key) => weekdays.find((day) => day.key === key).label);
     fillSelect(els.changePeriod, periods, (period) => `${period}교시`);
     fillSelect(els.baseMergeStart, periods, (period) => `${period}교시`);
@@ -3509,6 +3652,7 @@
     els.baseMergeEnd.value = "2";
     els.eventStart.value = "7";
     els.eventEnd.value = "9";
+    els.studentCallDestination.value = "교무실";
     els.academicDate.value = today;
     els.academicStart.value = "7";
     els.academicEnd.value = "9";
@@ -4394,6 +4538,7 @@
       }
       await refreshNeisAcademicEvents({ showError: true });
       await materializeNeisDiscretionaryHolidays();
+      await materializeSaturdaySpecialSchedulesFromSundayEvents();
       setControlDisabled(els.syncNeisButton, !canRole("sync_neis_calendar"));
     });
 
@@ -4546,6 +4691,54 @@
         resetAcademicForm();
       }
       saveState("학사일정을 삭제했습니다.", "update_event");
+    });
+
+    els.sendStudentCallButton.addEventListener("click", async () => {
+      if (!ensurePermission("call_student", "학생 호출")) return;
+      const className = els.studentCallClass.value;
+      const studentName = els.studentCallName.value.trim();
+      const destination = els.studentCallDestination.value.trim();
+      const message = els.studentCallMessage.value.trim();
+      if (!classes.includes(className)) {
+        showMessage(els.adminMessage, "호출할 학급을 선택하세요.");
+        els.studentCallClass.focus();
+        return;
+      }
+      if (!studentName) {
+        showMessage(els.adminMessage, "학생 이름을 입력하세요.");
+        els.studentCallName.focus();
+        return;
+      }
+      if (!destination) {
+        showMessage(els.adminMessage, "호출 장소를 입력하세요.");
+        els.studentCallDestination.focus();
+        return;
+      }
+      const createdAt = new Date();
+      state.studentCall = {
+        id: `${createdAt.getTime()}-${Math.random().toString(36).slice(2, 9)}`,
+        className,
+        studentName,
+        destination,
+        message,
+        createdAt: createdAt.toISOString(),
+        expiresAt: new Date(createdAt.getTime() + 5 * 60_000).toISOString(),
+      };
+      setControlDisabled(els.sendStudentCallButton, true);
+      const result = await saveState(`${className} ${studentName} 학생 호출을 보냈습니다.`, "call_student");
+      setControlDisabled(els.sendStudentCallButton, false);
+      if (result && result.ok === false) return;
+      els.studentCallName.value = "";
+      els.studentCallMessage.value = "";
+      els.studentCallName.focus();
+    });
+
+    [els.studentCallName, els.studentCallDestination, els.studentCallMessage].forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        els.sendStudentCallButton.click();
+      });
     });
 
     els.slideEventFontScale.addEventListener("input", () => {
@@ -4794,12 +4987,14 @@
     refreshAdminAuth();
     renderView();
     renderAdmin();
+    notifyBoardStudentCall(state.studentCall);
     routeTo(currentRoute);
     analyticsRouteTrackingReady = true;
     syncRemoteForRoute();
     if (isBoardMode) startBoardRefreshTimer();
-    refreshFromRemote();
+    await refreshFromRemote();
     await refreshNeisAcademicEvents();
+    await materializeSaturdaySpecialSchedulesFromSundayEvents();
   }
 
   init();

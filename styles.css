@@ -820,6 +820,7 @@ button:focus-visible {
   display: flex;
   gap: 2px;
   overflow-x: auto;
+  overflow-y: hidden;
   border-bottom: 1px solid var(--line);
   margin-bottom: 14px;
 }
@@ -2006,7 +2007,7 @@ body.board-mode .schedule-shell {
 .base-merge-cell {
   z-index: 2;
   background: var(--line);
-  color: var(--blue-soft);
+  color: var(--ink-strong);
   box-shadow: var(--shadow-overlay);
 }
 

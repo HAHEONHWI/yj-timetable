@@ -62,9 +62,16 @@ KRDS HTML Component Kit v1.1.0을 바탕으로 한 어두운 고대비 중심의
 
 ### Header
 
-- `.topbar`는 desktop에서 80px 높이, tablet 이하에서 2행 구조로 전환한다.
+- `.topbar`는 KRDS처럼 브랜드·화면 모드의 utility 행과 큰 주 메뉴 행을 분리한 2단 구조다.
 - 현재 메뉴는 3px primary 하단선과 굵은 글자로 표시한다.
 - 모바일 메뉴는 문서 전체가 아닌 nav 내부에서만 가로 스크롤한다.
+
+### Student Call
+
+- 관리자 `.student-call-form`은 기존 Field와 Buttons를 조합하며 desktop 4열, tablet 2열, mobile 1열이다.
+- 전자칠판 `.board-student-call`은 `--student-call-*` 의미 token을 쓰는 전체화면 `alertdialog`다.
+- 호출 폼 최소 폭, overlay 최대 폭, 이름·장소 최대 크기도 `--student-call-*` token으로 관리한다.
+- 확인 버튼, Escape, 60초 timeout으로 닫히며 학생 이름과 호출 장소를 가장 큰 정보 계층으로 표시한다.
 
 ### Footer Disclosure
 
