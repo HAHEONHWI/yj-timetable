@@ -57,14 +57,6 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
     ) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
 
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        int widthDp = newOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250);
-        int heightDp = newOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110);
-        prefs.edit()
-            .putInt("widget_width_dp_" + appWidgetId, widthDp)
-            .putInt("widget_height_dp_" + appWidgetId, heightDp)
-            .apply();
-
         updateWidget(context, appWidgetManager, appWidgetId);
         refreshWidgetData(context, appWidgetManager, new int[] {appWidgetId});
     }
@@ -82,13 +74,14 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_image, refreshPending);
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String teacherName = prefs.getString("name", "").trim();
+        String teacherName = prefs.getString("name", "최세영").trim();
+        if (teacherName.isEmpty()) teacherName = "최세영";
         String cachedTeacher = prefs.getString("last_teacher_schedule_name", "").trim();
         String cachedJson = teacherName.equals(cachedTeacher) && !teacherName.isEmpty()
             ? prefs.getString("last_teacher_schedule_json", "")
             : prefs.getString("last_timetable_json", "");
-        int width = widgetSizePx(context, appWidgetManager, prefs, appWidgetId, true);
-        int height = widgetSizePx(context, appWidgetManager, prefs, appWidgetId, false);
+        int width = widgetSizePx(context, appWidgetManager, appWidgetId, true);
+        int height = widgetSizePx(context, appWidgetManager, appWidgetId, false);
         Bitmap bitmap = LocalTimetableRenderer.drawTeacherWidget(context, cachedJson, width, height);
         views.setImageViewBitmap(R.id.widget_image, bitmap);
         appWidgetManager.updateAppWidget(appWidgetId, views);
@@ -97,18 +90,18 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
     private static int widgetSizePx(
         Context context,
         AppWidgetManager appWidgetManager,
-        SharedPreferences prefs,
         int appWidgetId,
         boolean width
     ) {
         Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
-        String key = (width ? "widget_width_dp_" : "widget_height_dp_") + appWidgetId;
-        int fallbackDp = width ? 250 : 110;
+        boolean portrait = context.getResources().getConfiguration().orientation
+            == android.content.res.Configuration.ORIENTATION_PORTRAIT;
         String optionKey = width
-            ? AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH
-            : AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT;
-        int sizeDp = prefs.getInt(key, options.getInt(optionKey, fallbackDp));
-        sizeDp = Math.max(100, Math.min(sizeDp, 1200));
+            ? (portrait ? AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH : AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH)
+            : (portrait ? AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT : AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
+        int fallbackDp = width ? 250 : 110;
+        int sizeDp = options.getInt(optionKey, fallbackDp);
+        sizeDp = Math.max(width ? 80 : 50, Math.min(sizeDp, 1200));
         return Math.max(1, Math.round(sizeDp * context.getResources().getDisplayMetrics().density));
     }
 

@@ -23,12 +23,6 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
-      <activity
-        android:name=".LegacySettingsActivity"
-        android:configChanges="keyboardHidden|orientation|screenSize"
-        android:exported="false"
-        android:screenOrientation="portrait" />
-
       <receiver
         android:name=".TimetableWidgetProvider"
         android:exported="true"

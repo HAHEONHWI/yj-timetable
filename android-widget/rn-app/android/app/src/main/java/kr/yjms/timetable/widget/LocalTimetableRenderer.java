@@ -106,13 +106,16 @@ public final class LocalTimetableRenderer {
         paint.setStyle(Paint.Style.FILL);
 
         float horizontalPadding = Math.min(20f, Math.max(14f, widthDp * 0.055f));
-        boolean showAgenda = heightDp >= 190f && heightDp / Math.max(widthDp, 1f) >= 0.62f;
+        boolean showAgenda = heightDp >= 330f && heightDp / Math.max(widthDp, 1f) >= 0.62f;
+        boolean showCompact = widthDp >= 220f && heightDp >= 125f;
         String title = "용정시간표 · " + teacherName;
 
         if (showAgenda) {
             drawExpanded(canvas, paint, card, title, timeline, palette, horizontalPadding);
-        } else {
+        } else if (showCompact) {
             drawCompact(canvas, paint, card, title, timeline, palette, horizontalPadding);
+        } else {
+            drawSmall(canvas, paint, card, teacherName, timeline, palette, horizontalPadding);
         }
 
         canvas.restore();
@@ -300,7 +303,31 @@ public final class LocalTimetableRenderer {
         drawFittedText(canvas, mainText, card.left + padding, titleY, width - padding * 2f, 25f, 16f, colors.primary, Paint.Align.LEFT, true, paint);
         drawFittedText(canvas, timeText, card.left + padding, timeY, width - padding * 2f, 15f, 11f, colors.secondary, Paint.Align.LEFT, false, paint);
 
-        drawFooter(canvas, paint, card, timeline, colors, padding, footerY, false);
+        drawFooter(canvas, paint, card, timeline, colors, padding, footerY);
+    }
+
+    private static void drawSmall(
+        Canvas canvas,
+        Paint paint,
+        RectF card,
+        String teacherName,
+        Timeline timeline,
+        Palette colors,
+        float padding
+    ) {
+        float width = card.width();
+        float headerY = card.top + Math.min(18f, card.height() * 0.32f);
+        float titleY = card.top + Math.min(42f, card.height() * 0.74f);
+        LessonRow next = lessonAt(timeline.lessons, timeline.nextLessonIndex);
+        String header = next == null
+            ? teacherName + " · 오늘"
+            : teacherName + " · 다음 " + next.period + "교시";
+        String title = next == null
+            ? (timeline.lessons.isEmpty() ? "오늘 수업 없음" : "오늘 수업 끝")
+            : next.classes;
+
+        drawFittedText(canvas, header, card.left + padding, headerY, width - padding * 2f, 11f, 7f, colors.secondary, Paint.Align.LEFT, false, paint);
+        drawFittedText(canvas, title, card.left + padding, titleY, width - padding * 2f, 17f, 10f, colors.primary, Paint.Align.LEFT, true, paint);
     }
 
     private static void drawExpanded(
@@ -374,7 +401,7 @@ public final class LocalTimetableRenderer {
             drawFittedText(canvas, "오늘 수업이 없습니다", card.left + padding, listTop + 18f, width - padding * 2f, 14f, 11f, colors.secondary, Paint.Align.LEFT, false, paint);
         }
 
-        drawFooter(canvas, paint, card, timeline, colors, padding, footerY, true);
+        drawFooter(canvas, paint, card, timeline, colors, padding, footerY);
     }
 
     private static void drawHeader(
@@ -403,38 +430,23 @@ public final class LocalTimetableRenderer {
         Timeline timeline,
         Palette colors,
         float padding,
-        float baseline,
-        boolean expanded
+        float baseline
     ) {
         int remaining = 0;
         for (LessonRow lesson : timeline.lessons) {
             if (lesson.index >= timeline.firstRemainingIndex) remaining++;
         }
         String summary = "남은 수업 " + remaining + "개 · 오늘 " + timeline.lessons.size() + "개";
-        float sizeLabelWidth = expanded ? 40f : 42f;
         drawFittedText(
             canvas,
             summary,
             card.left + padding,
             baseline,
-            card.width() - padding * 2f - sizeLabelWidth - 8f,
+            card.width() - padding * 2f,
             12f,
             8f,
             colors.secondary,
             Paint.Align.LEFT,
-            false,
-            paint
-        );
-        drawFittedText(
-            canvas,
-            expanded ? "4 × 4" : "4 × 2",
-            card.right - padding,
-            baseline,
-            sizeLabelWidth,
-            12f,
-            9f,
-            colors.secondary,
-            Paint.Align.RIGHT,
             false,
             paint
         );

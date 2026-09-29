@@ -1,6 +1,5 @@
 package kr.yjms.timetable.widget;
 
-import android.app.Activity;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -40,13 +39,6 @@ public final class WidgetSettingsModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void getCachedSchedule(Promise promise) {
-        SharedPreferences prefs = getReactApplicationContext()
-            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        promise.resolve(prefs.getString("last_timetable_json", ""));
-    }
-
-    @ReactMethod
     public void getCachedTeacherSchedule(Promise promise) {
         SharedPreferences prefs = getReactApplicationContext()
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -83,14 +75,6 @@ public final class WidgetSettingsModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void cacheSchedule(String json, Promise promise) {
-        SharedPreferences prefs = getReactApplicationContext()
-            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        prefs.edit().putString("last_timetable_json", json).apply();
-        promise.resolve(null);
-    }
-
-    @ReactMethod
     public void setTheme(String theme, Promise promise) {
         String safeTheme = "light".equals(theme) ? "light" : "dark";
         SharedPreferences prefs = getReactApplicationContext()
@@ -103,19 +87,6 @@ public final class WidgetSettingsModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void refreshWidgets(Promise promise) {
         refreshWidgets();
-        promise.resolve(null);
-    }
-
-    @ReactMethod
-    public void openLegacySettings(Promise promise) {
-        Activity activity = getCurrentActivity();
-        if (activity == null) {
-            promise.reject("NO_ACTIVITY", "Settings screen is unavailable.");
-            return;
-        }
-        activity.runOnUiThread(() ->
-            activity.startActivity(new Intent(activity, LegacySettingsActivity.class))
-        );
         promise.resolve(null);
     }
 

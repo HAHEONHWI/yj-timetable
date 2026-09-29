@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
@@ -35,7 +36,6 @@ type NativeWidgetSettings = {
   setTeacherName(name: string): Promise<string>;
   setTheme(theme: 'dark' | 'light'): Promise<string>;
   refreshWidgets(): Promise<void>;
-  openLegacySettings(): Promise<void>;
 };
 
 const WidgetSettings = NativeModules.WidgetSettings as NativeWidgetSettings;
@@ -48,9 +48,6 @@ const DEFAULT_SETTINGS: Settings = {
 };
 const START_TIMES = ['08:50', '09:50', '10:50', '11:50', '13:30', '14:30', '15:30', '16:30', '17:30'];
 const END_TIMES = ['09:35', '10:35', '11:35', '12:35', '14:15', '15:15', '16:15', '17:15', '18:15'];
-const PERIOD_WIDTH = 80;
-const DAY_WIDTH = 116;
-
 const PALETTES = {
   dark: {
     background: '#151619',
@@ -132,6 +129,7 @@ function lessonColor(type: string | undefined, colors: typeof PALETTES.dark) {
 }
 
 function AppContent() {
+  const {width: screenWidth} = useWindowDimensions();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [schedule, setSchedule] = useState<ApiSchedule | null>(null);
   const [clock, setClock] = useState(minutesNowInKorea);
@@ -160,7 +158,11 @@ function AppContent() {
   );
   const subjects = [...new Set((schedule?.grid || []).flat(2).map(match => match.title).filter(Boolean))];
   const subjectSummary = subjects.slice(0, 2).join(' · ') || '교사 시간표';
-  const gridWidth = PERIOD_WIDTH + days.length * DAY_WIDTH;
+  const gridWidth = Math.max(0, screenWidth - 32);
+  const periodWidth = Math.min(64, Math.max(48, gridWidth * 0.165));
+  const dayWidth = Math.floor(
+    Math.max(0, gridWidth - 2 - days.length - periodWidth) / Math.max(days.length, 1),
+  );
 
   const loadSettings = useCallback(async () => {
     try {
@@ -238,24 +240,45 @@ function AppContent() {
     await refresh(next);
   };
 
-  const openSettings = async () => {
-    try {
-      await WidgetSettings.openLegacySettings();
-    } catch {
-      setError('설정을 열지 못했습니다.');
-    }
-  };
-
   const pressTab = async (tab: string) => {
-    setActiveTab(tab);
-    if (tab === '관리자' || tab === '시간표') {
-      await openSettings();
-    } else if (tab === '다운로드') {
-      await Linking.openURL('https://schedule.yjms.kr/download');
+    if (tab === '다운로드') {
+      try {
+        await Linking.openURL('https://schedule.yjms.kr/download');
+      } catch {
+        setError('다운로드 페이지를 열지 못했습니다.');
+      }
+      return;
     }
+    setActiveTab(tab);
   };
 
   const teacherTitle = settings.name || '교사';
+  const renderTodaySchedule = (showRows: boolean) => (
+    <>
+      <View style={[styles.todayHeader, {borderTopColor: colors.border}]}>
+        <Text style={[styles.todayTitle, {color: colors.primary}]}>
+          {todayIndex >= 0 ? dateLabel(days[todayIndex]) : '오늘'} 수업
+        </Text>
+        <Text style={[styles.todayCount, {color: colors.secondary}]}>{todayMatches.length}개 수업</Text>
+      </View>
+      {showRows ? (todayMatches.length ? todayMatches.map((match, index) => (
+        <View key={match.periodIndex + '-' + index} style={[styles.todayRow, {borderTopColor: colors.border}]}>
+          <Text style={[styles.todayPeriod, {color: colors.secondary}]}>
+            {(periods[match.periodIndex] || match.periodIndex + 1) + '교시'}
+          </Text>
+          <Text numberOfLines={1} style={[styles.todayClass, {color: colors.primary}]}>
+            {match.className || match.title || '수업'}
+          </Text>
+          <Text numberOfLines={1} style={[styles.todaySubject, {color: colors.secondary}]}>
+            {match.title || ''}
+          </Text>
+          <Text style={[styles.todayTime, {color: colors.secondary}]}>{START_TIMES[match.periodIndex]}</Text>
+        </View>
+      )) : (
+        <Text style={[styles.todayEmpty, {color: colors.secondary}]}>오늘 예정된 수업이 없습니다.</Text>
+      )) : null}
+    </>
+  );
 
   return (
     <SafeAreaView style={[styles.safeArea, {backgroundColor: colors.background}]}>
@@ -281,7 +304,9 @@ function AppContent() {
 
           <View style={styles.heading}>
             <View style={styles.headingCopy}>
-              <Text style={[styles.pageTitle, {color: colors.primary}]}>교사 보기</Text>
+              <Text style={[styles.pageTitle, {color: colors.primary}]}>
+                {activeTab === '시간표' ? '오늘 시간표' : '교사 보기'}
+              </Text>
               <Text numberOfLines={1} style={[styles.subtitle, {color: colors.secondary}]}>
                 {teacherTitle} · {subjectSummary} · 주간 {weeklyHours}시간
               </Text>
@@ -306,11 +331,12 @@ function AppContent() {
               <ActivityIndicator color={colors.accent} />
               <Text style={[styles.loadingText, {color: colors.secondary}]}>시간표 불러오는 중</Text>
             </View>
+          ) : activeTab === '시간표' ? (
+            <View style={styles.todayPage}>{renderTodaySchedule(true)}</View>
           ) : days.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator>
               <View style={[styles.grid, {width: gridWidth, backgroundColor: colors.border}]}>
                 <View style={[styles.gridRow, styles.headerGridRow]}>
-                  <View style={[styles.cornerCell, {width: PERIOD_WIDTH, backgroundColor: colors.panelStrong}]}>
+                  <View style={[styles.cornerCell, {width: periodWidth, backgroundColor: colors.panelStrong}]}>
                     <Text style={[styles.headerText, {color: colors.secondary}]}>교시</Text>
                   </View>
                   {days.map(day => {
@@ -318,11 +344,11 @@ function AppContent() {
                     return (
                       <View
                         key={day.iso}
-                        style={[styles.dayHeader, {width: DAY_WIDTH, backgroundColor: colors.panelStrong}]}>
-                        <Text style={[styles.headerText, {color: isToday ? colors.primary : colors.secondary}]}>
+                        style={[styles.dayHeader, {width: dayWidth, backgroundColor: colors.panelStrong}]}>
+                        <Text style={[styles.headerText, {fontSize: Math.min(11, dayWidth * 0.19), color: isToday ? colors.primary : colors.secondary}]}>
                           {day.label}
                         </Text>
-                        <Text style={[styles.dayDate, {color: isToday ? colors.accent : colors.muted}]}>
+                        <Text style={[styles.dayDate, {fontSize: Math.min(11, dayWidth * 0.19), color: isToday ? colors.accent : colors.muted}]}>
                           {dateNumber(day.iso)}
                         </Text>
                       </View>
@@ -332,10 +358,10 @@ function AppContent() {
 
                 {periods.map((period, periodIndex) => (
                   <View key={period + '-' + periodIndex} style={styles.gridRow}>
-                    <View style={[styles.periodCell, {width: PERIOD_WIDTH, backgroundColor: colors.panelStrong}]}>
-                      <Text style={[styles.periodNumber, {color: colors.primary}]}>{period}교시</Text>
-                      <Text style={[styles.periodTime, {color: colors.secondary}]}>{START_TIMES[periodIndex]}</Text>
-                      <Text style={[styles.periodTime, {color: colors.secondary}]}>–{END_TIMES[periodIndex]}</Text>
+                    <View style={[styles.periodCell, {width: periodWidth, backgroundColor: colors.panelStrong}]}>
+                      <Text style={[styles.periodNumber, {fontSize: Math.min(10, periodWidth * 0.18), color: colors.primary}]}>{period}교시</Text>
+                      <Text style={[styles.periodTime, {fontSize: Math.min(9, periodWidth * 0.16), color: colors.secondary}]}>{START_TIMES[periodIndex]}</Text>
+                      <Text style={[styles.periodTime, {fontSize: Math.min(9, periodWidth * 0.16), color: colors.secondary}]}>–{END_TIMES[periodIndex]}</Text>
                     </View>
                     {days.map((day, dayIndex) => {
                       const matches = schedule?.grid?.[dayIndex]?.[periodIndex] || [];
@@ -348,7 +374,7 @@ function AppContent() {
                           key={day.iso + '-' + periodIndex}
                           style={[
                             styles.lessonCell,
-                            {width: DAY_WIDTH, backgroundColor: colors.panel, opacity: isPast ? 0.5 : 1},
+                            {width: dayWidth, backgroundColor: colors.panel, opacity: isPast ? 0.5 : 1},
                             accent ? {borderLeftWidth: 3, borderLeftColor: accent} : null,
                           ]}>
                           {matches.length ? matches.map((match, matchIndex) => (
@@ -367,16 +393,16 @@ function AppContent() {
                                         : colors.panel,
                                 },
                               ]}>
-                              <Text numberOfLines={1} style={[styles.lessonClass, {color: colors.primary}]}>
+                              <Text numberOfLines={1} style={[styles.lessonClass, {fontSize: Math.max(9, Math.min(12, dayWidth * 0.2)), color: colors.primary}]}>
                                 {match.className || match.title || '수업'}
                               </Text>
                               {match.note ? (
-                                <Text numberOfLines={1} style={[styles.lessonNote, {color: lessonColor(match.type, colors)}]}>
+                                <Text numberOfLines={1} style={[styles.lessonNote, {fontSize: Math.max(7, Math.min(9, dayWidth * 0.15)), color: lessonColor(match.type, colors)}]}>
                                   {match.note}
                                 </Text>
                               ) : null}
                               {match.className && match.title ? (
-                                <Text numberOfLines={1} style={[styles.lessonSubject, {color: colors.secondary}]}>
+                                <Text numberOfLines={1} style={[styles.lessonSubject, {fontSize: Math.max(7, Math.min(9, dayWidth * 0.15)), color: colors.secondary}]}>
                                   {match.title}
                                 </Text>
                               ) : null}
@@ -388,7 +414,6 @@ function AppContent() {
                   </View>
                 ))}
               </View>
-            </ScrollView>
           ) : (
             <View style={[styles.emptySchedule, {borderColor: colors.border, backgroundColor: colors.panel}]}>
               <Text style={[styles.emptyTitle, {color: colors.primary}]}>주간 시간표가 없습니다</Text>
@@ -396,39 +421,21 @@ function AppContent() {
             </View>
           )}
 
-          <View style={styles.legend}>
-            <LegendItem label="교과 변경" color={colors.change} textColor={colors.secondary} />
-            <LegendItem label="신설 수업" color={colors.added} textColor={colors.secondary} />
-            <LegendItem label="행사" color={colors.event} textColor={colors.secondary} />
-            <Text style={[styles.legendNote, {color: colors.secondary}]}>가운데점은 공강입니다</Text>
-          </View>
-
-          <View style={[styles.todayHeader, {borderTopColor: colors.border}]}>
-            <Text style={[styles.todayTitle, {color: colors.primary}]}>
-              {todayIndex >= 0 ? dateLabel(days[todayIndex]) : '오늘'} 수업
-            </Text>
-            <Text style={[styles.todayCount, {color: colors.secondary}]}>{todayMatches.length}개 수업</Text>
-          </View>
-          {todayMatches.length ? todayMatches.map((match, index) => (
-            <View key={match.periodIndex + '-' + index} style={[styles.todayRow, {borderTopColor: colors.border}]}>
-              <Text style={[styles.todayPeriod, {color: colors.secondary}]}>
-                {(periods[match.periodIndex] || match.periodIndex + 1) + '교시'}
-              </Text>
-              <Text numberOfLines={1} style={[styles.todayClass, {color: colors.primary}]}>
-                {match.className || match.title || '수업'}
-              </Text>
-              <Text numberOfLines={1} style={[styles.todaySubject, {color: colors.secondary}]}>
-                {match.title || ''}
-              </Text>
-              <Text style={[styles.todayTime, {color: colors.secondary}]}>{START_TIMES[match.periodIndex]}</Text>
-            </View>
-          )) : (
-            <Text style={[styles.todayEmpty, {color: colors.secondary}]}>오늘 예정된 수업이 없습니다.</Text>
-          )}
+          {activeTab === '교사 보기' ? (
+            <>
+              <View style={styles.legend}>
+                <LegendItem label="교과 변경" color={colors.change} textColor={colors.secondary} />
+                <LegendItem label="신설 수업" color={colors.added} textColor={colors.secondary} />
+                <LegendItem label="행사" color={colors.event} textColor={colors.secondary} />
+                <Text style={[styles.legendNote, {color: colors.secondary}]}>가운데점은 공강입니다</Text>
+              </View>
+              {renderTodaySchedule(false)}
+            </>
+          ) : null}
         </ScrollView>
 
         <View style={[styles.bottomNav, {borderTopColor: colors.border, backgroundColor: colors.background}]}>
-          {['시간표', '교사 보기', '관리자', '다운로드'].map(tab => (
+          {['시간표', '교사 보기', '다운로드'].map(tab => (
             <Pressable key={tab} accessibilityRole="button" onPress={() => pressTab(tab)} style={styles.navItem}>
               <View style={[styles.navIndicator, {backgroundColor: activeTab === tab ? colors.accent : 'transparent'}]} />
               <Text style={[styles.navText, {color: activeTab === tab ? colors.primary : colors.secondary}]}>{tab}</Text>
@@ -524,7 +531,7 @@ const styles = StyleSheet.create({
   gridRow: {flexDirection: 'row', gap: 1, minHeight: 60},
   headerGridRow: {height: 38, minHeight: 38},
   cornerCell: {height: 38, alignItems: 'center', justifyContent: 'center'},
-  dayHeader: {height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},
+  dayHeader: {height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3},
   headerText: {fontSize: 12, fontWeight: '700'},
   dayDate: {fontSize: 12, fontWeight: '700'},
   periodCell: {minHeight: 60, alignItems: 'center', justifyContent: 'center', paddingVertical: 3},
@@ -539,6 +546,7 @@ const styles = StyleSheet.create({
   loading: {height: 250, alignItems: 'center', justifyContent: 'center', gap: 10},
   loadingText: {fontSize: 13},
   emptySchedule: {minHeight: 150, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', padding: 20},
+  todayPage: {minHeight: 180},
   emptyTitle: {fontSize: 15, fontWeight: '700'},
   emptyHint: {fontSize: 12, marginTop: 8, textAlign: 'center'},
   legend: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingVertical: 12},

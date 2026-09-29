@@ -7,7 +7,7 @@
 - `App.tsx`: React Native 교사 주간 시간표 화면
 - `android/app/src/main/java/kr/yjms/timetable/widget/WidgetSettingsModule.java`: React Native와 Android 위젯 설정 공유
 - `android/app/src/main/java/kr/yjms/timetable/widget/TimetableWidgetProvider.java`: Android 홈 화면 위젯
-- `android/app/src/main/java/kr/yjms/timetable/widget/LegacySettingsActivity.java`: 기존 교사/관리자 설정 화면
+- Android 홈 화면 위젯은 네이티브 `AppWidgetProvider`로 제공하고 React Native 앱과 설정을 공유합니다.
 
 ## 명령
 
