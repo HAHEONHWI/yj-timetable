@@ -5,11 +5,14 @@ import {
   Linking,
   Modal,
   NativeModules,
+  PermissionsAndroid,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   useWindowDimensions,
@@ -29,6 +32,7 @@ type Settings = {
 type ApiDay = {iso: string; label: string};
 type ApiMatch = {title?: string; type?: string; note?: string; className?: string};
 type ApiSchedule = {days?: ApiDay[]; periods?: number[]; grid?: ApiMatch[][][]};
+type NotificationSettings = {changes: boolean; daily: boolean; setupDone: boolean};
 type TeacherOption = {name: string; label: string; subjects: string[]};
 type ClassLesson = {title?: string; type?: string; teacher?: string};
 type ClassSchedule = {
@@ -45,6 +49,9 @@ type NativeWidgetSettings = {
   setTeacherName(name: string): Promise<string>;
   setTheme(theme: 'dark' | 'light'): Promise<string>;
   refreshWidgets(): Promise<void>;
+  getNotificationSettings(): Promise<NotificationSettings>;
+  setNotificationSettings(changes: boolean, daily: boolean): Promise<void>;
+  syncNotifications(): Promise<void>;
 };
 
 const WidgetSettings = NativeModules.WidgetSettings as NativeWidgetSettings;
@@ -115,6 +122,13 @@ function teacherScheduleUrl(name: string) {
     .join('&');
 }
 
+async function ensureNotificationPermission() {
+  if (Platform.OS !== 'android' || Number(Platform.Version) < 33) return true;
+  const permission = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
+  if (await PermissionsAndroid.check(permission)) return true;
+  return (await PermissionsAndroid.request(permission)) === PermissionsAndroid.RESULTS.GRANTED;
+}
+
 function classScheduleUrl() {
   return 'https://schedule.yjms.kr/wallpaper.png?format=classes&v=' + Date.now();
 }
@@ -164,6 +178,10 @@ function AppContent() {
   const [selectedClass, setSelectedClass] = useState('');
   const [classLoading, setClassLoading] = useState(false);
   const [classError, setClassError] = useState('');
+  const [notifySettings, setNotifySettings] = useState<NotificationSettings>({changes: false, daily: false, setupDone: true});
+  const [notifyDraft, setNotifyDraft] = useState({changes: true, daily: true});
+  const [settingsModal, setSettingsModal] = useState<'' | 'setup' | 'edit'>('');
+  const [notifyPermissionDenied, setNotifyPermissionDenied] = useState(false);
   const colors = PALETTES[settings.theme];
   const days = schedule?.days || [];
   const periods = schedule?.periods || START_TIMES.map((_, index) => index + 1);
@@ -257,8 +275,24 @@ function AppContent() {
     loadTeacherOptions();
   }, [loadTeacherOptions]);
 
+  const loadNotificationSettings = useCallback(async () => {
+    try {
+      const saved = await WidgetSettings.getNotificationSettings();
+      setNotifySettings(saved);
+      if (saved.setupDone) {
+        WidgetSettings.syncNotifications();
+      } else {
+        setNotifyDraft({changes: true, daily: true});
+        setSettingsModal('setup');
+      }
+    } catch {
+      // 알림 설정을 못 읽어도 시간표는 계속 보여 준다.
+    }
+  }, []);
+
   const loadInitialData = useCallback(async () => {
     const saved = await loadSettings();
+    if (saved.teacherSelected !== false) loadNotificationSettings();
     if (saved.teacherSelected === false) {
       setFirstRun(true);
       openTeacherModal();
@@ -275,7 +309,7 @@ function AppContent() {
       setSchedule(null);
     }
     await refresh(saved);
-  }, [loadSettings, openTeacherModal, refresh]);
+  }, [loadNotificationSettings, loadSettings, openTeacherModal, refresh]);
 
   useEffect(() => {
     loadInitialData();
@@ -303,9 +337,37 @@ function AppContent() {
     const savedName = await WidgetSettings.setTeacherName(name);
     const next = {...settings, name: savedName, teacherSelected: true};
     setSettings(next);
+    const wasFirstRun = firstRun;
     setFirstRun(false);
     setTeacherModalVisible(false);
+    if (wasFirstRun) loadNotificationSettings();
     await refresh(next);
+  };
+
+  const saveNotificationSettings = async (next: {changes: boolean; daily: boolean}) => {
+    const granted = next.changes || next.daily ? await ensureNotificationPermission() : true;
+    setNotifyPermissionDenied(!granted);
+    await WidgetSettings.setNotificationSettings(next.changes, next.daily);
+    setNotifySettings({...next, setupDone: true});
+    setNotifyDraft(next);
+    return granted;
+  };
+
+  const finishNotificationSetup = async () => {
+    const granted = await saveNotificationSettings(notifyDraft);
+    if (granted) setSettingsModal('');
+  };
+
+  const toggleNotification = async (key: 'changes' | 'daily', value: boolean) => {
+    const next = {...notifyDraft, [key]: value};
+    setNotifyDraft(next);
+    if (settingsModal === 'edit') await saveNotificationSettings(next);
+  };
+
+  const openSettings = () => {
+    setNotifyDraft({changes: notifySettings.changes, daily: notifySettings.daily});
+    setNotifyPermissionDenied(false);
+    setSettingsModal('edit');
   };
 
   const pressTab = async (tab: string) => {
@@ -509,14 +571,22 @@ function AppContent() {
           }>
           <View style={[styles.topBar, {borderBottomColor: colors.border}]}>
             <Text style={[styles.brand, {color: colors.primary}]}>용정시간표</Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={toggleTheme}
-              style={[styles.themeButton, {borderColor: colors.border}]}>
-              <Text style={[styles.themeButtonText, {color: colors.secondary}]}>
-                {settings.theme === 'dark' ? '라이트 모드' : '다크 모드'}
-              </Text>
-            </Pressable>
+            <View style={styles.topActions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={toggleTheme}
+                style={[styles.themeButton, {borderColor: colors.border}]}>
+                <Text style={[styles.themeButtonText, {color: colors.secondary}]}>
+                  {settings.theme === 'dark' ? '라이트 모드' : '다크 모드'}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={openSettings}
+                style={[styles.themeButton, {borderColor: colors.border}]}>
+                <Text style={[styles.themeButtonText, {color: colors.secondary}]}>설정</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.heading}>
@@ -672,6 +742,88 @@ function AppContent() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={settingsModal !== '' && !teacherModalVisible}
+        onRequestClose={() => {
+          if (settingsModal === 'edit') setSettingsModal('');
+        }}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, {backgroundColor: colors.panel, borderColor: colors.border}]}>
+            <Text style={[styles.modalTitle, {color: colors.primary}]}>
+              {settingsModal === 'setup' ? '알림 설정' : '설정'}
+            </Text>
+            {settingsModal === 'setup' ? (
+              <Text style={[styles.modalHint, {color: colors.secondary}]}>
+                받을 알림을 고르세요. 나중에 상단 설정에서 바꿀 수 있습니다.
+              </Text>
+            ) : (
+              <View style={[styles.settingRow, {borderBottomColor: colors.border}]}>
+                <View style={styles.settingCopy}>
+                  <Text style={[styles.settingTitle, {color: colors.primary}]}>교사</Text>
+                  <Text style={[styles.settingHint, {color: colors.secondary}]}>{settings.name || '선택 안 됨'}</Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={openTeacherModal}
+                  style={[styles.retryButton, {borderColor: colors.border}]}>
+                  <Text style={[styles.cancelText, {color: colors.primary}]}>변경</Text>
+                </Pressable>
+              </View>
+            )}
+            <View style={[styles.settingRow, {borderBottomColor: colors.border}]}>
+              <View style={styles.settingCopy}>
+                <Text style={[styles.settingTitle, {color: colors.primary}]}>교과 변경 알림</Text>
+                <Text style={[styles.settingHint, {color: colors.secondary}]}>내 수업이 바뀌거나 새로 생기면 알려 드려요</Text>
+              </View>
+              <Switch
+                value={notifyDraft.changes}
+                onValueChange={value => toggleNotification('changes', value)}
+                trackColor={{true: colors.accent, false: colors.border}}
+              />
+            </View>
+            <View style={[styles.settingRow, {borderBottomColor: colors.border}]}>
+              <View style={styles.settingCopy}>
+                <Text style={[styles.settingTitle, {color: colors.primary}]}>일일 수업 알림</Text>
+                <Text style={[styles.settingHint, {color: colors.secondary}]}>평일 매일 오전 8시에 오늘 수업을 알려 드려요</Text>
+              </View>
+              <Switch
+                value={notifyDraft.daily}
+                onValueChange={value => toggleNotification('daily', value)}
+                trackColor={{true: colors.accent, false: colors.border}}
+              />
+            </View>
+            {notifyPermissionDenied ? (
+              <View style={styles.permissionNote}>
+                <Text style={styles.error}>알림 권한이 꺼져 있어 알림을 보낼 수 없습니다.</Text>
+                <Pressable onPress={() => Linking.openSettings()} style={[styles.retryButton, {borderColor: colors.border}]}>
+                  <Text style={[styles.cancelText, {color: colors.primary}]}>알림 권한 켜기</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            <View style={styles.modalActions}>
+              {settingsModal === 'setup' ? (
+                <>
+                  {notifyPermissionDenied ? (
+                    <Pressable onPress={() => setSettingsModal('')} style={styles.modalAction}>
+                      <Text style={[styles.cancelText, {color: colors.secondary}]}>나중에</Text>
+                    </Pressable>
+                  ) : null}
+                  <Pressable onPress={finishNotificationSetup} style={[styles.primaryButton, {backgroundColor: colors.accent}]}>
+                    <Text style={styles.primaryButtonText}>시작하기</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Pressable onPress={() => setSettingsModal('')} style={styles.modalAction}>
+                  <Text style={[styles.cancelText, {color: colors.secondary}]}>닫기</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -708,6 +860,14 @@ const styles = StyleSheet.create({
   brand: {fontSize: 16, fontWeight: '700'},
   themeButton: {paddingHorizontal: 11, paddingVertical: 7, borderWidth: 1, borderRadius: 8},
   themeButtonText: {fontSize: 12, fontWeight: '600'},
+  topActions: {flexDirection: 'row', gap: 8},
+  settingRow: {minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 10},
+  settingCopy: {flex: 1},
+  settingTitle: {fontSize: 15, fontWeight: '700'},
+  settingHint: {fontSize: 12, marginTop: 3},
+  permissionNote: {marginTop: 12, alignItems: 'flex-start', gap: 8},
+  primaryButton: {paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8},
+  primaryButtonText: {color: '#FFFFFF', fontSize: 13, fontWeight: '700'},
   heading: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, paddingBottom: 14},
   headingCopy: {flex: 1, minWidth: 0, marginRight: 8},
   pageTitle: {fontSize: 21, lineHeight: 27, fontWeight: '800'},

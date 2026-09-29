@@ -8,6 +8,8 @@
 - `android/app/src/main/java/kr/yjms/timetable/widget/WidgetSettingsModule.java`: React Native와 Android 위젯 설정 공유
 - `android/app/src/main/java/kr/yjms/timetable/widget/TimetableWidgetProvider.java`: Android 홈 화면 위젯
 - Android 홈 화면 위젯은 네이티브 `AppWidgetProvider`로 제공하고 React Native 앱과 설정을 공유합니다.
+- `android/app/src/main/java/kr/yjms/timetable/widget/TeacherNotifications.java`: 교과 변경 알림(1시간마다 교사 시간표 비교)과 평일 오전 8시 일일 수업 알림. 서버 푸시 없이 기기에서 처리합니다.
+- 교사 목록과 학급 시간표는 `netlify/functions/wallpaper.js`의 `format=teachers`, `format=classes` 응답을 씁니다.
 
 ## 명령
 
