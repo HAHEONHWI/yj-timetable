@@ -30,11 +30,12 @@ public final class WidgetSettingsModule extends ReactContextBaseJavaModule {
         SharedPreferences prefs = getReactApplicationContext()
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         WritableMap settings = Arguments.createMap();
-        settings.putString("name", prefs.getString("name", "최세영"));
+        settings.putString("name", prefs.getString("name", ""));
         settings.putString("subjects", prefs.getString("subjects", ""));
         settings.putString("grades", prefs.getString("grades", ""));
         settings.putString("days", prefs.getString("days", "mon,tue,wed,thu,fri"));
         settings.putString("theme", prefs.getString("widget_theme", "dark"));
+        settings.putString("audience", BuildConfig.AUDIENCE);
         settings.putBoolean("teacherSelected", !prefs.getString("name", "").trim().isEmpty());
         promise.resolve(settings);
     }
@@ -50,6 +51,19 @@ public final class WidgetSettingsModule extends ReactContextBaseJavaModule {
             promise.resolve(cached.toString());
         } catch (org.json.JSONException error) {
             promise.reject("CACHE_READ_FAILED", error);
+        }
+    }
+
+    /** 학생용: 전 학급 응답에서 우리 반만 교사 시간표 형식으로 바꿔 위젯 캐시에 저장한다. */
+    @ReactMethod
+    public void cacheClassSchedule(String classesJson, String className, Promise promise) {
+        try {
+            String json = TeacherNotifications.classToScheduleJson(classesJson, className);
+            if (json != null) TeacherNotifications.cacheSchedule(getReactApplicationContext(), className, json);
+            refreshWidgets();
+            promise.resolve(json);
+        } catch (Exception error) {
+            promise.reject("CLASS_CACHE_FAILED", error);
         }
     }
 

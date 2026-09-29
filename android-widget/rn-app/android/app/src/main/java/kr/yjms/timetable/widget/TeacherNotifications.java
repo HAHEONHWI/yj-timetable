@@ -112,26 +112,83 @@ final class TeacherNotifications {
         }
     }
 
+    static boolean isStudent() {
+        return "student".equals(BuildConfig.AUDIENCE);
+    }
+
+    /** 교사용은 교사 이름, 학생용은 학급(예: 2-1)이 "name"에 저장된다. */
     static String teacherName(Context context) {
         return prefs(context).getString("name", "").trim();
     }
 
-    /** 교사 시간표 JSON을 받아 위젯 캐시에도 저장한다. 실패하면 null. */
+    /** 위젯 제목용 이름. 학생용은 "2-1반"처럼 보여 준다. */
+    static String targetLabel(String name) {
+        String value = name == null ? "" : name.trim();
+        if (value.isEmpty()) return isStudent() ? "반 선택 필요" : "교사 선택 필요";
+        return isStudent() ? value + "반" : value;
+    }
+
+    /**
+     * 학급 시간표 응답(format=classes)에서 한 반을 골라 교사 시간표와 같은 형식으로 바꾼다.
+     * 위젯과 알림이 같은 코드를 쓰도록 과목명을 className 자리에 넣는다.
+     */
+    static String classToScheduleJson(String classesJson, String className) throws Exception {
+        JSONObject source = new JSONObject(classesJson);
+        JSONArray rows = source.getJSONObject("timetables").optJSONArray(className);
+        if (rows == null) return null;
+        JSONArray grid = new JSONArray();
+        for (int dayIndex = 0; dayIndex < rows.length(); dayIndex++) {
+            JSONArray dayRow = rows.getJSONArray(dayIndex);
+            JSONArray dayOut = new JSONArray();
+            for (int periodIndex = 0; periodIndex < dayRow.length(); periodIndex++) {
+                JSONObject lesson = dayRow.getJSONObject(periodIndex);
+                JSONArray matches = new JSONArray();
+                String subject = lesson.optString("title").trim();
+                if (!subject.isEmpty()) {
+                    String type = lesson.optString("type");
+                    JSONObject match = new JSONObject();
+                    match.put("className", subject);
+                    match.put("title", "");
+                    match.put("teacher", lesson.optString("teacher"));
+                    match.put("type", "merge".equals(type) ? "event" : type);
+                    match.put("note", "change".equals(type) ? "변경" : "new".equals(type) ? "신설 수업" : "");
+                    matches.put(match);
+                }
+                dayOut.put(matches);
+            }
+            grid.put(dayOut);
+        }
+        JSONObject result = new JSONObject();
+        result.put("days", source.optJSONArray("days"));
+        result.put("periods", source.optJSONArray("periods"));
+        result.put("grid", grid);
+        return result.toString();
+    }
+
+    static void cacheSchedule(Context context, String target, String json) {
+        prefs(context).edit()
+            .putString("last_teacher_schedule_name", target)
+            .putString("last_teacher_schedule_json", json)
+            .apply();
+    }
+
+    /** 교사(또는 학급) 시간표 JSON을 받아 위젯 캐시에도 저장한다. 실패하면 null. */
     static String fetchTeacherSchedule(Context context, String teacher) {
         HttpURLConnection connection = null;
         try {
-            String url = "https://schedule.yjms.kr/wallpaper.png?format=json&teacher="
-                + URLEncoder.encode(teacher, "UTF-8") + "&v=" + System.currentTimeMillis();
+            String url = isStudent()
+                ? "https://schedule.yjms.kr/wallpaper.png?format=classes&v=" + System.currentTimeMillis()
+                : "https://schedule.yjms.kr/wallpaper.png?format=json&teacher="
+                    + URLEncoder.encode(teacher, "UTF-8") + "&v=" + System.currentTimeMillis();
             connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) return null;
             String json = readUtf8(connection.getInputStream());
+            if (isStudent()) json = classToScheduleJson(json, teacher);
+            if (json == null) return null;
             new JSONObject(json);
-            prefs(context).edit()
-                .putString("last_teacher_schedule_name", teacher)
-                .putString("last_teacher_schedule_json", json)
-                .apply();
+            cacheSchedule(context, teacher, json);
             return json;
         } catch (Exception error) {
             return null;
@@ -192,7 +249,8 @@ final class TeacherNotifications {
             }
 
             String title = lines.isEmpty() ? "오늘은 예정된 수업이 없습니다" : "오늘 수업 " + lines.size() + "개";
-            String body = lines.isEmpty() ? teacher + " 선생님, 좋은 하루 보내세요." : join(lines);
+            String greeting = isStudent() ? "오늘도 좋은 하루 보내세요." : teacher + " 선생님, 좋은 하루 보내세요.";
+            String body = lines.isEmpty() ? greeting : join(lines);
             notify(context, CHANNEL_DAILY, DAILY_NOTIFICATION_ID, title, body);
         } catch (Exception ignored) {
             // 형식이 맞지 않는 응답이면 이번 알림은 건너뛴다.

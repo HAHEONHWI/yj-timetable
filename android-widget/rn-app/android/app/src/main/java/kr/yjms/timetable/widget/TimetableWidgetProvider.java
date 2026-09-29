@@ -74,8 +74,7 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_image, refreshPending);
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String teacherName = prefs.getString("name", "최세영").trim();
-        if (teacherName.isEmpty()) teacherName = "최세영";
+        String teacherName = prefs.getString("name", "").trim();
         String cachedTeacher = prefs.getString("last_teacher_schedule_name", "").trim();
         String cachedJson = teacherName.equals(cachedTeacher) && !teacherName.isEmpty()
             ? prefs.getString("last_teacher_schedule_json", "")
@@ -117,7 +116,7 @@ public class TimetableWidgetProvider extends AppWidgetProvider {
                 HttpURLConnection connection = null;
                 try {
                     SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-                    String name = prefs.getString("name", "최세영");
+                    String name = prefs.getString("name", "");
                     String subjects = prefs.getString("subjects", "");
                     String grades = prefs.getString("grades", "");
                     String days = prefs.getString("days", "mon,tue,wed,thu,fri");
