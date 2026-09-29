@@ -1,67 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0f172a"
-    android:padding="8dp">
+    android:background="@android:color/transparent">
 
-    <!-- 상단 제어 바 -->
-    <RelativeLayout
-        android:id="@+id/widget_header"
-        android:layout_width="match_parent"
-        android:layout_height="36dp"
-        android:layout_alignParentTop="true"
-        android:paddingHorizontal="4dp">
-
-        <!-- 동적 타이틀 텍스트뷰 (선생님 성함 및 과목명 반영) -->
-        <TextView
-            android:id="@+id/widget_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="용정시간표"
-            android:textColor="#2dd4bf"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:layout_alignParentLeft="true"
-            android:layout_centerVertical="true"
-            android:layout_toLeftOf="@+id/widget_last_update"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:layout_marginRight="8dp" />
-
-        <!-- 최종 새로고침 시각 표시 텍스트뷰 -->
-        <TextView
-            android:id="@+id/widget_last_update"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="갱신: -"
-            android:textColor="#64748b"
-            android:textSize="10sp"
-            android:layout_toLeftOf="@id/widget_refresh_button"
-            android:layout_centerVertical="true"
-            android:layout_marginRight="8dp" />
-
-        <Button
-            android:id="@+id/widget_refresh_button"
-            android:layout_width="48dp"
-            android:layout_height="28dp"
-            android:background="#1e293b"
-            android:text="🔄"
-            android:textColor="#f8fafc"
-            android:textSize="11sp"
-            android:layout_alignParentRight="true"
-            android:layout_centerVertical="true" />
-
-    </RelativeLayout>
-
-    <!-- iOS 배경화면과 100% 동일한 병합 비주얼을 뿌려줄 시간표 전체 이미지 영역 -->
     <ImageView
         android:id="@+id/widget_image"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/widget_header"
-        android:scaleType="fitCenter"
-        android:layout_marginTop="4dp"
-        android:background="#0f172a" />
+        android:contentDescription="@string/widget_name"
+        android:scaleType="fitXY" />
 
-</RelativeLayout>
+</FrameLayout>
