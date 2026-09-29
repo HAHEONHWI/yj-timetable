@@ -4,7 +4,9 @@
 
 ## 구조
 
-- `App.tsx`: React Native 교사 주간 시간표 화면
+- `App.tsx`: 빌드 종류(교사용/학생용)에 따라 화면 선택
+- `TeacherApp.tsx`: 교사용 화면, `StudentApp.tsx`: 학생용 화면, `src/shared.tsx`: 공통 타입·표·알림 설정 창
+- 교사용/학생용은 `android/app/build.gradle`의 productFlavors(`teacher`, `student`)로 나뉜다.
 - `android/app/src/main/java/kr/yjms/timetable/widget/WidgetSettingsModule.java`: React Native와 Android 위젯 설정 공유
 - `android/app/src/main/java/kr/yjms/timetable/widget/TimetableWidgetProvider.java`: Android 홈 화면 위젯
 - Android 홈 화면 위젯은 네이티브 `AppWidgetProvider`로 제공하고 React Native 앱과 설정을 공유합니다.
@@ -24,13 +26,13 @@ npm run android
 교사용 APK 빌드:
 
 ```sh
-./android-widget/build-apk.sh
+./android-widget/build-apk.sh teacher   # 또는 student
 ```
 
 구글 플레이용 AAB 빌드 (업로드 키 설정은 `android-widget/README.md` 참고):
 
 ```sh
-./android-widget/build-aab.sh
+./android-widget/build-aab.sh teacher   # 또는 student
 ```
 
 빌드 산출물은 `android/app/build/`에 생성되며 커밋하지 않습니다. keystore, APK 및 기존 `android-widget/build/` 사용자 파일을 덮어쓰거나 삭제하지 않습니다.
