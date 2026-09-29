@@ -23,6 +23,7 @@ type Settings = {
   grades: string;
   days: string;
   theme: 'dark' | 'light';
+  teacherSelected?: boolean;
 };
 
 type ApiDay = {iso: string; label: string};
@@ -138,6 +139,7 @@ function AppContent() {
   const [error, setError] = useState('');
   const [teacherModalVisible, setTeacherModalVisible] = useState(false);
   const [teacherDraft, setTeacherDraft] = useState(DEFAULT_SETTINGS.name);
+  const [firstRun, setFirstRun] = useState(false);
   const [activeTab, setActiveTab] = useState('교사 보기');
   const colors = PALETTES[settings.theme];
   const days = schedule?.days || [];
@@ -197,6 +199,13 @@ function AppContent() {
 
   const loadInitialData = useCallback(async () => {
     const saved = await loadSettings();
+    if (saved.teacherSelected === false) {
+      setFirstRun(true);
+      setTeacherDraft('');
+      setTeacherModalVisible(true);
+      setLoading(false);
+      return;
+    }
     try {
       const cached = await WidgetSettings.getCachedTeacherSchedule();
       if (cached) {
@@ -234,8 +243,9 @@ function AppContent() {
     const name = teacherDraft.trim();
     if (!name) return;
     const savedName = await WidgetSettings.setTeacherName(name);
-    const next = {...settings, name: savedName};
+    const next = {...settings, name: savedName, teacherSelected: true};
     setSettings(next);
+    setFirstRun(false);
     setTeacherModalVisible(false);
     await refresh(next);
   };
@@ -448,10 +458,17 @@ function AppContent() {
         transparent
         animationType="fade"
         visible={teacherModalVisible}
-        onRequestClose={() => setTeacherModalVisible(false)}>
+        onRequestClose={() => {
+          if (!firstRun) setTeacherModalVisible(false);
+        }}>
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, {backgroundColor: colors.panel, borderColor: colors.border}]}>
             <Text style={[styles.modalTitle, {color: colors.primary}]}>교사 선택</Text>
+            {firstRun ? (
+              <Text style={[styles.modalHint, {color: colors.secondary}]}>
+                시간표를 볼 교사 이름을 입력하세요. 나중에 상단에서 바꿀 수 있습니다.
+              </Text>
+            ) : null}
             <TextInput
               autoFocus
               value={teacherDraft}
@@ -463,9 +480,11 @@ function AppContent() {
               style={[styles.teacherInput, {borderColor: colors.border, color: colors.primary}]}
             />
             <View style={styles.modalActions}>
-              <Pressable onPress={() => setTeacherModalVisible(false)} style={styles.modalAction}>
-                <Text style={[styles.cancelText, {color: colors.secondary}]}>취소</Text>
-              </Pressable>
+              {firstRun ? null : (
+                <Pressable onPress={() => setTeacherModalVisible(false)} style={styles.modalAction}>
+                  <Text style={[styles.cancelText, {color: colors.secondary}]}>취소</Text>
+                </Pressable>
+              )}
               <Pressable onPress={saveTeacher} style={[styles.saveButton, {backgroundColor: colors.accent}]}>
                 <Text style={styles.saveText}>적용</Text>
               </Pressable>
@@ -571,6 +590,7 @@ const styles = StyleSheet.create({
   modalBackdrop: {flex: 1, backgroundColor: '#0009', alignItems: 'center', justifyContent: 'center', padding: 22},
   modalCard: {width: '100%', borderWidth: 1, borderRadius: 16, padding: 18},
   modalTitle: {fontSize: 17, fontWeight: '800'},
+  modalHint: {fontSize: 12, marginTop: 6, lineHeight: 17},
   teacherInput: {height: 46, borderWidth: 1, borderRadius: 9, paddingHorizontal: 12, marginTop: 16, fontSize: 15},
   modalActions: {flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 16},
   modalAction: {paddingHorizontal: 13, paddingVertical: 10},

@@ -35,6 +35,7 @@ public final class WidgetSettingsModule extends ReactContextBaseJavaModule {
         settings.putString("grades", prefs.getString("grades", ""));
         settings.putString("days", prefs.getString("days", "mon,tue,wed,thu,fri"));
         settings.putString("theme", prefs.getString("widget_theme", "dark"));
+        settings.putBoolean("teacherSelected", !prefs.getString("name", "").trim().isEmpty());
         promise.resolve(settings);
     }
 
