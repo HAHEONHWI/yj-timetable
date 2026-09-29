@@ -25,4 +25,10 @@ npm run android
 ./android-widget/build-apk.sh
 ```
 
+구글 플레이용 AAB 빌드 (업로드 키 설정은 `android-widget/README.md` 참고):
+
+```sh
+./android-widget/build-aab.sh
+```
+
 빌드 산출물은 `android/app/build/`에 생성되며 커밋하지 않습니다. keystore, APK 및 기존 `android-widget/build/` 사용자 파일을 덮어쓰거나 삭제하지 않습니다.
