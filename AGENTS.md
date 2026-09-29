@@ -12,7 +12,8 @@
 - Netlify Function: `netlify/functions/wallpaper.js`
 - Windows 위젯: `widget/`, `dist/`, `Widget-Win/`
 - Android 전자칠판 앱: `android-board/`
-- Android 홈 화면 위젯: `android-widget/`
+- Android 교사용 React Native 앱: `android-widget/rn-app/`
+- Android 홈 화면 위젯 및 기존 설정 화면: `android-widget/`
 - 다운로드 산출물: `downloads/`
 
 ## 작업 원칙
