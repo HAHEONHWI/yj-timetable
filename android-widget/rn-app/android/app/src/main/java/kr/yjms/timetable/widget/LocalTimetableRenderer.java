@@ -20,11 +20,11 @@ import org.json.JSONObject;
 
 public final class LocalTimetableRenderer {
 
-    private static final String[] START_TIMES = {
-        "08:50", "09:50", "10:50", "11:50", "13:30", "14:30", "15:30", "16:30", "17:30"
+    static final String[] START_TIMES = {
+        "08:40", "09:35", "10:30", "11:25", "13:20", "14:15", "15:10", "16:05", "16:55"
     };
     private static final String[] END_TIMES = {
-        "09:35", "10:35", "11:35", "12:35", "14:15", "15:15", "16:15", "17:15", "18:15"
+        "09:25", "10:20", "11:15", "12:10", "14:05", "15:00", "15:55", "16:45", "17:35"
     };
 
     private LocalTimetableRenderer() {}

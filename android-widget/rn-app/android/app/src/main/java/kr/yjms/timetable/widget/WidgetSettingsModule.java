@@ -70,9 +70,59 @@ public final class WidgetSettingsModule extends ReactContextBaseJavaModule {
         String safeName = name == null ? "" : name.trim();
         SharedPreferences prefs = getReactApplicationContext()
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        boolean changed = !safeName.equals(prefs.getString("name", ""));
         prefs.edit().putString("name", safeName).apply();
+        if (changed) {
+            TeacherNotifications.resetChangeBaseline(getReactApplicationContext());
+            captureChangeBaseline();
+        }
         refreshWidgets();
         promise.resolve(safeName);
+    }
+
+    @ReactMethod
+    public void getNotificationSettings(Promise promise) {
+        SharedPreferences prefs = TeacherNotifications.prefs(getReactApplicationContext());
+        WritableMap settings = Arguments.createMap();
+        settings.putBoolean("changes", prefs.getBoolean(TeacherNotifications.KEY_CHANGES, false));
+        settings.putBoolean("daily", prefs.getBoolean(TeacherNotifications.KEY_DAILY, false));
+        settings.putBoolean("setupDone", prefs.getBoolean(TeacherNotifications.KEY_SETUP_DONE, false));
+        promise.resolve(settings);
+    }
+
+    @ReactMethod
+    public void setNotificationSettings(boolean changes, boolean daily, Promise promise) {
+        Context context = getReactApplicationContext();
+        SharedPreferences prefs = TeacherNotifications.prefs(context);
+        boolean changesTurnedOn = changes && !prefs.getBoolean(TeacherNotifications.KEY_CHANGES, false);
+        prefs.edit()
+            .putBoolean(TeacherNotifications.KEY_CHANGES, changes)
+            .putBoolean(TeacherNotifications.KEY_DAILY, daily)
+            .putBoolean(TeacherNotifications.KEY_SETUP_DONE, true)
+            .apply();
+        if (changesTurnedOn) {
+            TeacherNotifications.resetChangeBaseline(context);
+            captureChangeBaseline();
+        }
+        TeacherNotifications.applySchedules(context);
+        promise.resolve(null);
+    }
+
+    @ReactMethod
+    public void syncNotifications(Promise promise) {
+        TeacherNotifications.applySchedules(getReactApplicationContext());
+        promise.resolve(null);
+    }
+
+    /** 알림을 켜거나 교사를 바꾼 시점의 변경 목록을 기준으로 저장해, 이미 있던 변경은 알리지 않는다. */
+    private void captureChangeBaseline() {
+        final Context context = getReactApplicationContext().getApplicationContext();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                TeacherNotifications.checkChanges(context);
+            }
+        }).start();
     }
 
     @ReactMethod
