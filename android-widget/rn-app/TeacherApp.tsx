@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
+  AcademicCalendar,
   ApiSchedule,
   ClassSchedule,
   DEFAULT_SETTINGS,
@@ -54,6 +55,7 @@ export default function TeacherApp() {
   const [teacherListLoading, setTeacherListLoading] = useState(false);
   const [teacherListError, setTeacherListError] = useState('');
   const [activeTab, setActiveTab] = useState('교사 보기');
+  const [academicRefresh, setAcademicRefresh] = useState(0);
   const [classSchedule, setClassSchedule] = useState<ClassSchedule | null>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [classLoading, setClassLoading] = useState(false);
@@ -362,8 +364,12 @@ export default function TeacherApp() {
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
-              refreshing={activeTab === '시간표' ? classLoading && !!classSchedule : refreshing}
-              onRefresh={() => (activeTab === '시간표' ? loadClassSchedule() : refresh())}
+              refreshing={activeTab === '시간표' ? classLoading && !!classSchedule : activeTab === '학사일정' ? false : refreshing}
+              onRefresh={() => {
+                if (activeTab === '시간표') loadClassSchedule();
+                else if (activeTab === '학사일정') setAcademicRefresh(value => value + 1);
+                else refresh();
+              }}
               tintColor={colors.accent}
             />
           }>
@@ -390,17 +396,19 @@ export default function TeacherApp() {
           <View style={styles.heading}>
             <View style={styles.headingCopy}>
               <Text style={[styles.pageTitle, {color: colors.primary}]}>
-                {activeTab === '시간표' ? '학급 시간표' : '교사 보기'}
+                {activeTab === '시간표' ? '학급 시간표' : activeTab === '학사일정' ? '학사일정' : '교사 보기'}
               </Text>
               <Text numberOfLines={1} style={[styles.subtitle, {color: colors.secondary}]}>
                 {activeTab === '시간표'
                   ? (selectedClass ? selectedClass + '반 · ' : '') + '이번 주 시간표'
-                  : firstRun
+                  : activeTab === '학사일정'
+                    ? '시험, 행사, 휴업일과 다가오는 일정'
+                    : firstRun
                     ? '시간표를 볼 교사를 선택하세요'
                     : teacherTitle + ' · ' + subjectSummary + ' · 주간 ' + weeklyHours + '시간'}
               </Text>
             </View>
-            {activeTab === '시간표' ? null : (
+            {activeTab === '시간표' || activeTab === '학사일정' ? null : (
             <Pressable
               accessibilityRole="button"
               onPress={openTeacherModal}
@@ -413,7 +421,9 @@ export default function TeacherApp() {
             )}
           </View>
 
-          {activeTab === '시간표' ? renderClassPage() : (
+          {activeTab === '학사일정' ? (
+            <AcademicCalendar colors={colors} refreshKey={academicRefresh} />
+          ) : activeTab === '시간표' ? renderClassPage() : (
           <>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {loading && !schedule ? (
@@ -461,7 +471,7 @@ export default function TeacherApp() {
         </ScrollView>
 
         <View style={[styles.bottomNav, {borderTopColor: colors.border, backgroundColor: colors.background}]}>
-          {['시간표', '교사 보기', '다운로드'].map(tab => (
+          {['시간표', '교사 보기', '학사일정', '다운로드'].map(tab => (
             <Pressable key={tab} accessibilityRole="button" onPress={() => pressTab(tab)} style={styles.navItem}>
               <View style={[styles.navIndicator, {backgroundColor: activeTab === tab ? colors.accent : 'transparent'}]} />
               <Text style={[styles.navText, {color: activeTab === tab ? colors.primary : colors.secondary}]}>{tab}</Text>

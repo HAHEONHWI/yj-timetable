@@ -267,6 +267,91 @@ function classTimetables(state) {
   };
 }
 
+// 앱 학사일정 탭. 관리자 행사(neis-holiday: 사본 제외)와 나이스 학사일정을 합친다.
+// 필터 규칙은 웹 달력(src/calendar.js eventsForMonth)과 같다.
+async function readAcademicEventRange(from, to) {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/academic_events?select=id,event_date,title,content,grades,is_school_day,holiday_kind`
+      + `&event_date=gte.${from}&event_date=lte.${to}&order=event_date.asc`;
+    const response = await fetch(url, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!response.ok) return [];
+    const rows = await response.json();
+    return (rows || []).map((row) => ({
+      source: "neis",
+      date: row.event_date,
+      title: row.title,
+      content: row.content || "",
+      grades: Array.isArray(row.grades) ? row.grades : [],
+      isSchoolDay: row.is_school_day !== false,
+      holidayKind: row.holiday_kind || "",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function academicEventMatchesClass(event, className) {
+  if (!className) return true;
+  if (Array.isArray(event.classes)) return event.classes.includes(className);
+  if (!Array.isArray(event.grades)) return false;
+  const grade = Number(String(className).split("-")[0]);
+  return event.grades.length === 0 || event.grades.includes(grade);
+}
+
+function academicEventView(event, className) {
+  if (event.source === "neis") {
+    const target = event.grades.length ? `${event.grades.join(", ")}학년` : "전교";
+    const kind = event.holidayKind && event.holidayKind !== "해당없음"
+      ? event.holidayKind
+      : event.isSchoolDay ? "" : "휴업일";
+    const closed = event.holidayKind === "공휴일" || /재량\s*휴업일/.test(`${event.title} ${event.content}`);
+    return {
+      date: event.date,
+      title: event.title || "학사일정",
+      detail: [target, kind, event.content].filter(Boolean).join(" · "),
+      holiday: closed,
+    };
+  }
+  return {
+    date: event.date,
+    title: event.title || "학사일정",
+    detail: [!className && Array.isArray(event.classes) ? event.classes.join(", ") : "", event.memo || ""].filter(Boolean).join(" · "),
+    holiday: false,
+  };
+}
+
+async function academicCalendar(state, query) {
+  const today = toISO(kstNow());
+  const month = /^\d{4}-\d{2}$/.test(query.month || "") ? query.month : today.slice(0, 7);
+  const className = classes.includes(query.class) ? query.class : "";
+  const [year, monthNumber] = month.split("-").map(Number);
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${pad(new Date(year, monthNumber, 0).getDate())}`;
+  const upcomingEnd = toISO(new Date(fromISO(today).getTime() + 120 * 24 * 60 * 60 * 1000));
+  const from = monthStart < today ? monthStart : today;
+  const to = monthEnd > upcomingEnd ? monthEnd : upcomingEnd;
+  const manual = state.events
+    .filter((event) => !String(event.id).startsWith("neis-holiday:"))
+    .map((event) => ({ ...event, source: "manual" }));
+  const all = [...manual, ...(await readAcademicEventRange(from, to))]
+    .filter((event) => event && typeof event.date === "string" && academicEventMatchesClass(event, className))
+    .sort((first, second) => first.date.localeCompare(second.date) || String(first.title || "").localeCompare(String(second.title || ""), "ko"));
+  return {
+    month,
+    today,
+    className,
+    events: all.filter((event) => event.date >= monthStart && event.date <= monthEnd).map((event) => academicEventView(event, className)),
+    // D-day용: 여러 날 이어지는 일정(중간고사 등)은 첫날만 남긴다.
+    upcoming: all
+      .filter((event) => event.date > today && event.date <= upcomingEnd)
+      .filter((event, index, list) => list.findIndex((other) => other.title === event.title) === index)
+      .slice(0, 5)
+      .map((event) => academicEventView(event, className)),
+  };
+}
+
 async function readState() {
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/app_state?id=eq.main&select=data`, {
@@ -784,6 +869,18 @@ exports.handler = async (event) => {
         "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify(debugInfo, null, 2),
+    };
+  }
+
+  if (query.format === "academic") {
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify(await academicCalendar(state, query)),
     };
   }
 

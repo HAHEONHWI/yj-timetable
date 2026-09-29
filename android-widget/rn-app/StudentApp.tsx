@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
+  AcademicCalendar,
   ClassSchedule,
   DEFAULT_SETTINGS,
   Legend,
@@ -63,7 +64,8 @@ export default function StudentApp() {
   const [clock, setClock] = useState(minutesNowInKorea);
   const [firstRun, setFirstRun] = useState(false);
   const [classModalVisible, setClassModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'시간표' | '급식'>('시간표');
+  const [activeTab, setActiveTab] = useState<'시간표' | '급식' | '학사일정'>('시간표');
+  const [academicRefresh, setAcademicRefresh] = useState(0);
   const [meal, setMeal] = useState<Meal | null>(null);
   const [mealLoading, setMealLoading] = useState(false);
   const [mealError, setMealError] = useState('');
@@ -209,7 +211,7 @@ export default function StudentApp() {
     setSettingsModal('edit');
   };
 
-  const pressTab = (tab: '시간표' | '급식') => {
+  const pressTab = (tab: '시간표' | '급식' | '학사일정') => {
     setActiveTab(tab);
     if (tab === '급식' && !meal && !mealLoading) loadMeal();
   };
@@ -342,8 +344,12 @@ export default function StudentApp() {
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
-              refreshing={activeTab === '급식' ? mealLoading && !!meal : refreshing}
-              onRefresh={() => (activeTab === '급식' ? loadMeal(meal?.targetDate, meal?.mealCode) : loadClassSchedule(myClass))}
+              refreshing={activeTab === '급식' ? mealLoading && !!meal : activeTab === '학사일정' ? false : refreshing}
+              onRefresh={() => {
+                if (activeTab === '급식') loadMeal(meal?.targetDate, meal?.mealCode);
+                else if (activeTab === '학사일정') setAcademicRefresh(value => value + 1);
+                else loadClassSchedule(myClass);
+              }}
               tintColor={colors.accent}
             />
           }>
@@ -370,21 +376,27 @@ export default function StudentApp() {
           <View style={styles.heading}>
             <View style={styles.headingCopy}>
               <Text style={[styles.pageTitle, {color: colors.primary}]}>
-                {activeTab === '급식' ? '오늘 급식' : shownClass && shownClass !== myClass ? shownClass + '반 시간표' : '우리 반 시간표'}
+                {activeTab === '급식' ? '오늘 급식' : activeTab === '학사일정' ? '학사일정' : shownClass && shownClass !== myClass ? shownClass + '반 시간표' : '우리 반 시간표'}
               </Text>
               <Text numberOfLines={1} style={[styles.subtitle, {color: colors.secondary}]}>
                 {activeTab === '급식'
                   ? '용정중학교 급식'
+                  : activeTab === '학사일정'
+                    ? (myClass ? myClass + '반 기준 · ' : '') + '시험, 행사, 휴업일'
                   : myClass ? myClass + '반 · 이번 주 시간표' : '우리 반을 선택하세요'}
               </Text>
             </View>
           </View>
 
-          {activeTab === '급식' ? renderMeal() : renderTimetable()}
+          {activeTab === '급식'
+            ? renderMeal()
+            : activeTab === '학사일정'
+              ? <AcademicCalendar colors={colors} className={myClass} refreshKey={academicRefresh} />
+              : renderTimetable()}
         </ScrollView>
 
         <View style={[styles.bottomNav, {borderTopColor: colors.border, backgroundColor: colors.background}]}>
-          {(['시간표', '급식'] as const).map(tab => (
+          {(['시간표', '급식', '학사일정'] as const).map(tab => (
             <Pressable key={tab} accessibilityRole="button" onPress={() => pressTab(tab)} style={styles.navItem}>
               <View style={[styles.navIndicator, {backgroundColor: activeTab === tab ? colors.accent : 'transparent'}]} />
               <Text style={[styles.navText, {color: activeTab === tab ? colors.primary : colors.secondary}]}>{tab}</Text>
