@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 알림 표시줄용 단색 아이콘: 시간표 달력 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7,2h2v2h6V2h2v2h2a2,2 0,0 1,2 2v14a2,2 0,0 1,-2 2H5a2,2 0,0 1,-2 -2V6a2,2 0,0 1,2 -2h2V2zM5,9v11h14V9H5zM7,11h4v3H7v-3zM13,11h4v3h-4v-3zM7,16h4v2H7v-2zM13,16h4v2h-4v-2z" />
+</vector>

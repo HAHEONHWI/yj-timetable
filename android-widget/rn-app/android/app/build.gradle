@@ -79,7 +79,7 @@ android {
 
     namespace "kr.yjms.timetable.widget"
     defaultConfig {
-        applicationId "kr.yjms.timetable.widget"
+        applicationId "kr.yjms.timetable.teacher"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 4

@@ -209,6 +209,64 @@ function teacherLessonsForCell(state, teacher, date, period, periodIndex) {
   return matches;
 }
 
+// 교사용 앱의 교사 선택 목록. 웹 교사 보기와 같은 규칙으로 이름을 모으고,
+// 담당 과목을 함께 내려 준다. label은 이름 가리기 설정을 따른다.
+function teacherDirectory(state) {
+  const subjectsByTeacher = new Map();
+  const add = (teacher, subject) => {
+    const name = String(teacher || "").trim();
+    if (!name) return;
+    if (!subjectsByTeacher.has(name)) subjectsByTeacher.set(name, new Set());
+    if (subject) subjectsByTeacher.get(name).add(subjectDisplayLabel(state, subject));
+  };
+  for (const className of classes) {
+    Object.entries((state.teachers && state.teachers[className]) || {}).forEach(([subject, teacher]) => add(teacher, subject));
+    Object.values((state.teachersByPeriod && state.teachersByPeriod[className]) || {}).forEach((teacherRow) => {
+      if (Array.isArray(teacherRow)) teacherRow.forEach((teacher) => add(teacher, ""));
+    });
+  }
+  return [...subjectsByTeacher.entries()]
+    .sort(([first], [second]) => first.localeCompare(second, "ko"))
+    .map(([name, subjects]) => ({
+      name,
+      label: maskedTeacherName(state, name),
+      subjects: [...subjects].sort((first, second) => first.localeCompare(second, "ko")),
+    }));
+}
+
+// 교사용 앱의 학급 시간표 탭. 이번 주 전 학급 시간표를 한 번에 내려 준다.
+function classTimetables(state) {
+  const days = schoolDaysForCurrentWeek();
+  const timetables = {};
+  for (const className of classes) {
+    timetables[className] = days.map((day) => {
+      const closure = fullDayClosureForDate(state, day.iso);
+      return periods.map((period, periodIndex) => {
+        if (closure && period >= closure.start && period <= closure.end) {
+          return { title: closure.title, type: "event", teacher: "" };
+        }
+        const lesson = lessonFor(state, day.iso, className, period, periodIndex);
+        const isLesson = lesson.type === "base" || lesson.type === "change" || lesson.type === "new";
+        const subject = lesson.title === "-" ? "" : lesson.title;
+        const teacher = isLesson && subject
+          ? resolveTeacherForCell(state, day.iso, className, periodIndex, subject, lesson.type !== "base")
+          : "";
+        return {
+          title: isLesson ? subjectDisplayLabel(state, subject) : subject,
+          type: lesson.type,
+          teacher: maskedTeacherName(state, teacher),
+        };
+      });
+    });
+  }
+  return {
+    classes,
+    days: days.map((day) => ({ iso: day.iso, label: day.weekday.label })),
+    periods,
+    timetables,
+  };
+}
+
 async function readState() {
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/app_state?id=eq.main&select=data`, {
@@ -726,6 +784,30 @@ exports.handler = async (event) => {
         "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify(debugInfo, null, 2),
+    };
+  }
+
+  if (query.format === "classes") {
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify(classTimetables(state)),
+    };
+  }
+
+  if (query.format === "teachers") {
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({ teachers: teacherDirectory(state) }),
     };
   }
 
