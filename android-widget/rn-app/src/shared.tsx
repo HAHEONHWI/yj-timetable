@@ -1,5 +1,6 @@
-import React, {ReactNode} from 'react';
+import React, {ReactNode, useCallback, useEffect, useState} from 'react';
 import {
+  ActivityIndicator,
   Linking,
   Modal,
   NativeModules,
@@ -162,6 +163,160 @@ export function mealUrl(date?: string, mealCode?: string) {
   if (date) params.push('date=' + date);
   if (mealCode) params.push('mealCode=' + mealCode);
   return 'https://schedule.yjms.kr/api/meal?' + params.join('&');
+}
+
+export type AcademicEvent = {date: string; title: string; detail: string; holiday: boolean};
+type AcademicResponse = {month: string; today: string; events: AcademicEvent[]; upcoming: AcademicEvent[]};
+
+export function academicUrl(month: string, className?: string) {
+  const params = ['format=academic', 'month=' + month, 'v=' + Date.now()];
+  if (className) params.push('class=' + encodeURIComponent(className));
+  return 'https://schedule.yjms.kr/wallpaper.png?' + params.join('&');
+}
+
+const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function isoDate(year: number, month: number, day: number) {
+  return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+}
+
+function shiftMonthKey(month: string, delta: number) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const date = new Date(Date.UTC(year, monthNumber - 1 + delta, 1));
+  return date.getUTCFullYear() + '-' + String(date.getUTCMonth() + 1).padStart(2, '0');
+}
+
+function weekdayOf(iso: string) {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+function daysUntil(from: string, to: string) {
+  const toUtc = (iso: string) => {
+    const [year, month, day] = iso.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  };
+  return Math.round((toUtc(to) - toUtc(from)) / 86400000);
+}
+
+function shortDate(iso: string) {
+  return Number(iso.slice(5, 7)) + '/' + Number(iso.slice(8, 10)) + ' (' + WEEKDAY_LABELS[weekdayOf(iso)] + ')';
+}
+
+type AcademicCalendarProps = {colors: Palette; className?: string; refreshKey: number};
+
+/** 월간 학사일정: 다가오는 일정 D-day, 월 달력, 일정 목록. 교사용은 전체, 학생용은 우리 반 기준. */
+export function AcademicCalendar({colors, className, refreshKey}: AcademicCalendarProps) {
+  const [month, setMonth] = useState(todayInKorea().slice(0, 7));
+  const [data, setData] = useState<AcademicResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(academicUrl(month, className));
+      if (!response.ok) throw new Error('학사일정 요청 실패 (' + response.status + ')');
+      setData(await response.json() as AcademicResponse);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '학사일정을 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  }, [month, className]);
+
+  useEffect(() => {
+    load();
+  }, [load, refreshKey]);
+
+  const today = data?.today || todayInKorea();
+  const events = data?.month === month ? data.events : [];
+  const [year, monthNumber] = month.split('-').map(Number);
+  const firstWeekday = weekdayOf(isoDate(year, monthNumber, 1));
+  const dayCount = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  const cells: (string | null)[] = [
+    ...Array.from({length: firstWeekday}, () => null),
+    ...Array.from({length: dayCount}, (_, index) => isoDate(year, monthNumber, index + 1)),
+  ];
+  while (cells.length % 7) cells.push(null);
+  const eventsByDate = new Map<string, AcademicEvent[]>();
+  events.forEach(event => eventsByDate.set(event.date, [...(eventsByDate.get(event.date) || []), event]));
+
+  return (
+    <>
+      {data?.upcoming?.length ? (
+        <View style={styles.academicUpcoming}>
+          {data.upcoming.map(event => (
+            <View key={event.date + event.title} style={[styles.academicUpcomingItem, {borderColor: colors.border, backgroundColor: colors.panel}]}>
+              <Text style={[styles.academicDday, {color: event.holiday ? colors.added : colors.accent}]}>
+                D-{daysUntil(today, event.date)}
+              </Text>
+              <Text numberOfLines={1} style={[styles.academicUpcomingTitle, {color: colors.primary}]}>{event.title}</Text>
+              <Text style={[styles.academicUpcomingDate, {color: colors.secondary}]}>{shortDate(event.date)}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <View style={styles.academicMonthBar}>
+        <Pressable accessibilityRole="button" onPress={() => setMonth(shiftMonthKey(month, -1))} style={[styles.retryButton, {borderColor: colors.border}]}>
+          <Text style={[styles.cancelText, {color: colors.primary}]}>이전</Text>
+        </Pressable>
+        <Text style={[styles.academicMonthTitle, {color: colors.primary}]}>{year}년 {monthNumber}월</Text>
+        <Pressable accessibilityRole="button" onPress={() => setMonth(shiftMonthKey(month, 1))} style={[styles.retryButton, {borderColor: colors.border}]}>
+          <Text style={[styles.cancelText, {color: colors.primary}]}>다음</Text>
+        </Pressable>
+      </View>
+
+      <View style={[styles.academicGrid, {borderColor: colors.border, backgroundColor: colors.panel}]}>
+        {WEEKDAY_LABELS.map((label, index) => (
+          <Text
+            key={label}
+            style={[styles.academicWeekday, {color: index === 0 ? colors.added : index === 6 ? colors.accent : colors.secondary}]}>
+            {label}
+          </Text>
+        ))}
+        {cells.map((iso, index) => {
+          const dayEvents = iso ? eventsByDate.get(iso) || [] : [];
+          const holiday = dayEvents.some(event => event.holiday) || index % 7 === 0;
+          const isToday = iso === today;
+          return (
+            <View key={iso || 'blank-' + index} style={styles.academicCell}>
+              {iso ? (
+                <View style={[styles.academicDay, isToday ? {backgroundColor: colors.accent} : null]}>
+                  <Text style={[styles.academicDayText, {color: isToday ? '#FFFFFF' : holiday ? colors.added : colors.primary}]}>
+                    {Number(iso.slice(8, 10))}
+                  </Text>
+                </View>
+              ) : null}
+              {dayEvents.length ? (
+                <View style={[styles.academicDot, {backgroundColor: dayEvents.some(event => event.holiday) ? colors.added : colors.event}]} />
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {loading && !data ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.accent} />
+          <Text style={[styles.loadingText, {color: colors.secondary}]}>학사일정 불러오는 중</Text>
+        </View>
+      ) : events.length ? events.map((event, index) => (
+        <View key={event.date + event.title + index} style={[styles.academicRow, {borderTopColor: colors.border}]}>
+          <Text style={[styles.academicRowDate, {color: event.holiday ? colors.added : colors.secondary}]}>{shortDate(event.date)}</Text>
+          <View style={styles.settingCopy}>
+            <Text style={[styles.academicRowTitle, {color: event.holiday ? colors.added : colors.primary}]}>{event.title}</Text>
+            {event.detail ? <Text style={[styles.settingHint, {color: colors.secondary}]}>{event.detail}</Text> : null}
+          </View>
+        </View>
+      )) : (
+        <Text style={[styles.todayEmpty, {color: colors.secondary}]}>{loading ? '불러오는 중…' : '이 달에는 학사일정이 없습니다.'}</Text>
+      )}
+    </>
+  );
 }
 
 export function lessonBackground(type: string | undefined, colors: Palette) {
@@ -445,6 +600,22 @@ export const styles = StyleSheet.create({
   navText: {fontSize: 11},
   error: {fontSize: 12, color: '#C76464', marginBottom: 8},
   modalBackdrop: {flex: 1, backgroundColor: '#0009', alignItems: 'center', justifyContent: 'center', padding: 22},
+  academicUpcoming: {gap: 8, marginBottom: 14},
+  academicUpcomingItem: {flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10},
+  academicDday: {width: 52, fontSize: 15, fontWeight: '800'},
+  academicUpcomingTitle: {flex: 1, fontSize: 14, fontWeight: '700'},
+  academicUpcomingDate: {fontSize: 12},
+  academicMonthBar: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10},
+  academicMonthTitle: {fontSize: 16, fontWeight: '800'},
+  academicGrid: {flexDirection: 'row', flexWrap: 'wrap', borderWidth: 1, borderRadius: 12, paddingVertical: 8, marginBottom: 8},
+  academicWeekday: {width: '14.2857%', textAlign: 'center', fontSize: 11, fontWeight: '700', paddingBottom: 6},
+  academicCell: {width: '14.2857%', height: 42, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 2},
+  academicDay: {width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center'},
+  academicDayText: {fontSize: 13, fontWeight: '700'},
+  academicDot: {width: 5, height: 5, borderRadius: 3, marginTop: 3},
+  academicRow: {flexDirection: 'row', gap: 12, paddingVertical: 11, borderTopWidth: StyleSheet.hairlineWidth},
+  academicRowDate: {width: 64, fontSize: 12, fontWeight: '700', paddingTop: 1},
+  academicRowTitle: {fontSize: 14, fontWeight: '700'},
   modalCard: {width: '100%', borderWidth: 1, borderRadius: 16, padding: 18},
   modalTitle: {fontSize: 17, fontWeight: '800'},
   modalHint: {fontSize: 12, marginTop: 6, lineHeight: 17},
