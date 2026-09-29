@@ -1,4 +1,4 @@
-# 용정시간표 교사용 Android 앱
+# 용정시간표 Android 앱 (교사용 · 학생용)
 
 교사 주간 시간표 화면은 React Native로 구현합니다. Android 홈 화면 위젯은 `AppWidgetProvider`와 `RemoteViews`를 사용하며 React Native 앱과 설정을 공유합니다.
 
@@ -6,11 +6,14 @@
 
 JDK 21, Android SDK, Node.js 22.11 이상이 필요합니다. 의존성이 없으면 빌드 스크립트가 `npm ci`를 실행합니다.
 
+같은 코드에서 교사용(`kr.yjms.timetable.teacher`)과 학생용(`kr.yjms.timetable.student`) 앱을 빌드합니다. 화면은 `BuildConfig.AUDIENCE`에 따라 `TeacherApp.tsx` 또는 `StudentApp.tsx`로 나뉘고, 학생용은 학급 시간표·급식·알림을 제공합니다.
+
 ```sh
-./android-widget/build-apk.sh
+./android-widget/build-apk.sh teacher
+./android-widget/build-apk.sh student
 ```
 
-APK는 JS 번들을 포함한 `android-widget/rn-app/android/app/build/outputs/apk/release/app-release.apk`에 생성됩니다. 로컬 `android-widget/debug.keystore`로 서명하며, 스토어 배포 서명용은 아닙니다. Android 홈 화면 위젯은 2×1 크기까지 줄일 수 있습니다.
+APK는 JS 번들을 포함한 `android-widget/rn-app/android/app/build/outputs/apk/<teacher|student>/release/app-<teacher|student>-release.apk`에 생성됩니다. 로컬 `android-widget/debug.keystore`로 서명하며, 스토어 배포 서명용은 아닙니다. Android 홈 화면 위젯은 2×1 크기까지 줄일 수 있습니다.
 
 ## 구글 플레이 배포
 
@@ -31,10 +34,11 @@ APK는 JS 번들을 포함한 `android-widget/rn-app/android/app/build/outputs/a
    YJ_UPLOAD_KEY_PASSWORD=<키 비밀번호>
    ```
 
-3. AAB를 빌드합니다. 결과물은 `android-widget/rn-app/android/app/build/outputs/bundle/release/app-release.aab`입니다.
+3. AAB를 빌드합니다. 결과물은 `android-widget/rn-app/android/app/build/outputs/bundle/<teacher|student>Release/app-<teacher|student>-release.aab`입니다.
 
    ```sh
-   ./android-widget/build-aab.sh
+   ./android-widget/build-aab.sh teacher
+   ./android-widget/build-aab.sh student
    ```
 
 4. Play Console에서 Play 앱 서명을 사용하고 AAB를 업로드합니다. 업로드할 때마다 `android/app/build.gradle`의 `versionCode`를 올립니다.

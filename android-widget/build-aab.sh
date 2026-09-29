@@ -3,6 +3,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP_DIR="$ROOT_DIR/android-widget/rn-app"
+# 사용법: build-aab.sh [teacher|student] (기본값 teacher)
+AUDIENCE="${1:-teacher}"
+if [[ "$AUDIENCE" != "teacher" && "$AUDIENCE" != "student" ]]; then
+  echo "teacher 또는 student를 지정하세요: $AUDIENCE" >&2
+  exit 1
+fi
+VARIANT="$(tr '[:lower:]' '[:upper:]' <<< "${AUDIENCE:0:1}")${AUDIENCE:1}Release"
 GRADLE_PROPS="${GRADLE_USER_HOME:-$HOME/.gradle}/gradle.properties"
 
 if [[ -z "${JAVA_HOME:-}" && -d "/opt/homebrew/opt/openjdk@21" ]]; then
@@ -27,9 +34,9 @@ if [[ ! -d "$APP_DIR/node_modules" ]]; then
 fi
 
 cd "$APP_DIR/android"
-./gradlew --no-daemon -PyjPlayRelease :app:bundleRelease
+./gradlew --no-daemon -PyjPlayRelease ":app:bundle${VARIANT}"
 
-AAB_PATH="$APP_DIR/android/app/build/outputs/bundle/release/app-release.aab"
+AAB_PATH="$APP_DIR/android/app/build/outputs/bundle/${AUDIENCE}Release/app-$AUDIENCE-release.aab"
 if [[ ! -f "$AAB_PATH" ]]; then
   echo "AAB was not created: $AAB_PATH" >&2
   exit 1

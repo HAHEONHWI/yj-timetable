@@ -52,6 +52,7 @@ react {
 
     /* Autolinking */
     autolinkLibrariesWithApp()
+    debuggableVariants = ["teacherDebug", "studentDebug"]
 }
 
 /**
@@ -79,11 +80,31 @@ android {
 
     namespace "kr.yjms.timetable.widget"
     defaultConfig {
-        applicationId "kr.yjms.timetable.teacher"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 4
         versionName "1.2.0"
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    // 같은 코드로 교사용과 학생용 앱을 따로 만든다. 화면은 BuildConfig.AUDIENCE로 나뉜다.
+    flavorDimensions "audience"
+    productFlavors {
+        teacher {
+            dimension "audience"
+            applicationId "kr.yjms.timetable.teacher"
+            resValue "string", "app_name", "용정시간표 교사용"
+            buildConfigField "String", "AUDIENCE", '"teacher"'
+        }
+        student {
+            dimension "audience"
+            applicationId "kr.yjms.timetable.student"
+            versionCode 1
+            versionName "1.0.0"
+            resValue "string", "app_name", "용정시간표"
+            buildConfigField "String", "AUDIENCE", '"student"'
+        }
     }
     signingConfigs {
         debug {

@@ -87,8 +87,7 @@ public final class LocalTimetableRenderer {
 
         SharedPreferences prefs = context.getSharedPreferences("kr.yjms.timetable.widget.PREFS", Context.MODE_PRIVATE);
         String theme = prefs.getString("widget_theme", "dark");
-        String teacherName = prefs.getString("name", "최세영").trim();
-        if (teacherName.isEmpty()) teacherName = "최세영";
+        String teacherName = TeacherNotifications.targetLabel(prefs.getString("name", ""));
 
         Palette palette = palette("light".equals(theme));
         Timeline timeline = buildTimeline(jsonString);
