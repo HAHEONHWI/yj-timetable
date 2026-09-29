@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {ReactNode, useCallback, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -29,6 +29,14 @@ type Settings = {
 type ApiDay = {iso: string; label: string};
 type ApiMatch = {title?: string; type?: string; note?: string; className?: string};
 type ApiSchedule = {days?: ApiDay[]; periods?: number[]; grid?: ApiMatch[][][]};
+type TeacherOption = {name: string; label: string; subjects: string[]};
+type ClassLesson = {title?: string; type?: string; teacher?: string};
+type ClassSchedule = {
+  classes?: string[];
+  days?: ApiDay[];
+  periods?: number[];
+  timetables?: Record<string, ClassLesson[][]>;
+};
 
 type NativeWidgetSettings = {
   getSettings(): Promise<Settings>;
@@ -107,6 +115,14 @@ function teacherScheduleUrl(name: string) {
     .join('&');
 }
 
+function classScheduleUrl() {
+  return 'https://schedule.yjms.kr/wallpaper.png?format=classes&v=' + Date.now();
+}
+
+function teacherListUrl() {
+  return 'https://schedule.yjms.kr/wallpaper.png?format=teachers&v=' + Date.now();
+}
+
 function dateNumber(iso: string) {
   return Number(iso.slice(-2));
 }
@@ -140,7 +156,14 @@ function AppContent() {
   const [teacherModalVisible, setTeacherModalVisible] = useState(false);
   const [teacherDraft, setTeacherDraft] = useState(DEFAULT_SETTINGS.name);
   const [firstRun, setFirstRun] = useState(false);
+  const [teacherOptions, setTeacherOptions] = useState<TeacherOption[]>([]);
+  const [teacherListLoading, setTeacherListLoading] = useState(false);
+  const [teacherListError, setTeacherListError] = useState('');
   const [activeTab, setActiveTab] = useState('교사 보기');
+  const [classSchedule, setClassSchedule] = useState<ClassSchedule | null>(null);
+  const [selectedClass, setSelectedClass] = useState('');
+  const [classLoading, setClassLoading] = useState(false);
+  const [classError, setClassError] = useState('');
   const colors = PALETTES[settings.theme];
   const days = schedule?.days || [];
   const periods = schedule?.periods || START_TIMES.map((_, index) => index + 1);
@@ -197,12 +220,48 @@ function AppContent() {
     }
   }, []);
 
+  const loadClassSchedule = useCallback(async () => {
+    setClassLoading(true);
+    setClassError('');
+    try {
+      const response = await fetch(classScheduleUrl());
+      if (!response.ok) throw new Error('학급 시간표 요청 실패 (' + response.status + ')');
+      const parsed = await response.json() as ClassSchedule;
+      setClassSchedule(parsed);
+      setSelectedClass(current => current || parsed.classes?.[0] || '');
+    } catch (err) {
+      setClassError(err instanceof Error ? err.message : '학급 시간표를 불러오지 못했습니다.');
+    } finally {
+      setClassLoading(false);
+    }
+  }, []);
+
+  const loadTeacherOptions = useCallback(async () => {
+    setTeacherListLoading(true);
+    setTeacherListError('');
+    try {
+      const response = await fetch(teacherListUrl());
+      if (!response.ok) throw new Error('교사 목록 요청 실패 (' + response.status + ')');
+      const parsed = await response.json() as {teachers?: TeacherOption[]};
+      setTeacherOptions(parsed.teachers || []);
+    } catch (err) {
+      setTeacherListError(err instanceof Error ? err.message : '교사 목록을 불러오지 못했습니다.');
+    } finally {
+      setTeacherListLoading(false);
+    }
+  }, []);
+
+  const openTeacherModal = useCallback(() => {
+    setTeacherDraft('');
+    setTeacherModalVisible(true);
+    loadTeacherOptions();
+  }, [loadTeacherOptions]);
+
   const loadInitialData = useCallback(async () => {
     const saved = await loadSettings();
     if (saved.teacherSelected === false) {
       setFirstRun(true);
-      setTeacherDraft('');
-      setTeacherModalVisible(true);
+      openTeacherModal();
       setLoading(false);
       return;
     }
@@ -216,7 +275,7 @@ function AppContent() {
       setSchedule(null);
     }
     await refresh(saved);
-  }, [loadSettings, refresh]);
+  }, [loadSettings, openTeacherModal, refresh]);
 
   useEffect(() => {
     loadInitialData();
@@ -239,8 +298,7 @@ function AppContent() {
     setSettings({...settings, theme: nextTheme});
   };
 
-  const saveTeacher = async () => {
-    const name = teacherDraft.trim();
+  const saveTeacher = async (name: string) => {
     if (!name) return;
     const savedName = await WidgetSettings.setTeacherName(name);
     const next = {...settings, name: savedName, teacherSelected: true};
@@ -260,10 +318,155 @@ function AppContent() {
       return;
     }
     setActiveTab(tab);
+    if (tab === '시간표' && !classSchedule && !classLoading) loadClassSchedule();
   };
 
-  const teacherTitle = settings.name || '교사';
-  const renderTodaySchedule = (showRows: boolean) => (
+  const teacherTitle = firstRun ? '교사 선택' : settings.name || '교사';
+  const teacherQuery = teacherDraft.trim();
+  const filteredTeachers = teacherOptions.filter(teacher =>
+    !teacherQuery
+    || teacher.name.includes(teacherQuery)
+    || teacher.label.includes(teacherQuery)
+    || teacher.subjects.some(subject => subject.includes(teacherQuery)),
+  );
+  const lessonBackground = (type: string | undefined) => {
+    if (type === 'change') return colors.change + '22';
+    if (type === 'new') return colors.added + '22';
+    if (type === 'event') return colors.event + '22';
+    return colors.panel;
+  };
+
+  const renderLegend = (note: string) => (
+    <View style={styles.legend}>
+      <LegendItem label="교과 변경" color={colors.change} textColor={colors.secondary} />
+      <LegendItem label="신설 수업" color={colors.added} textColor={colors.secondary} />
+      <LegendItem label="행사" color={colors.event} textColor={colors.secondary} />
+      <Text style={[styles.legendNote, {color: colors.secondary}]}>{note}</Text>
+    </View>
+  );
+
+  const renderWeekGrid = (
+    gridDays: ApiDay[],
+    gridPeriods: number[],
+    renderCell: (dayIndex: number, periodIndex: number) => ReactNode,
+  ) => {
+    const cellWidth = Math.floor(
+      Math.max(0, gridWidth - 2 - gridDays.length - periodWidth) / Math.max(gridDays.length, 1),
+    );
+    return (
+      <View style={[styles.grid, {width: gridWidth, backgroundColor: colors.border}]}>
+        <View style={[styles.gridRow, styles.headerGridRow]}>
+          <View style={[styles.cornerCell, {width: periodWidth, backgroundColor: colors.panelStrong}]}>
+            <Text style={[styles.headerText, {color: colors.secondary}]}>교시</Text>
+          </View>
+          {gridDays.map(day => {
+            const isToday = day.iso === todayInKorea();
+            return (
+              <View key={day.iso} style={[styles.dayHeader, {width: cellWidth, backgroundColor: colors.panelStrong}]}>
+                <Text style={[styles.headerText, {fontSize: Math.min(11, cellWidth * 0.19), color: isToday ? colors.primary : colors.secondary}]}>
+                  {day.label}
+                </Text>
+                <Text style={[styles.dayDate, {fontSize: Math.min(11, cellWidth * 0.19), color: isToday ? colors.accent : colors.muted}]}>
+                  {dateNumber(day.iso)}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        {gridPeriods.map((period, periodIndex) => (
+          <View key={period + '-' + periodIndex} style={styles.gridRow}>
+            <View style={[styles.periodCell, {width: periodWidth, backgroundColor: colors.panelStrong}]}>
+              <Text style={[styles.periodNumber, {fontSize: Math.min(10, periodWidth * 0.18), color: colors.primary}]}>{period}교시</Text>
+              <Text style={[styles.periodTime, {fontSize: Math.min(9, periodWidth * 0.16), color: colors.secondary}]}>{START_TIMES[periodIndex]}</Text>
+              <Text style={[styles.periodTime, {fontSize: Math.min(9, periodWidth * 0.16), color: colors.secondary}]}>–{END_TIMES[periodIndex]}</Text>
+            </View>
+            {gridDays.map((day, dayIndex) => {
+              const isToday = day.iso === todayInKorea();
+              const isCurrent = isToday && currentPeriodIndex === periodIndex;
+              const isPast = isToday && periodIndex < remainingStart && !isCurrent;
+              return (
+                <View
+                  key={day.iso + '-' + periodIndex}
+                  style={[
+                    styles.lessonCell,
+                    {width: cellWidth, backgroundColor: colors.panel, opacity: isPast ? 0.5 : 1},
+                    isCurrent ? {borderLeftWidth: 3, borderLeftColor: colors.accent} : null,
+                  ]}>
+                  {renderCell(dayIndex, periodIndex)}
+                </View>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderClassPage = () => {
+    const classNames = classSchedule?.classes || [];
+    const classDays = classSchedule?.days || [];
+    const classPeriods = classSchedule?.periods || START_TIMES.map((_, index) => index + 1);
+    const table = (selectedClass && classSchedule?.timetables?.[selectedClass]) || [];
+    return (
+      <>
+        {classError ? <Text style={styles.error}>{classError}</Text> : null}
+        {classNames.length ? (
+          <View style={styles.classChips}>
+            {classNames.map(className => {
+              const active = className === selectedClass;
+              return (
+                <Pressable
+                  key={className}
+                  accessibilityRole="button"
+                  onPress={() => setSelectedClass(className)}
+                  style={[
+                    styles.classChip,
+                    {borderColor: active ? colors.accent : colors.border, backgroundColor: active ? colors.accent + '22' : colors.panel},
+                  ]}>
+                  <Text style={[styles.classChipText, {color: active ? colors.primary : colors.secondary}]}>{className}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+        {classLoading && !classSchedule ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.accent} />
+            <Text style={[styles.loadingText, {color: colors.secondary}]}>학급 시간표 불러오는 중</Text>
+          </View>
+        ) : classDays.length && table.length ? (
+          renderWeekGrid(classDays, classPeriods, (dayIndex, periodIndex) => {
+            const lesson = table[dayIndex]?.[periodIndex];
+            if (!lesson?.title) return <Text style={[styles.emptyMark, {color: colors.muted}]}>·</Text>;
+            return (
+              <View
+                style={[
+                  styles.lessonCard,
+                  {borderLeftColor: lessonColor(lesson.type, colors), backgroundColor: lessonBackground(lesson.type)},
+                ]}>
+                <Text numberOfLines={2} style={[styles.lessonClass, {fontSize: Math.max(9, Math.min(12, dayWidth * 0.2)), color: colors.primary}]}>
+                  {lesson.title}
+                </Text>
+                {lesson.teacher ? (
+                  <Text numberOfLines={1} style={[styles.lessonSubject, {fontSize: Math.max(7, Math.min(9, dayWidth * 0.15)), color: colors.secondary}]}>
+                    {lesson.teacher}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })
+        ) : (
+          <View style={[styles.emptySchedule, {borderColor: colors.border, backgroundColor: colors.panel}]}>
+            <Text style={[styles.emptyTitle, {color: colors.primary}]}>학급 시간표가 없습니다</Text>
+            <Text style={[styles.emptyHint, {color: colors.secondary}]}>아래로 당겨 새로고침하세요.</Text>
+          </View>
+        )}
+        {renderLegend('')}
+      </>
+    );
+  };
+
+  const renderTodaySchedule = () => (
     <>
       <View style={[styles.todayHeader, {borderTopColor: colors.border}]}>
         <Text style={[styles.todayTitle, {color: colors.primary}]}>
@@ -271,7 +474,7 @@ function AppContent() {
         </Text>
         <Text style={[styles.todayCount, {color: colors.secondary}]}>{todayMatches.length}개 수업</Text>
       </View>
-      {showRows ? (todayMatches.length ? todayMatches.map((match, index) => (
+      {todayMatches.length ? todayMatches.map((match, index) => (
         <View key={match.periodIndex + '-' + index} style={[styles.todayRow, {borderTopColor: colors.border}]}>
           <Text style={[styles.todayPeriod, {color: colors.secondary}]}>
             {(periods[match.periodIndex] || match.periodIndex + 1) + '교시'}
@@ -286,7 +489,7 @@ function AppContent() {
         </View>
       )) : (
         <Text style={[styles.todayEmpty, {color: colors.secondary}]}>오늘 예정된 수업이 없습니다.</Text>
-      )) : null}
+      )}
     </>
   );
 
@@ -298,7 +501,11 @@ function AppContent() {
           style={styles.scroll}
           contentContainerStyle={styles.content}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => refresh()} tintColor={colors.accent} />
+            <RefreshControl
+              refreshing={activeTab === '시간표' ? classLoading && !!classSchedule : refreshing}
+              onRefresh={() => (activeTab === '시간표' ? loadClassSchedule() : refresh())}
+              tintColor={colors.accent}
+            />
           }>
           <View style={[styles.topBar, {borderBottomColor: colors.border}]}>
             <Text style={[styles.brand, {color: colors.primary}]}>용정시간표</Text>
@@ -315,115 +522,61 @@ function AppContent() {
           <View style={styles.heading}>
             <View style={styles.headingCopy}>
               <Text style={[styles.pageTitle, {color: colors.primary}]}>
-                {activeTab === '시간표' ? '오늘 시간표' : '교사 보기'}
+                {activeTab === '시간표' ? '학급 시간표' : '교사 보기'}
               </Text>
               <Text numberOfLines={1} style={[styles.subtitle, {color: colors.secondary}]}>
-                {teacherTitle} · {subjectSummary} · 주간 {weeklyHours}시간
+                {activeTab === '시간표'
+                  ? (selectedClass ? selectedClass + '반 · ' : '') + '이번 주 시간표'
+                  : teacherTitle + ' · ' + subjectSummary + ' · 주간 ' + weeklyHours + '시간'}
               </Text>
             </View>
+            {activeTab === '시간표' ? null : (
             <Pressable
               accessibilityRole="button"
-              onPress={() => {
-                setTeacherDraft(settings.name);
-                setTeacherModalVisible(true);
-              }}
+              onPress={openTeacherModal}
               style={[styles.teacherPicker, {borderColor: colors.accent}]}>
               <Text numberOfLines={1} style={[styles.teacherPickerText, {color: colors.primary}]}>
                 {teacherTitle + ' (' + (subjects[0] || '교사') + ')'}
               </Text>
               <Text style={[styles.chevron, {color: colors.secondary}]}>⌄</Text>
             </Pressable>
+            )}
           </View>
 
+          {activeTab === '시간표' ? renderClassPage() : (
+          <>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {loading && !schedule ? (
             <View style={styles.loading}>
               <ActivityIndicator color={colors.accent} />
               <Text style={[styles.loadingText, {color: colors.secondary}]}>시간표 불러오는 중</Text>
             </View>
-          ) : activeTab === '시간표' ? (
-            <View style={styles.todayPage}>{renderTodaySchedule(true)}</View>
           ) : days.length > 0 ? (
-              <View style={[styles.grid, {width: gridWidth, backgroundColor: colors.border}]}>
-                <View style={[styles.gridRow, styles.headerGridRow]}>
-                  <View style={[styles.cornerCell, {width: periodWidth, backgroundColor: colors.panelStrong}]}>
-                    <Text style={[styles.headerText, {color: colors.secondary}]}>교시</Text>
+              renderWeekGrid(days, periods, (dayIndex, periodIndex) => {
+                const matches = schedule?.grid?.[dayIndex]?.[periodIndex] || [];
+                return matches.length ? matches.map((match, matchIndex) => (
+                  <View
+                    key={match.className + '-' + matchIndex}
+                    style={[
+                      styles.lessonCard,
+                      {borderLeftColor: lessonColor(match.type, colors), backgroundColor: lessonBackground(match.type)},
+                    ]}>
+                    <Text numberOfLines={1} style={[styles.lessonClass, {fontSize: Math.max(9, Math.min(12, dayWidth * 0.2)), color: colors.primary}]}>
+                      {match.className || match.title || '수업'}
+                    </Text>
+                    {match.note ? (
+                      <Text numberOfLines={1} style={[styles.lessonNote, {fontSize: Math.max(7, Math.min(9, dayWidth * 0.15)), color: lessonColor(match.type, colors)}]}>
+                        {match.note}
+                      </Text>
+                    ) : null}
+                    {match.className && match.title ? (
+                      <Text numberOfLines={1} style={[styles.lessonSubject, {fontSize: Math.max(7, Math.min(9, dayWidth * 0.15)), color: colors.secondary}]}>
+                        {match.title}
+                      </Text>
+                    ) : null}
                   </View>
-                  {days.map(day => {
-                    const isToday = day.iso === todayInKorea();
-                    return (
-                      <View
-                        key={day.iso}
-                        style={[styles.dayHeader, {width: dayWidth, backgroundColor: colors.panelStrong}]}>
-                        <Text style={[styles.headerText, {fontSize: Math.min(11, dayWidth * 0.19), color: isToday ? colors.primary : colors.secondary}]}>
-                          {day.label}
-                        </Text>
-                        <Text style={[styles.dayDate, {fontSize: Math.min(11, dayWidth * 0.19), color: isToday ? colors.accent : colors.muted}]}>
-                          {dateNumber(day.iso)}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-
-                {periods.map((period, periodIndex) => (
-                  <View key={period + '-' + periodIndex} style={styles.gridRow}>
-                    <View style={[styles.periodCell, {width: periodWidth, backgroundColor: colors.panelStrong}]}>
-                      <Text style={[styles.periodNumber, {fontSize: Math.min(10, periodWidth * 0.18), color: colors.primary}]}>{period}교시</Text>
-                      <Text style={[styles.periodTime, {fontSize: Math.min(9, periodWidth * 0.16), color: colors.secondary}]}>{START_TIMES[periodIndex]}</Text>
-                      <Text style={[styles.periodTime, {fontSize: Math.min(9, periodWidth * 0.16), color: colors.secondary}]}>–{END_TIMES[periodIndex]}</Text>
-                    </View>
-                    {days.map((day, dayIndex) => {
-                      const matches = schedule?.grid?.[dayIndex]?.[periodIndex] || [];
-                      const isToday = day.iso === todayInKorea();
-                      const isCurrent = isToday && currentPeriodIndex === periodIndex;
-                      const isPast = isToday && periodIndex < remainingStart && !isCurrent;
-                      const accent = isCurrent ? colors.accent : '';
-                      return (
-                        <View
-                          key={day.iso + '-' + periodIndex}
-                          style={[
-                            styles.lessonCell,
-                            {width: dayWidth, backgroundColor: colors.panel, opacity: isPast ? 0.5 : 1},
-                            accent ? {borderLeftWidth: 3, borderLeftColor: accent} : null,
-                          ]}>
-                          {matches.length ? matches.map((match, matchIndex) => (
-                            <View
-                              key={match.className + '-' + matchIndex}
-                              style={[
-                                styles.lessonCard,
-                                {
-                                  borderLeftColor: lessonColor(match.type, colors),
-                                  backgroundColor: match.type === 'change'
-                                    ? colors.change + '22'
-                                    : match.type === 'new'
-                                      ? colors.added + '22'
-                                      : match.type === 'event'
-                                        ? colors.event + '22'
-                                        : colors.panel,
-                                },
-                              ]}>
-                              <Text numberOfLines={1} style={[styles.lessonClass, {fontSize: Math.max(9, Math.min(12, dayWidth * 0.2)), color: colors.primary}]}>
-                                {match.className || match.title || '수업'}
-                              </Text>
-                              {match.note ? (
-                                <Text numberOfLines={1} style={[styles.lessonNote, {fontSize: Math.max(7, Math.min(9, dayWidth * 0.15)), color: lessonColor(match.type, colors)}]}>
-                                  {match.note}
-                                </Text>
-                              ) : null}
-                              {match.className && match.title ? (
-                                <Text numberOfLines={1} style={[styles.lessonSubject, {fontSize: Math.max(7, Math.min(9, dayWidth * 0.15)), color: colors.secondary}]}>
-                                  {match.title}
-                                </Text>
-                              ) : null}
-                            </View>
-                          )) : <Text style={[styles.emptyMark, {color: colors.muted}]}>·</Text>}
-                        </View>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
+                )) : <Text style={[styles.emptyMark, {color: colors.muted}]}>·</Text>;
+              })
           ) : (
             <View style={[styles.emptySchedule, {borderColor: colors.border, backgroundColor: colors.panel}]}>
               <Text style={[styles.emptyTitle, {color: colors.primary}]}>주간 시간표가 없습니다</Text>
@@ -431,17 +584,10 @@ function AppContent() {
             </View>
           )}
 
-          {activeTab === '교사 보기' ? (
-            <>
-              <View style={styles.legend}>
-                <LegendItem label="교과 변경" color={colors.change} textColor={colors.secondary} />
-                <LegendItem label="신설 수업" color={colors.added} textColor={colors.secondary} />
-                <LegendItem label="행사" color={colors.event} textColor={colors.secondary} />
-                <Text style={[styles.legendNote, {color: colors.secondary}]}>가운데점은 공강입니다</Text>
-              </View>
-              {renderTodaySchedule(false)}
-            </>
-          ) : null}
+          {renderLegend('가운데점은 공강입니다')}
+          {renderTodaySchedule()}
+          </>
+          )}
         </ScrollView>
 
         <View style={[styles.bottomNav, {borderTopColor: colors.border, backgroundColor: colors.background}]}>
@@ -464,31 +610,63 @@ function AppContent() {
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, {backgroundColor: colors.panel, borderColor: colors.border}]}>
             <Text style={[styles.modalTitle, {color: colors.primary}]}>교사 선택</Text>
-            {firstRun ? (
-              <Text style={[styles.modalHint, {color: colors.secondary}]}>
-                시간표를 볼 교사 이름을 입력하세요. 나중에 상단에서 바꿀 수 있습니다.
-              </Text>
-            ) : null}
+            <Text style={[styles.modalHint, {color: colors.secondary}]}>
+              {firstRun
+                ? '시간표를 볼 교사를 선택하세요. 나중에 상단에서 바꿀 수 있습니다.'
+                : '시간표를 볼 교사를 선택하세요.'}
+            </Text>
             <TextInput
-              autoFocus
               value={teacherDraft}
               onChangeText={setTeacherDraft}
-              placeholder="교사 이름"
+              placeholder="이름 또는 과목 검색"
               placeholderTextColor={colors.muted}
-              returnKeyType="done"
-              onSubmitEditing={saveTeacher}
+              returnKeyType="search"
               style={[styles.teacherInput, {borderColor: colors.border, color: colors.primary}]}
             />
-            <View style={styles.modalActions}>
-              {firstRun ? null : (
-                <Pressable onPress={() => setTeacherModalVisible(false)} style={styles.modalAction}>
-                  <Text style={[styles.cancelText, {color: colors.secondary}]}>취소</Text>
-                </Pressable>
+            <ScrollView style={styles.teacherList} keyboardShouldPersistTaps="handled">
+              {teacherListLoading ? (
+                <View style={styles.teacherListState}>
+                  <ActivityIndicator color={colors.accent} />
+                </View>
+              ) : teacherListError ? (
+                <View style={styles.teacherListState}>
+                  <Text style={styles.error}>{teacherListError}</Text>
+                  <Pressable onPress={loadTeacherOptions} style={[styles.retryButton, {borderColor: colors.border}]}>
+                    <Text style={[styles.cancelText, {color: colors.primary}]}>다시 시도</Text>
+                  </Pressable>
+                </View>
+              ) : filteredTeachers.length ? filteredTeachers.map(teacher => {
+                const selected = !firstRun && teacher.name === settings.name;
+                return (
+                  <Pressable
+                    key={teacher.name}
+                    accessibilityRole="button"
+                    onPress={() => saveTeacher(teacher.name)}
+                    style={[
+                      styles.teacherOption,
+                      {borderBottomColor: colors.border},
+                      selected ? {backgroundColor: colors.accent + '22'} : null,
+                    ]}>
+                    <Text style={[styles.teacherOptionName, {color: colors.primary}]}>{teacher.label}</Text>
+                    <Text numberOfLines={1} style={[styles.teacherOptionSubjects, {color: colors.secondary}]}>
+                      {teacher.subjects.join(' · ')}
+                    </Text>
+                    {selected ? <Text style={[styles.teacherOptionCheck, {color: colors.accent}]}>✓</Text> : null}
+                  </Pressable>
+                );
+              }) : (
+                <Text style={[styles.todayEmpty, {color: colors.secondary}]}>
+                  {teacherOptions.length ? '검색 결과가 없습니다.' : '등록된 교사가 없습니다.'}
+                </Text>
               )}
-              <Pressable onPress={saveTeacher} style={[styles.saveButton, {backgroundColor: colors.accent}]}>
-                <Text style={styles.saveText}>적용</Text>
-              </Pressable>
-            </View>
+            </ScrollView>
+            {firstRun ? null : (
+              <View style={styles.modalActions}>
+                <Pressable onPress={() => setTeacherModalVisible(false)} style={styles.modalAction}>
+                  <Text style={[styles.cancelText, {color: colors.secondary}]}>닫기</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -565,7 +743,9 @@ const styles = StyleSheet.create({
   loading: {height: 250, alignItems: 'center', justifyContent: 'center', gap: 10},
   loadingText: {fontSize: 13},
   emptySchedule: {minHeight: 150, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', padding: 20},
-  todayPage: {minHeight: 180},
+  classChips: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12},
+  classChip: {minWidth: 52, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderRadius: 8, alignItems: 'center'},
+  classChipText: {fontSize: 13, fontWeight: '700'},
   emptyTitle: {fontSize: 15, fontWeight: '700'},
   emptyHint: {fontSize: 12, marginTop: 8, textAlign: 'center'},
   legend: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingVertical: 12},
@@ -591,10 +771,15 @@ const styles = StyleSheet.create({
   modalCard: {width: '100%', borderWidth: 1, borderRadius: 16, padding: 18},
   modalTitle: {fontSize: 17, fontWeight: '800'},
   modalHint: {fontSize: 12, marginTop: 6, lineHeight: 17},
+  teacherList: {maxHeight: 360, marginTop: 10},
+  teacherListState: {minHeight: 120, alignItems: 'center', justifyContent: 'center', gap: 10},
+  retryButton: {paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderRadius: 8},
+  teacherOption: {minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 6, borderBottomWidth: StyleSheet.hairlineWidth},
+  teacherOptionName: {fontSize: 15, fontWeight: '700'},
+  teacherOptionSubjects: {flex: 1, fontSize: 12},
+  teacherOptionCheck: {fontSize: 15, fontWeight: '800'},
   teacherInput: {height: 46, borderWidth: 1, borderRadius: 9, paddingHorizontal: 12, marginTop: 16, fontSize: 15},
   modalActions: {flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 16},
   modalAction: {paddingHorizontal: 13, paddingVertical: 10},
   cancelText: {fontSize: 13, fontWeight: '600'},
-  saveButton: {paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8},
-  saveText: {color: '#FFFFFF', fontSize: 13, fontWeight: '700'},
 });
