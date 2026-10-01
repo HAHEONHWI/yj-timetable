@@ -49,6 +49,23 @@ type NativeWidgetSettings = {
   setNotificationSettings(changes: boolean, daily: boolean): Promise<void>;
   syncNotifications(): Promise<void>;
   cacheClassSchedule(classesJson: string, className: string): Promise<string | null>;
+  getAppInfo(): Promise<AppInfo>;
+};
+
+export type AppInfo = {
+  versionCode: number;
+  versionName: string;
+  audience: 'teacher' | 'student';
+  packageName: string;
+  installer: string;
+};
+// 저장소 루트 app-version.json. 새 APK/AAB를 배포할 때 versionCode를 함께 올린다.
+type AppRelease = {
+  versionCode: number;
+  versionName: string;
+  minVersionCode?: number;
+  notes?: string[];
+  apkUrl?: string;
 };
 
 export const WidgetSettings = NativeModules.WidgetSettings as NativeWidgetSettings;
@@ -132,6 +149,10 @@ export function classScheduleUrl() {
 
 export function teacherListUrl() {
   return 'https://schedule.yjms.kr/wallpaper.png?format=teachers&v=' + Date.now();
+}
+
+export function appVersionUrl() {
+  return 'https://schedule.yjms.kr/app-version.json?v=' + Date.now();
 }
 
 export function dateNumber(iso: string) {
@@ -515,6 +536,217 @@ export function NotificationSettingsModal(props: NotificationModalProps) {
   );
 }
 
+type Meal = {
+  ok?: boolean;
+  targetDate?: string;
+  formattedDate?: string;
+  mealCode?: string;
+  mealTypeLabel?: string;
+  menu?: string[];
+  calories?: string;
+};
+
+const MEAL_CODES = [
+  {code: '1', label: '아침'},
+  {code: '2', label: '점심'},
+  {code: '3', label: '저녁'},
+];
+
+// YYYYMMDD 날짜를 delta 방향으로 옮기되 주말은 건너뛴다.
+function shiftSchoolDay(ymd: string, delta: number) {
+  const date = new Date(Date.UTC(Number(ymd.slice(0, 4)), Number(ymd.slice(4, 6)) - 1, Number(ymd.slice(6, 8))));
+  do {
+    date.setUTCDate(date.getUTCDate() + delta);
+  } while (date.getUTCDay() === 0 || date.getUTCDay() === 6);
+  return date.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
+/** 급식 탭. 날짜를 앞뒤로 넘기고 아침·점심·저녁을 고를 수 있다. 교사용·학생용이 같이 쓴다. */
+export function MealView({colors, refreshKey}: {colors: Palette; refreshKey: number}) {
+  // date, code가 비어 있으면 서버가 지금 시각에 맞는 급식을 고른다.
+  // 그날 해당 끼니가 없으면 서버가 다른 끼니를 주므로, 날짜를 옮길 때는 사용자가 고른 끼니를 다시 요청한다.
+  const [query, setQuery] = useState<{date?: string; code?: string}>({});
+  const [meal, setMeal] = useState<Meal | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    (async () => {
+      try {
+        const response = await fetch(mealUrl(query.date, query.code));
+        if (!response.ok) throw new Error('급식 요청 실패 (' + response.status + ')');
+        const next = await response.json() as Meal;
+        if (!cancelled) setMeal(next);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : '급식 정보를 불러오지 못했습니다.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [query, refreshKey]);
+
+  const isToday = meal?.targetDate === todayInKorea().replace(/-/g, '');
+  const shift = (delta: number) => setQuery({date: shiftSchoolDay(meal!.targetDate!, delta), code: query.code || meal?.mealCode});
+
+  return (
+    <>
+      {meal?.targetDate ? (
+        <View style={styles.mealDateRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="이전 날 급식"
+            disabled={loading}
+            onPress={() => shift(-1)}
+            style={[styles.mealDateButton, {borderColor: colors.border, backgroundColor: colors.panel}]}>
+            <Text style={[styles.mealDateButtonText, {color: colors.secondary}]}>◀</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="오늘 급식으로 돌아가기"
+            disabled={loading || isToday}
+            onPress={() => setQuery({})}
+            style={styles.mealDateCenter}>
+            <Text style={[styles.mealDateText, {color: colors.primary}]}>{meal.formattedDate}</Text>
+            {isToday ? null : <Text style={[styles.mealTodayLink, {color: colors.accent}]}>오늘로</Text>}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="다음 날 급식"
+            disabled={loading}
+            onPress={() => shift(1)}
+            style={[styles.mealDateButton, {borderColor: colors.border, backgroundColor: colors.panel}]}>
+            <Text style={[styles.mealDateButtonText, {color: colors.secondary}]}>▶</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      <View style={styles.classChips}>
+        {MEAL_CODES.map(item => {
+          const active = meal?.mealCode === item.code;
+          return (
+            <Pressable
+              key={item.code}
+              accessibilityRole="button"
+              onPress={() => setQuery({date: meal?.targetDate, code: item.code})}
+              style={[
+                styles.classChip,
+                {borderColor: active ? colors.accent : colors.border, backgroundColor: active ? colors.accent + '22' : colors.panel},
+              ]}>
+              <Text style={[styles.classChipText, {color: active ? colors.primary : colors.secondary}]}>{item.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {loading && !meal ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.accent} />
+          <Text style={[styles.loadingText, {color: colors.secondary}]}>급식 불러오는 중</Text>
+        </View>
+      ) : meal ? (
+        <View style={[styles.mealCard, {borderColor: colors.border, backgroundColor: colors.panel}, loading && styles.mealStale]}>
+          <Text style={[styles.mealTitle, {color: colors.primary}]}>{isToday ? meal.mealTypeLabel : meal.mealTypeLabel?.replace('다음 ', '')}</Text>
+          {meal.menu?.length ? meal.menu.map((item, index) => (
+            <Text key={item + index} style={[styles.mealItem, {color: colors.primary, borderTopColor: colors.border}]}>{item}</Text>
+          )) : (
+            <Text style={[styles.todayEmpty, {color: colors.secondary}]}>급식 정보가 없습니다.</Text>
+          )}
+          {meal.calories ? <Text style={[styles.mealLabel, {color: colors.secondary}]}>{meal.calories}</Text> : null}
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+const PLAY_INSTALLER = 'com.android.vending';
+
+/** 앱을 켤 때 한 번 새 버전을 확인하고, 있으면 업데이트할지 묻는다. */
+export function UpdatePrompt({colors, hidden}: {colors: Palette; hidden?: boolean}) {
+  const [update, setUpdate] = useState<{app: AppInfo; release: AppRelease} | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const app = await WidgetSettings.getAppInfo();
+        const response = await fetch(appVersionUrl());
+        if (!response.ok) return;
+        const releases = await response.json() as Record<string, AppRelease>;
+        const release = releases[app.audience];
+        if (!cancelled && release && release.versionCode > app.versionCode) setUpdate({app, release});
+      } catch {
+        // 확인에 실패하면 조용히 넘어간다. 다음 실행 때 다시 확인한다.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!update) return null;
+  const {app, release} = update;
+  const required = (release.minVersionCode || 0) > app.versionCode;
+  const fromPlay = app.installer === PLAY_INSTALLER;
+
+  const startUpdate = async () => {
+    const playUrl = 'https://play.google.com/store/apps/details?id=' + app.packageName;
+    try {
+      if (fromPlay) await Linking.openURL('market://details?id=' + app.packageName);
+      else await Linking.openURL(release.apkUrl || 'https://schedule.yjms.kr/download');
+    } catch {
+      await Linking.openURL(fromPlay ? playUrl : 'https://schedule.yjms.kr/download').catch(() => {});
+    }
+    if (!required) setUpdate(null);
+  };
+
+  return (
+    <Modal
+      transparent
+      animationType="fade"
+      visible={!hidden}
+      onRequestClose={() => {
+        if (!required) setUpdate(null);
+      }}>
+      <View style={styles.modalBackdrop}>
+        <View style={[styles.modalCard, {backgroundColor: colors.panel, borderColor: colors.border}]}>
+          <Text style={[styles.modalTitle, {color: colors.primary}]}>새 버전이 있습니다</Text>
+          <Text style={[styles.modalHint, {color: colors.secondary}]}>
+            {'현재 ' + app.versionName + ' → 최신 ' + release.versionName + '\n'}
+            {required ? '이 버전은 더 이상 지원되지 않아 업데이트가 필요합니다.' : '지금 업데이트할까요?'}
+          </Text>
+          {release.notes?.length ? (
+            <View style={styles.updateNotes}>
+              {release.notes.map(note => (
+                <Text key={note} style={[styles.updateNote, {color: colors.primary}]}>{'· ' + note}</Text>
+              ))}
+            </View>
+          ) : null}
+          {!fromPlay ? (
+            <Text style={[styles.modalHint, {color: colors.secondary}]}>
+              다운로드한 APK를 열어 설치하면 설정과 알림은 그대로 유지됩니다.
+            </Text>
+          ) : null}
+          <View style={styles.modalActions}>
+            {required ? null : (
+              <Pressable onPress={() => setUpdate(null)} style={styles.modalAction}>
+                <Text style={[styles.cancelText, {color: colors.secondary}]}>나중에</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={startUpdate} style={[styles.primaryButton, {backgroundColor: colors.accent}]}>
+              <Text style={styles.primaryButtonText}>업데이트</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export const styles = StyleSheet.create({
   safeArea: {flex: 1},
   screen: {flex: 1},
@@ -619,6 +851,19 @@ export const styles = StyleSheet.create({
   modalCard: {width: '100%', borderWidth: 1, borderRadius: 16, padding: 18},
   modalTitle: {fontSize: 17, fontWeight: '800'},
   modalHint: {fontSize: 12, marginTop: 6, lineHeight: 17},
+  updateNotes: {marginTop: 12, gap: 4},
+  mealDateRow: {flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12},
+  mealDateButton: {width: 44, height: 44, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center'},
+  mealDateButtonText: {fontSize: 14, fontWeight: '700'},
+  mealDateCenter: {flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 44},
+  mealDateText: {fontSize: 16, fontWeight: '800'},
+  mealTodayLink: {fontSize: 12, fontWeight: '700', marginTop: 2},
+  mealStale: {opacity: 0.5},
+  mealCard: {borderWidth: 1, borderRadius: 12, padding: 16},
+  mealLabel: {fontSize: 12},
+  mealTitle: {fontSize: 17, fontWeight: '800', marginTop: 4, marginBottom: 10},
+  mealItem: {fontSize: 15, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth},
+  updateNote: {fontSize: 13, lineHeight: 18},
   teacherList: {maxHeight: 360, marginTop: 10},
   teacherListState: {minHeight: 120, alignItems: 'center', justifyContent: 'center', gap: 10},
   retryButton: {paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderRadius: 8},
