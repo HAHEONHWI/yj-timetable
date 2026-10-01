@@ -35,4 +35,12 @@ npm run android
 ./android-widget/build-aab.sh teacher   # 또는 student
 ```
 
+## 업데이트 알림
+
+앱은 켤 때 `https://schedule.yjms.kr/app-version.json`(저장소 루트 `app-version.json`)을 읽어 설치된 `versionCode`보다 높으면 업데이트 팝업을 띄웁니다. 플레이 스토어 설치본은 스토어로, 직접 설치본은 `apkUrl`(없으면 다운로드 페이지)로 보냅니다.
+
+- 새 APK/AAB를 배포한 **뒤에** `app-version.json`의 해당 flavor(`teacher`/`student`) `versionCode`, `versionName`, `notes`를 `build.gradle`과 같게 올립니다. 배포 전에 올리면 받을 수 없는 업데이트를 안내하게 됩니다.
+- 플레이 스토어 심사가 끝나기 전에 올리면 스토어 사용자는 업데이트 버튼이 보이지 않으니 심사 완료 후 올립니다.
+- `minVersionCode`를 넣으면 그보다 낮은 버전은 "나중에" 없이 업데이트를 강제합니다.
+
 빌드 산출물은 `android/app/build/`에 생성되며 커밋하지 않습니다. keystore, APK 및 기존 `android-widget/build/` 사용자 파일을 덮어쓰거나 삭제하지 않습니다.

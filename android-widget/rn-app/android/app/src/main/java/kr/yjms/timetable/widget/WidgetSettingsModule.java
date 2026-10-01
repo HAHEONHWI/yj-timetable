@@ -149,6 +149,31 @@ public final class WidgetSettingsModule extends ReactContextBaseJavaModule {
         promise.resolve(safeTheme);
     }
 
+    /** 업데이트 확인용: 설치된 버전과 설치 경로(플레이 스토어인지 직접 APK인지)를 알려 준다. */
+    @ReactMethod
+    public void getAppInfo(Promise promise) {
+        Context context = getReactApplicationContext();
+        WritableMap info = Arguments.createMap();
+        info.putInt("versionCode", BuildConfig.VERSION_CODE);
+        info.putString("versionName", BuildConfig.VERSION_NAME);
+        info.putString("audience", BuildConfig.AUDIENCE);
+        info.putString("packageName", context.getPackageName());
+        String installer = null;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                installer = context.getPackageManager()
+                    .getInstallSourceInfo(context.getPackageName())
+                    .getInstallingPackageName();
+            } else {
+                installer = context.getPackageManager().getInstallerPackageName(context.getPackageName());
+            }
+        } catch (Exception ignored) {
+            // 설치 경로를 모르면 직접 배포 APK로 본다.
+        }
+        info.putString("installer", installer == null ? "" : installer);
+        promise.resolve(info);
+    }
+
     @ReactMethod
     public void refreshWidgets(Promise promise) {
         refreshWidgets();
