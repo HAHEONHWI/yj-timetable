@@ -66,7 +66,7 @@
     return list.sort((first, second) => String(first.date).localeCompare(String(second.date)) || String(first.title || "").localeCompare(String(second.title || ""), "ko"));
   }
 
-  function specialSaturdayDatesFromSundayEvents(events, cutoffDate, specialSchedules, generationDate = cutoffDate) {
+  function specialSaturdayDatesFromNeisEvents(events, cutoffDate, specialSchedules, generationDate = cutoffDate) {
     const existing = specialSchedules && typeof specialSchedules === "object" ? specialSchedules : {};
     const generation = new Date(`${generationDate}T00:00:00`);
     if (Number.isNaN(generation.getTime())) return [];
@@ -78,18 +78,18 @@
       if (!event || event.source !== "neis" || !event.isSchoolDay) return;
       const match = String(event.date || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (!match) return;
-      const sunday = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-      if (toISO(sunday) !== event.date || sunday.getDay() !== 0) return;
+      const schoolDay = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      if (toISO(schoolDay) !== event.date) return;
+      if (schoolDay.getDay() === 0) schoolDay.setDate(schoolDay.getDate() + 6);
+      else if (schoolDay.getDay() !== 6) return;
       if (event.date < generationDate || event.date > latestEventDate) return;
-      const saturday = new Date(sunday);
-      saturday.setDate(sunday.getDate() + 6);
-      const saturdayISO = toISO(saturday);
+      const saturdayISO = toISO(schoolDay);
       if (saturdayISO >= cutoffDate && !existing[saturdayISO]) saturdayDates.add(saturdayISO);
     });
     return [...saturdayDates].sort();
   }
 
-  const api = { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, specialSaturdayDatesFromSundayEvents, upsertEvent };
+  const api = { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, specialSaturdayDatesFromNeisEvents, upsertEvent };
   global.TimetableCalendar = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
