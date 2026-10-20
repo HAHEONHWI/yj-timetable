@@ -4,7 +4,7 @@ const {
   eventsForMonth,
   monthKeyOf,
   shiftMonth,
-  specialSaturdayDatesFromSundayEvents,
+  specialSaturdayDatesFromNeisEvents,
   upsertEvent,
 } = require("../src/calendar.js");
 
@@ -82,24 +82,23 @@ assert.deepEqual(edited.map((event) => event.id), ["all", "second", "neis-first"
 // Then: 목록을 망가뜨리지 않고 즉시 실패한다.
 assert.throws(() => upsertEvent(events, { date: "2026-09-01", title: "잘못된 일정" }), /id/);
 
-const sundayEvents = [
+const neisEvents = [
   { source: "neis", isSchoolDay: true, date: "2026-10-25", title: "학교 행사" },
   { source: "neis", isSchoolDay: true, date: "2026-10-25", title: "중복 행사" },
   { source: "neis", isSchoolDay: true, date: "2027-01-10", title: "졸업 행사" },
-  { source: "neis", isSchoolDay: true, date: "2026-10-24", title: "토요일 행사는 기준 아님" },
   { source: "manual", isSchoolDay: true, date: "2026-11-01", title: "수동 행사" },
   { source: "neis", isSchoolDay: false, date: "2026-11-08", title: "휴업일" },
 ];
 
 // Given: NEIS에 수업일인 일요일 행사가 있다.
 // When: 자동 생성할 특별 토요일을 계산한다.
-// Then: 행사 1주 전부터 각 일요일의 다음 토요일만 중복 없이 반환한다.
+// Then: 일요일 다음 토요일과 토요일 등교일을 중복 없이 반환한다.
 assert.deepEqual(
-  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", {}, "2026-10-18"),
+  specialSaturdayDatesFromNeisEvents(neisEvents, "2026-09-14", {}, "2026-10-18"),
   ["2026-10-31"]
 );
 assert.deepEqual(
-  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", {}, "2026-10-17"),
+  specialSaturdayDatesFromNeisEvents(neisEvents, "2026-09-14", {}, "2026-10-17"),
   []
 );
 
@@ -107,15 +106,44 @@ assert.deepEqual(
 // When: 자동 생성 대상을 계산한다.
 // Then: 기존 시간표와 cutoff 이전 날짜는 건너뛴다.
 assert.deepEqual(
-  specialSaturdayDatesFromSundayEvents(sundayEvents, "2026-09-14", { "2026-10-31": {} }, "2026-10-18"),
+  specialSaturdayDatesFromNeisEvents(neisEvents, "2026-09-14", { "2026-10-31": {} }, "2026-10-18"),
   []
 );
 assert.deepEqual(
-  specialSaturdayDatesFromSundayEvents(
+  specialSaturdayDatesFromNeisEvents(
     [{ source: "neis", isSchoolDay: true, date: "2026-09-06", title: "지난 일요일 행사" }],
     "2026-09-14",
     {},
     "2026-09-14"
+  ),
+  []
+);
+
+assert.deepEqual(
+  specialSaturdayDatesFromNeisEvents(
+    [{ source: "neis", isSchoolDay: true, date: "2026-10-24", title: "용정 축제" }],
+    "2026-10-19",
+    {},
+    "2026-10-20"
+  ),
+  ["2026-10-24"],
+  "토요일 등교일 특별시간표가 자동 생성되지 않음"
+);
+assert.deepEqual(
+  specialSaturdayDatesFromNeisEvents(
+    [{ source: "neis", isSchoolDay: true, date: "2026-10-24", title: "용정 축제" }],
+    "2026-10-19",
+    { "2026-10-24": {} },
+    "2026-10-20"
+  ),
+  []
+);
+assert.deepEqual(
+  specialSaturdayDatesFromNeisEvents(
+    [{ source: "neis", isSchoolDay: false, date: "2026-10-24", title: "토요휴업일" }],
+    "2026-10-19",
+    {},
+    "2026-10-20"
   ),
   []
 );
