@@ -135,6 +135,7 @@
     viewAcademicCalendar: $("#viewAcademicCalendar"),
     teacherAcademicCalendar: $("#teacherAcademicCalendar"),
     slideshowTitle: $("#slideshowTitle"),
+    slideshowOverflowWarning: $("#slideshowOverflowWarning"),
     slideshowMeta: $("#slideshowMeta"),
     slideshowStage: $("#slideshowStage"),
     slideshowDots: $("#slideshowDots"),
@@ -1115,7 +1116,7 @@
                     : 64
                   : 36;
           const titleMin = compact ? (rowSpan === 1 ? 18 : 22) : rowSpan === 1 ? 14 : 16;
-          const titleSize = clamp(
+          const autoTitleSize = clamp(
             (compact ? (hasMemo ? 20 : 25) : 14) +
               rowSpan * (compact ? 5 : 4) +
               Math.min(colSpan, 3) * (compact ? 2 : 1.5) +
@@ -1124,8 +1125,9 @@
             titleMin,
             titleMax
           );
+          const titleSize = compact && isEventCell ? 30 : autoTitleSize;
           const metaSize = clamp(
-            hasVisibleMeta ? (rowSpan === 1 ? 11 : titleSize * 0.4) : rowSpan === 1 ? 10 : titleSize * 0.32,
+            hasVisibleMeta ? (rowSpan === 1 ? 11 : autoTitleSize * 0.4) : rowSpan === 1 ? 10 : autoTitleSize * 0.32,
             10,
             hasVisibleMeta ? (rowSpan === 1 ? 12 : compact ? 18 : 15) : rowSpan === 1 ? 12 : 14
           );
@@ -2166,13 +2168,34 @@
     ];
   }
 
+  function updateSlideshowOverflowWarning() {
+    const cells = $$(".slideshow-grid .event-cell");
+    let hasOverflow = false;
+    cells.forEach((cell) => {
+      const textElements = [cell.querySelector("strong"), ...cell.querySelectorAll("small")].filter(Boolean);
+      const bounds = cell.getBoundingClientRect();
+      const overflows = (element) => {
+        const textBounds = element.getBoundingClientRect();
+        return element.scrollHeight > element.clientHeight + 1 || element.scrollWidth > element.clientWidth + 1 ||
+          textBounds.top < bounds.top - 1 || textBounds.bottom > bounds.bottom + 1 ||
+          textBounds.left < bounds.left - 1 || textBounds.right > bounds.right + 1;
+      };
+      const overflow = textElements.some(overflows) || overflows(cell);
+      cell.classList.toggle("has-overflow", overflow);
+      hasOverflow = hasOverflow || overflow;
+    });
+    els.slideshowOverflowWarning.textContent = hasOverflow ? "행사 글자가 칸을 넘칩니다." : "";
+  }
+
   function renderSlideshow() {
     const slides = slideshowSlides();
     slideshowIndex = clamp(slideshowIndex, 0, slides.length - 1);
     const slide = slides[slideshowIndex];
     els.slideshowTitle.textContent = slide.title;
     els.slideshowMeta.textContent = slide.meta;
+    els.slideshowOverflowWarning.textContent = "";
     els.slideshowStage.innerHTML = slide.html;
+    window.requestAnimationFrame(updateSlideshowOverflowWarning);
     renderSlideshowControls(slides.length);
   }
 
@@ -3680,6 +3703,14 @@
     document.addEventListener("visibilitychange", resumeRemoteSync);
     window.addEventListener("pageshow", resumeRemoteSync);
     window.addEventListener("online", resumeRemoteSync);
+    window.addEventListener("resize", () => {
+      if (currentRoute === "slideshow") window.requestAnimationFrame(updateSlideshowOverflowWarning);
+    });
+    if (document.fonts && document.fonts.addEventListener) {
+      document.fonts.addEventListener("loadingdone", () => {
+        if (currentRoute === "slideshow") updateSlideshowOverflowWarning();
+      });
+    }
     $$("[data-route]").forEach((button) => {
       button.addEventListener("click", () => {
         routeTo(button.dataset.route, { fullscreen: button.dataset.route === "slideshow" });
