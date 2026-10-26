@@ -1994,7 +1994,16 @@ body.board-mode .schedule-shell {
   font-size: var(--merge-title-size, 28px);
 }
 
-.slideshow-grid .event-cell.is-single-row.has-memo strong,
+.slideshow-grid .event-cell strong {
+  max-height: calc(var(--merge-title-lines, 2) * 1.2em);
+  line-height: 1.2;
+}
+
+.slideshow-grid .event-cell.has-overflow {
+  outline: 2px solid var(--st-change);
+  outline-offset: -2px;
+}
+
 .slideshow-grid .base-merge-cell.is-single-row.has-memo strong {
   line-height: 1;
 }
@@ -2004,6 +2013,11 @@ body.board-mode .schedule-shell {
   font-size: var(--merge-meta-size, 12px);
 }
 
+.slideshow-grid .event-cell small {
+  max-height: calc(var(--merge-meta-lines, 2) * 1.25em);
+  line-height: 1.25;
+}
+
 .base-merge-cell {
   z-index: 2;
   background: var(--line);
@@ -2011,7 +2025,7 @@ body.board-mode .schedule-shell {
   box-shadow: var(--shadow-overlay);
 }
 
-.slideshow-page {
+body.slideshow-mode .slideshow-page {
   position: relative;
   padding: 0;
   overflow: hidden;
@@ -2074,6 +2088,15 @@ body.board-mode .schedule-shell {
 
 .slideshow-top h2 {
   font-size: clamp(30px, 4vw, 64px);
+}
+
+.slideshow-overflow-warning {
+  min-height: 1.25em;
+  margin: 4px 0 0;
+  color: var(--change-text);
+  font-size: var(--text-14);
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .slideshow-meta {
@@ -3816,6 +3839,25 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  .slideshow-frame {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .slideshow-top {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .slideshow-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .slideshow-meta {
+    grid-column: 1 / -1;
+  }
+
   .teacher-view-head {
     align-items: stretch;
     flex-direction: column;
