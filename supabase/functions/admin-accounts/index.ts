@@ -179,8 +179,20 @@ Deno.serve(async (req) => {
       .single();
 
     if (profileError) {
-      await audit("admin_account_create", createdUser.user.id, account, false, profileError.message);
-      return json({ ok: false, error: profileError.message }, 400);
+      let cleanupError = "";
+      try {
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(createdUser.user.id);
+        cleanupError = error?.message || "";
+      } catch (error) {
+        cleanupError = error instanceof Error ? error.message : "Auth cleanup request failed";
+      }
+      const errorMessage = cleanupError
+        ? `${profileError.message}; Auth user cleanup failed: ${cleanupError}`
+        : profileError.message;
+      await audit("admin_account_create", createdUser.user.id, account, false, errorMessage);
+      return cleanupError
+        ? json({ ok: false, error: "Admin profile creation and Auth user cleanup failed; manual cleanup is required." }, 503)
+        : json({ ok: false, error: profileError.message }, 400);
     }
 
     await audit("admin_account_create", profile.user_id, profile, true);
