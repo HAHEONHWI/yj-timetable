@@ -10,7 +10,7 @@
 - 학급별 / 전체 학급 보기
 - 전자칠판용 `/board` 화면(가로 고정)
 - 자동 슬라이드쇼(시간표 ⇄ 공지 전환) 및 키보드 제어
-- 관리자 비밀번호 기반 편집(Edge Function 사용)
+- 관리자별 Supabase Auth 로그인 및 역할 기반 편집
 - Supabase를 통한 원격 저장 및 Realtime 동기화
 - Windows Electron 위젯, Android WebView APK 제공
 
@@ -55,12 +55,11 @@ npm run start:widget
 ## Supabase 설정
 
 1. Supabase 프로젝트 생성
-2. 마이그레이션 적용:
+2. 저장소의 전체 마이그레이션 적용:
 
-```text
-supabase/migrations/001_app_state.sql
-supabase/migrations/004_production_rls.sql
-supabase/migrations/005_enable_realtime.sql
+```bash
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase db push
 ```
 
 3. `src/supabase-config.js`에 공개용 URL/anon key 설정:
@@ -72,12 +71,14 @@ window.SUPABASE_CONFIG = {
 };
 ```
 
-4. 관리자 비밀번호(시크릿) 설정 및 Edge Functions 배포
+4. 관리자 Auth와 Edge Functions 설정
+
+관리자 로그인은 Supabase Auth 계정을 사용하며 `username@yjms.local` 형식으로 username을 변환합니다. `ADMIN_PASSWORD` secret은 사용하지 않습니다. 마이그레이션이 초기 관리자 계정을 생성하므로 최초 로그인 후 비밀번호를 즉시 변경하세요.
 
 ```bash
-npx supabase secrets set ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD --project-ref YOUR_PROJECT_REF
-npx supabase functions deploy admin-login --project-ref YOUR_PROJECT_REF
+npx supabase functions deploy admin-accounts --project-ref YOUR_PROJECT_REF
 npx supabase functions deploy save-state --project-ref YOUR_PROJECT_REF
+npx supabase functions deploy board-calls --project-ref YOUR_PROJECT_REF
 ```
 
 주의: 공개 브라우저 키는 노출되므로 RLS(행 수준 보안)를 적절히 설정하세요.
@@ -156,7 +157,7 @@ npm run deploy:netlify
 
 ## 보안 및 운영 주의
 
-- 절대로 저장소에 시크릿(ADMIN_PASSWORD, SERVICE_ROLE_KEY 등)을 커밋하지 마세요.
+- 절대로 저장소에 시크릿(SERVICE_ROLE_KEY, DB 비밀번호 등)을 커밋하지 마세요.
 - 브라우저 anon key는 공개될 수 있으므로 RLS로 권한을 제한하세요.
 - Android keystore, 서비스 키, 빌드 산출물은 `.gitignore`에 포함되어야 합니다.
 
