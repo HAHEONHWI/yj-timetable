@@ -99,6 +99,12 @@ KRDS HTML Component Kit v1.1.0을 바탕으로 한 어두운 고대비 중심의
 - 비활성 슬라이드는 `tabindex="-1"`로 두고 명칭은 `슬라이드 N로 이동` 형식을 사용한다.
 - 포커스된 표시기는 `ArrowLeft`, `ArrowRight`, `Home`, `End`로 이동하며 선택 후 새 활성 표시기에 포커스를 유지한다.
 
+### Slideshow Event Overflow Warning
+
+- 슬라이드 행사 제목은 `--text-30` 기준 크기에 설정된 행사 배율을 곱한다. 제목 길이와 셀 크기는 글자 크기를 바꾸지 않는다.
+- 행사 제목이나 메모가 잘리면 상단에 `role="status"` 경고를 표시하고 해당 행사 칸을 `--st-change` 윤곽선으로 표시한다.
+- 상태 영역의 높이를 유지해 경고 표시가 시간표 크기를 바꾸지 않게 한다. 720px 이하에서는 제목·경고와 재생 controls를 세로로 배치한다.
+
 ### Date Tabs
 
 - 날짜 버튼은 `role="tab"`, `aria-selected`, roving `tabindex`를 사용한다.
