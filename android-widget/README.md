@@ -15,7 +15,11 @@ JDK 21, Android SDK, Node.js 22.11 이상이 필요합니다. 의존성이 없�
 
 APK는 JS 번들을 포함한 `android-widget/rn-app/android/app/build/outputs/apk/<teacher|student>/release/app-<teacher|student>-release.apk`에 생성됩니다. 로컬 `android-widget/debug.keystore`로 서명하며, 스토어 배포 서명용은 아닙니다. Android 홈 화면 위젯은 2×1 크기까지 줄일 수 있습니다.
 
+빌드 스크립트는 배포본을 `android-widget/output/yj-timetable-teacher.apk` 또는 `yj-timetable-student.apk`로 복사합니다. 교사용 다운로드·업데이트 주소는 `/downloads/yj-timetable-teacher.apk`이며 이전 `/downloads/yj-timetable-widget.apk`도 새 주소로 연결됩니다.
+
 ## 구글 플레이 배포
+
+교사용 기본 설치 링크: [Google Play](https://play.google.com/store/apps/details?id=kr.yjms.timetable.teacher). 웹 다운로드 페이지와 배경화면 페이지에서 같은 링크를 사용하며 APK 직접 설치도 지원합니다.
 
 구글 플레이에는 AAB를 업로드 키로 서명해 올립니다. 업로드 키는 저장소에 커밋하지 않습니다. 직접 배포 APK는 기존 설치본이 업데이트되도록 계속 debug 키로 서명합니다.
 

@@ -22,9 +22,9 @@ cp -r "$ROOT_DIR/netlify/functions/fonts" "$DEPLOY_DIR/netlify/functions/"
 # on a fresh checkout, so every file placed there must first be refreshed
 # from a path that's actually tracked in git.
 mkdir -p "$ROOT_DIR/downloads"
-cp "$ROOT_DIR/android-widget/output/yj-timetable-widget.apk" "$ROOT_DIR/downloads/"
+cp "$ROOT_DIR/android-widget/output/yj-timetable-teacher.apk" "$ROOT_DIR/downloads/"
 cp "$ROOT_DIR/android-widget/output/yj-timetable-board.apk" "$ROOT_DIR/downloads/"
 cp "$ROOT_DIR/Widget-Win/용정시간표-Widget-Setup.exe" "$ROOT_DIR/downloads/yongjeong-timetable-widget-setup.exe"
-cp "$ROOT_DIR/downloads/yj-timetable-board.apk" "$ROOT_DIR/downloads/yj-timetable-widget.apk" "$ROOT_DIR/downloads/yongjeong-timetable-widget-setup.exe" "$DEPLOY_DIR/downloads/"
+cp "$ROOT_DIR/downloads/yj-timetable-board.apk" "$ROOT_DIR/downloads/yj-timetable-teacher.apk" "$ROOT_DIR/downloads/yongjeong-timetable-widget-setup.exe" "$DEPLOY_DIR/downloads/"
 
 echo "Prepared Netlify deploy directory: $DEPLOY_DIR"
