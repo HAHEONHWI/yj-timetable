@@ -20,6 +20,7 @@
     changeKey,
   } = window.TimetableStore;
   const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, specialSaturdayDatesFromSundayEvents, upsertEvent } = window.TimetableCalendar;
+  const { countdownLabel, renderCountdown } = window.TimetableNotices;
   let state = read();
   let selectedDate = "";
   // 조회 화면 하단과 관리자 학사일정 탭이 같은 달을 보도록 상태를 하나만 둔다.
@@ -263,6 +264,9 @@
     slideRefreshInterval: $("#slideRefreshInterval"),
     slideScheduleDate: $("#slideScheduleDate"),
     slideShowMeal: $("#slideShowMeal"),
+    slideDdayTitle: $("#slideDdayTitle"),
+    slideDdayDate: $("#slideDdayDate"),
+    slideDdayPreview: $("#slideDdayPreview"),
     slideShowTeacher: $("#slideShowTeacher"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
@@ -841,7 +845,7 @@
       els.baseMergeList.querySelectorAll("[data-delete-base-merge]").forEach((button) => setControlDisabled(button, !canBaseMerge));
     }
 
-    [els.slideInterval, els.slideRefreshInterval, els.slideScheduleDate, els.saveSlideSettingsButton].forEach((control) =>
+    [els.slideInterval, els.slideRefreshInterval, els.slideScheduleDate, els.slideDdayTitle, els.slideDdayDate, els.saveSlideSettingsButton].forEach((control) =>
       setControlDisabled(control, !canSlideRuntime)
     );
     [
@@ -2127,25 +2131,25 @@
 
     const notices = state.notices.filter((notice) => notice.title || notice.body);
     const showMeal = slideshowMealVisible();
+    const countdown = renderCountdown(state.slideshow.ddayDate, state.slideshow.ddayTitle);
 
     notices.forEach((notice, index) => {
       slides.push({
         type: "notice",
         title: "안내사항",
         meta: `${index + 1} / ${notices.length}`,
-        html: `<article class="notice-slide ${showMeal ? "has-meal" : "no-meal"}" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
-          <h3>${escapeHtml(notice.title)}</h3>
-          <div class="notice-main-content">
-            <div class="notice-body-text">
-              <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
+        html: `<article class="notice-slide ${countdown ? "has-countdown" : ""} ${showMeal || countdown ? "has-sidebar" : ""} ${showMeal ? "has-meal" : "no-meal"}" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
+          <div class="notice-main-content" tabindex="0" aria-label="안내사항과 디데이·급식">
+            <div class="notice-copy">
+              <h3>${escapeHtml(notice.title)}</h3>
+              <div class="notice-body-text">
+                <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
+              </div>
             </div>
-            ${
-              showMeal
-                ? `<div class="notice-meal-container">
-                    ${renderMealCard()}
-                  </div>`
-                : ""
-            }
+            ${showMeal || countdown ? `<aside class="notice-sidebar" aria-label="디데이와 급식">
+              ${countdown}
+              ${showMeal ? `<div class="notice-meal-container">${renderMealCard()}</div>` : ""}
+            </aside>` : ""}
           </div>
         </article>`,
       });
@@ -2251,6 +2255,7 @@
 
     const refreshSeconds = Math.max(10, Number(state.slideshow.refreshSeconds) || 60);
     slideshowRefreshTimer = window.setInterval(() => {
+      renderSlideshow();
       refreshFromRemote({ keepNoticeSelection: true, restartSlideshow: false });
       // Forces a real re-fetch so a meal-window boundary (07:45/12:20/18:10)
       // that passes while the slideshow is left running gets picked up
@@ -3051,7 +3056,7 @@
 
   function renderNoticePreview() {
     const title = els.noticeTitle.value.trim() || "안내사항 제목";
-    const body = els.noticeBody.value.trim() || "세부 내용 미리보기입니다.";
+    const body = els.noticeBody.value.trim();
     const titleSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);
     const bodySize = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
     const lessonScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
@@ -3066,6 +3071,7 @@
       : "담당 교사 표시를 켜면 조절할 수 있습니다.";
     els.noticeTitleFontSizeLabel.textContent = `제목 ${titleSize}px`;
     els.noticeFontSizeLabel.textContent = `내용 ${bodySize}px`;
+    els.slideDdayPreview.innerHTML = renderCountdown(els.slideDdayDate.value, els.slideDdayTitle.value);
     els.noticePreview.innerHTML = `<article class="notice-preview-card" style="--notice-preview-title-size:${titleSize}px;--notice-preview-size:${bodySize}px">
       <h4>${escapeHtml(title)}</h4>
       <p>${escapeHtml(body).replaceAll("\n", "<br />")}</p>
@@ -3319,6 +3325,8 @@
     renderSlideScheduleDateOptions();
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
+    els.slideDdayTitle.value = state.slideshow.ddayTitle;
+    els.slideDdayDate.value = state.slideshow.ddayDate;
     if (els.slideShowMeal) {
       els.slideShowMeal.value = state.slideshow.showMeal !== false ? "true" : "false";
     }
@@ -4761,6 +4769,8 @@
     [
       els.noticeTitle,
       els.noticeBody,
+      els.slideDdayTitle,
+      els.slideDdayDate,
       els.slideLessonFontScale,
       els.slideClassHeaderFontScale,
       els.slidePeriodHeaderFontScale,
@@ -4834,8 +4844,8 @@
       if (!ensurePermission("update_notice", "안내사항 수정")) return;
       const title = els.noticeTitle.value.trim();
       const body = els.noticeBody.value.trim();
-      if (!title || !body) {
-        showMessage(els.adminMessage, "안내사항 제목과 내용을 입력하세요.");
+      if (!title) {
+        showMessage(els.adminMessage, "안내사항 제목을 입력하세요.");
         return;
       }
       const existing = state.notices.find((notice) => notice.id === selectedNoticeId);
@@ -4876,6 +4886,12 @@
 
     els.saveSlideSettingsButton.addEventListener("click", () => {
       if (!ensurePermission("update_slide_runtime", "슬라이드쇼 설정 수정")) return;
+      const ddayTitle = els.slideDdayTitle.value.trim();
+      const ddayDate = els.slideDdayDate.value;
+      if (!els.slideDdayTitle.checkValidity() || !els.slideDdayDate.checkValidity() || Boolean(ddayTitle) !== Boolean(ddayDate) || (ddayDate && !countdownLabel(ddayDate))) {
+        showMessage(els.adminMessage, "디데이 제목과 올바른 날짜를 함께 입력하거나 모두 비우세요.");
+        return;
+      }
       const interval = Math.max(3, Math.min(120, Number(els.slideInterval.value) || 8));
       const refreshInterval = Math.max(10, Math.min(3600, Number(els.slideRefreshInterval.value) || 60));
       const scheduleDate = els.slideScheduleDate.value;
@@ -4895,6 +4911,8 @@
         renderAdmin();
         return;
       }
+      state.slideshow.ddayTitle = ddayTitle;
+      state.slideshow.ddayDate = ddayDate;
       state.slideshow.intervalSeconds = interval;
       state.slideshow.refreshSeconds = refreshInterval;
       state.slideshow.scheduleDate = scheduleDate;

@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { NoticeCountdownStateSchema } from "../_shared/notice-schema.ts";
 
 // allow: SIZE_OK — one deployable Edge Function owns auth, validation, audit logging, and the state write transaction.
 
@@ -109,7 +110,7 @@ function changedActions(beforeState: unknown, afterState: Record<string, unknown
   const beforeSlide = before.slideshow && typeof before.slideshow === "object" ? before.slideshow as Record<string, unknown> : {};
   const afterSlide = afterState.slideshow && typeof afterState.slideshow === "object" ? afterState.slideshow as Record<string, unknown> : {};
   const slideTypographyKeys = ["lessonFontScale", "classHeaderFontScale", "periodHeaderFontScale", "eventFontScale"];
-  const slideRuntimeKeys = ["intervalSeconds", "refreshSeconds", "scheduleDate", "scheduleDateExpiresOn"];
+  const slideRuntimeKeys = ["intervalSeconds", "refreshSeconds", "scheduleDate", "scheduleDateExpiresOn", "ddayTitle", "ddayDate"];
 
   slideTypographyKeys.forEach((key) => {
     if (isDifferent(beforeSlide[key], afterSlide[key])) actions.add("update_slide_typography");
@@ -160,6 +161,10 @@ Deno.serve(async (req) => {
       `| content-length: ${contentLength ?? "unknown"}`,
     );
     return json({ ok: false, error: "Invalid state" }, 400);
+  }
+
+  if (!NoticeCountdownStateSchema.safeParse(state).success) {
+    return json({ ok: false, error: "Invalid countdown settings" }, 400);
   }
 
   const studentCall = (state as Record<string, unknown>).studentCall;
