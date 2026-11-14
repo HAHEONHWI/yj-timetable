@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { NoticeCountdownStateSchema } from "../_shared/notice-schema.ts";
 
 // allow: SIZE_OK — one deployable Edge Function owns auth, validation, audit logging, and the state write transaction.
 
@@ -160,6 +161,10 @@ Deno.serve(async (req) => {
       `| content-length: ${contentLength ?? "unknown"}`,
     );
     return json({ ok: false, error: "Invalid state" }, 400);
+  }
+
+  if (!NoticeCountdownStateSchema.safeParse(state).success) {
+    return json({ ok: false, error: "Invalid notice target date" }, 400);
   }
 
   const studentCall = (state as Record<string, unknown>).studentCall;

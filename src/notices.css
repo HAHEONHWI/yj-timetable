@@ -1,0 +1,45 @@
+.notice-countdown {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-8);
+  margin-block: 0 var(--space-16);
+  color: var(--blue);
+  overflow-wrap: anywhere;
+}
+
+.notice-countdown strong {
+  font-size: clamp(var(--text-36), 6vw, calc(var(--text-36) * 2));
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.notice-countdown time {
+  color: var(--muted);
+  font-size: var(--text-16);
+}
+
+.notice-preview-card .notice-countdown strong {
+  font-size: var(--text-36);
+}
+
+@media (max-width: 720px) {
+  .notice-slide.has-countdown h3 {
+    font-size: min(var(--notice-title-size), var(--text-36));
+  }
+
+  .notice-slide.has-countdown .notice-body-text p {
+    font-size: min(var(--notice-body-size), var(--text-24));
+  }
+
+  .notice-slide.has-countdown .notice-main-content {
+    flex-direction: column;
+  }
+
+  .notice-slide.has-countdown .notice-body-text {
+    min-height: 0;
+  }
+
+  .notice-slide.has-countdown .notice-meal-container {
+    width: 100%;
+  }
+}

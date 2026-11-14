@@ -8,6 +8,7 @@
   <link rel="icon" href="./assets/logo.png" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./styles-krds.css" />
+  <link rel="stylesheet" href="./src/notices.css" />
   <script>
     // set before first paint so the themed tokens never flash the wrong palette
     document.documentElement.setAttribute(
@@ -878,9 +879,14 @@
               <input id="noticeTitle" type="text" placeholder="예: 급식실 이용 안내" />
             </div>
             <div class="field">
-              <label for="noticeBody">세부 내용</label>
-              <textarea id="noticeBody" rows="5" placeholder="슬라이드쇼에 표시할 세부 내용을 입력하세요."></textarea>
+              <label for="noticeTargetDate">D-day 목표일 (선택)</label>
+              <input id="noticeTargetDate" type="date" max="9999-12-31" aria-describedby="noticeTargetDateHint" />
+              <p id="noticeTargetDateHint" class="message">한국 시간 기준 남은 날짜를 표시합니다. 비우면 D-day를 숨깁니다.</p>
             </div>
+          </div>
+          <div class="field">
+            <label for="noticeBody">세부 내용</label>
+            <textarea id="noticeBody" rows="5" placeholder="슬라이드쇼에 표시할 세부 내용을 입력하세요."></textarea>
           </div>
           <div class="form-grid two">
             <div id="noticePreview" class="notice-preview"></div>
@@ -1145,6 +1151,7 @@
   <script src="./src/storage.js"></script>
   <script src="./src/timetable-import.js"></script>
   <script src="./src/calendar.js"></script>
+  <script src="./src/notices.js"></script>
   <script src="./src/app.js"></script>
 </body>
 

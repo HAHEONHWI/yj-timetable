@@ -1,4 +1,5 @@
 import { z } from "npm:zod@4.1.5";
+import { NoticeTargetDateSchema } from "./notice-schema.ts";
 
 export type TimetableEntry = {
   readonly period: number;
@@ -58,6 +59,7 @@ export const PublicStateSchema = z.object({
       id: z.string(),
       title: z.string(),
       body: z.string(),
+      targetDate: NoticeTargetDateSchema,
       titleFontSize: z.number().optional(),
       detailFontSize: z.number().optional(),
     }),

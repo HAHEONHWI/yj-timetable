@@ -20,6 +20,7 @@
     changeKey,
   } = window.TimetableStore;
   const { buildMonthGrid, eventsForMonth, monthKeyOf, shiftMonth, specialSaturdayDatesFromSundayEvents, upsertEvent } = window.TimetableCalendar;
+  const { countdownLabel, renderCountdown } = window.TimetableNotices;
   let state = read();
   let selectedDate = "";
   // 조회 화면 하단과 관리자 학사일정 탭이 같은 달을 보도록 상태를 하나만 둔다.
@@ -237,6 +238,7 @@
     neisPrefillStatus: $("#neisPrefillStatus"),
     noticeTitle: $("#noticeTitle"),
     noticeBody: $("#noticeBody"),
+    noticeTargetDate: $("#noticeTargetDate"),
     noticeTitleFontSize: $("#noticeTitleFontSize"),
     noticeTitleFontSizeLabel: $("#noticeTitleFontSizeLabel"),
     noticeFontSize: $("#noticeFontSize"),
@@ -2129,14 +2131,16 @@
     const showMeal = slideshowMealVisible();
 
     notices.forEach((notice, index) => {
+      const countdown = renderCountdown(notice.targetDate);
       slides.push({
         type: "notice",
         title: "안내사항",
         meta: `${index + 1} / ${notices.length}`,
-        html: `<article class="notice-slide ${showMeal ? "has-meal" : "no-meal"}" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
+        html: `<article class="notice-slide ${countdown ? "has-countdown" : ""} ${showMeal ? "has-meal" : "no-meal"}" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
           <h3>${escapeHtml(notice.title)}</h3>
           <div class="notice-main-content">
             <div class="notice-body-text">
+              ${countdown}
               <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
             </div>
             ${
@@ -2251,6 +2255,7 @@
 
     const refreshSeconds = Math.max(10, Number(state.slideshow.refreshSeconds) || 60);
     slideshowRefreshTimer = window.setInterval(() => {
+      renderSlideshow();
       refreshFromRemote({ keepNoticeSelection: true, restartSlideshow: false });
       // Forces a real re-fetch so a meal-window boundary (07:45/12:20/18:10)
       // that passes while the slideshow is left running gets picked up
@@ -3015,7 +3020,7 @@
             return `<article class="list-item notice-list-item${notice.id === selectedNoticeId ? " is-active" : ""}" data-select-notice="${notice.id}">
               <div>
                 <strong>${index + 1}페이지 · ${escapeHtml(notice.title || "제목 없음")}</strong>
-                <span>${escapeHtml(notice.body)} · 제목 ${Number(notice.titleFontSize) || 72}px · 내용 ${Number(notice.detailFontSize) || 42}px</span>
+                <span>${escapeHtml(notice.body)}${notice.targetDate ? ` · 목표일 ${escapeHtml(notice.targetDate)}` : ""} · 제목 ${Number(notice.titleFontSize) || 72}px · 내용 ${Number(notice.detailFontSize) || 42}px</span>
               </div>
               <button class="text-button" data-delete-notice="${notice.id}" type="button">삭제</button>
             </article>`;
@@ -3043,6 +3048,7 @@
     const notice = state.notices.find((item) => item.id === selectedNoticeId);
     els.noticeTitle.value = notice ? notice.title : "";
     els.noticeBody.value = notice ? notice.body : "";
+    els.noticeTargetDate.value = notice ? notice.targetDate || "" : "";
     els.noticeTitleFontSize.value = notice ? Number(notice.titleFontSize) || 72 : 72;
     els.noticeFontSize.value = notice ? Number(notice.detailFontSize) || 42 : 42;
     renderNoticeList();
@@ -3051,7 +3057,7 @@
 
   function renderNoticePreview() {
     const title = els.noticeTitle.value.trim() || "안내사항 제목";
-    const body = els.noticeBody.value.trim() || "세부 내용 미리보기입니다.";
+    const body = els.noticeBody.value.trim() || (els.noticeTargetDate.value ? "" : "세부 내용 미리보기입니다.");
     const titleSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);
     const bodySize = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
     const lessonScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
@@ -3068,6 +3074,7 @@
     els.noticeFontSizeLabel.textContent = `내용 ${bodySize}px`;
     els.noticePreview.innerHTML = `<article class="notice-preview-card" style="--notice-preview-title-size:${titleSize}px;--notice-preview-size:${bodySize}px">
       <h4>${escapeHtml(title)}</h4>
+      ${renderCountdown(els.noticeTargetDate.value)}
       <p>${escapeHtml(body).replaceAll("\n", "<br />")}</p>
     </article>`;
   }
@@ -4761,6 +4768,7 @@
     [
       els.noticeTitle,
       els.noticeBody,
+      els.noticeTargetDate,
       els.slideLessonFontScale,
       els.slideClassHeaderFontScale,
       els.slidePeriodHeaderFontScale,
@@ -4834,8 +4842,14 @@
       if (!ensurePermission("update_notice", "안내사항 수정")) return;
       const title = els.noticeTitle.value.trim();
       const body = els.noticeBody.value.trim();
-      if (!title || !body) {
-        showMessage(els.adminMessage, "안내사항 제목과 내용을 입력하세요.");
+      const targetDate = els.noticeTargetDate.value;
+      if (!els.noticeTargetDate.checkValidity() || (targetDate && !countdownLabel(targetDate))) {
+        showMessage(els.adminMessage, "D-day 목표일을 올바른 날짜로 입력하세요.");
+        els.noticeTargetDate.reportValidity();
+        return;
+      }
+      if (!title || (!body && !targetDate)) {
+        showMessage(els.adminMessage, "안내사항 제목과 내용 또는 D-day 목표일을 입력하세요.");
         return;
       }
       const existing = state.notices.find((notice) => notice.id === selectedNoticeId);
@@ -4843,6 +4857,7 @@
         id: existing ? existing.id : `${Date.now()}`,
         title,
         body,
+        targetDate,
         titleFontSize: clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120),
         detailFontSize: clamp(Number(els.noticeFontSize.value) || 42, 24, 84),
       };

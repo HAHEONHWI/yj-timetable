@@ -48,6 +48,13 @@ KRDS HTML Component Kit v1.1.0을 바탕으로 한 어두운 고대비 중심의
 
 ## 5. Components
 
+### Notice Countdown
+
+- Primary action: 안내사항 저장. 우선순위: 제목, D-day 목표일, 세부 내용.
+- 목표일은 선택 입력이다. 미리보기와 슬라이드에 목표일과 `D-N`·`D-day`·`D+N`을 표시한다. 한국 시간 자정 기준으로 계산한다.
+- Layout: 안내사항 D-day - 제목 아래 남은 날짜 표시 -> stack (https://github.com/changeroa/StyleGallery/blob/main/patterns/stacking/stack.md); scroll owner: `.notice-body-text` (슬라이드), document (관리자); anti-patterns: 고정 높이 카운터와 별도 중첩 스크롤을 추가하지 않는다.
+- 기존 Field, `.form-grid.two`, KRDS 색·간격·글자 token을 재사용한다. 장식 badge와 추가 설정은 두지 않는다.
+
 ### Page Panel
 
 - 구조: `.page`, `.login-panel`, `.admin-workspace`
