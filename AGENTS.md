@@ -231,10 +231,9 @@ admin/admin -> manager
 
 ## Android/Windows 산출물 규칙
 
-- 교사용 기본 설치 버튼은 https://play.google.com/store/apps/details?id=kr.yjms.timetable.teacher 를 사용한다. APK는 직접 설치 보조 링크로 제공한다.
+- 교사용 기본 설치 버튼은 https://play.google.com/store/apps/details?id=kr.yjms.timetable.teacher 를 사용한다. 교사용 APK는 공개하지 않으며 기존 APK URL도 Google Play로 redirect한다.
 
 - Android 빌드 스크립트는 `android-board/build-apk.sh`, `android-widget/build-apk.sh`를 사용한다.
-- 교사용 APK 빌드 산출물은 `android-widget/output/yj-timetable-teacher.apk`, 다운로드·앱 업데이트 주소는 `/downloads/yj-timetable-teacher.apk`다. 이전 `/downloads/yj-timetable-widget.apk`는 새 주소로 redirect한다.
 - APK 빌드 후 변경되는 `build/`, `.class`, `.idsig`, `debug.keystore`는 별도 요청 없으면 커밋하지 않는다.
 - Windows 위젯은 `npm run dist:win`으로 빌드한다.
 - Windows “알 수 없는 게시자” 경고는 코드 서명 인증서 없이는 제거할 수 없다.

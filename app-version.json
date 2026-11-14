@@ -3,7 +3,7 @@
     "versionCode": 7,
     "versionName": "1.4.0",
     "notes": ["급식 탭 추가", "이번 주 교과 변경 목록 추가", "새 버전 알림 추가"],
-    "apkUrl": "https://schedule.yjms.kr/downloads/yj-timetable-teacher.apk"
+    "apkUrl": "https://play.google.com/store/apps/details?id=kr.yjms.timetable.teacher"
   },
   "student": {
     "versionCode": 5,
