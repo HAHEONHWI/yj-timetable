@@ -238,7 +238,6 @@
     neisPrefillStatus: $("#neisPrefillStatus"),
     noticeTitle: $("#noticeTitle"),
     noticeBody: $("#noticeBody"),
-    noticeTargetDate: $("#noticeTargetDate"),
     noticeTitleFontSize: $("#noticeTitleFontSize"),
     noticeTitleFontSizeLabel: $("#noticeTitleFontSizeLabel"),
     noticeFontSize: $("#noticeFontSize"),
@@ -265,6 +264,9 @@
     slideRefreshInterval: $("#slideRefreshInterval"),
     slideScheduleDate: $("#slideScheduleDate"),
     slideShowMeal: $("#slideShowMeal"),
+    slideDdayTitle: $("#slideDdayTitle"),
+    slideDdayDate: $("#slideDdayDate"),
+    slideDdayPreview: $("#slideDdayPreview"),
     slideShowTeacher: $("#slideShowTeacher"),
     saveSlideSettingsButton: $("#saveSlideSettingsButton"),
     slideReloadPassword: $("#slideReloadPassword"),
@@ -843,7 +845,7 @@
       els.baseMergeList.querySelectorAll("[data-delete-base-merge]").forEach((button) => setControlDisabled(button, !canBaseMerge));
     }
 
-    [els.slideInterval, els.slideRefreshInterval, els.slideScheduleDate, els.saveSlideSettingsButton].forEach((control) =>
+    [els.slideInterval, els.slideRefreshInterval, els.slideScheduleDate, els.slideDdayTitle, els.slideDdayDate, els.saveSlideSettingsButton].forEach((control) =>
       setControlDisabled(control, !canSlideRuntime)
     );
     [
@@ -2129,27 +2131,25 @@
 
     const notices = state.notices.filter((notice) => notice.title || notice.body);
     const showMeal = slideshowMealVisible();
+    const countdown = renderCountdown(state.slideshow.ddayDate, state.slideshow.ddayTitle);
 
     notices.forEach((notice, index) => {
-      const countdown = renderCountdown(notice.targetDate);
       slides.push({
         type: "notice",
         title: "안내사항",
         meta: `${index + 1} / ${notices.length}`,
-        html: `<article class="notice-slide ${countdown ? "has-countdown" : ""} ${showMeal ? "has-meal" : "no-meal"}" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
-          <h3>${escapeHtml(notice.title)}</h3>
-          <div class="notice-main-content">
-            <div class="notice-body-text">
-              ${countdown}
-              <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
+        html: `<article class="notice-slide ${countdown ? "has-countdown" : ""} ${showMeal || countdown ? "has-sidebar" : ""} ${showMeal ? "has-meal" : "no-meal"}" style="--notice-title-size:${clamp(Number(notice.titleFontSize) || 72, 36, 120)}px;--notice-body-size:${clamp(Number(notice.detailFontSize) || 42, 24, 84)}px">
+          <div class="notice-main-content" tabindex="0" aria-label="안내사항과 디데이·급식">
+            <div class="notice-copy">
+              <h3>${escapeHtml(notice.title)}</h3>
+              <div class="notice-body-text">
+                <p>${escapeHtml(notice.body).replaceAll("\n", "<br />")}</p>
+              </div>
             </div>
-            ${
-              showMeal
-                ? `<div class="notice-meal-container">
-                    ${renderMealCard()}
-                  </div>`
-                : ""
-            }
+            ${showMeal || countdown ? `<aside class="notice-sidebar" aria-label="디데이와 급식">
+              ${countdown}
+              ${showMeal ? `<div class="notice-meal-container">${renderMealCard()}</div>` : ""}
+            </aside>` : ""}
           </div>
         </article>`,
       });
@@ -3020,7 +3020,7 @@
             return `<article class="list-item notice-list-item${notice.id === selectedNoticeId ? " is-active" : ""}" data-select-notice="${notice.id}">
               <div>
                 <strong>${index + 1}페이지 · ${escapeHtml(notice.title || "제목 없음")}</strong>
-                <span>${escapeHtml(notice.body)}${notice.targetDate ? ` · 목표일 ${escapeHtml(notice.targetDate)}` : ""} · 제목 ${Number(notice.titleFontSize) || 72}px · 내용 ${Number(notice.detailFontSize) || 42}px</span>
+                <span>${escapeHtml(notice.body)} · 제목 ${Number(notice.titleFontSize) || 72}px · 내용 ${Number(notice.detailFontSize) || 42}px</span>
               </div>
               <button class="text-button" data-delete-notice="${notice.id}" type="button">삭제</button>
             </article>`;
@@ -3048,7 +3048,6 @@
     const notice = state.notices.find((item) => item.id === selectedNoticeId);
     els.noticeTitle.value = notice ? notice.title : "";
     els.noticeBody.value = notice ? notice.body : "";
-    els.noticeTargetDate.value = notice ? notice.targetDate || "" : "";
     els.noticeTitleFontSize.value = notice ? Number(notice.titleFontSize) || 72 : 72;
     els.noticeFontSize.value = notice ? Number(notice.detailFontSize) || 42 : 42;
     renderNoticeList();
@@ -3057,7 +3056,7 @@
 
   function renderNoticePreview() {
     const title = els.noticeTitle.value.trim() || "안내사항 제목";
-    const body = els.noticeBody.value.trim() || (els.noticeTargetDate.value ? "" : "세부 내용 미리보기입니다.");
+    const body = els.noticeBody.value.trim();
     const titleSize = clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120);
     const bodySize = clamp(Number(els.noticeFontSize.value) || 42, 24, 84);
     const lessonScale = clamp(Number(els.slideLessonFontScale.value) || 100, 70, 150);
@@ -3072,9 +3071,9 @@
       : "담당 교사 표시를 켜면 조절할 수 있습니다.";
     els.noticeTitleFontSizeLabel.textContent = `제목 ${titleSize}px`;
     els.noticeFontSizeLabel.textContent = `내용 ${bodySize}px`;
+    els.slideDdayPreview.innerHTML = renderCountdown(els.slideDdayDate.value, els.slideDdayTitle.value);
     els.noticePreview.innerHTML = `<article class="notice-preview-card" style="--notice-preview-title-size:${titleSize}px;--notice-preview-size:${bodySize}px">
       <h4>${escapeHtml(title)}</h4>
-      ${renderCountdown(els.noticeTargetDate.value)}
       <p>${escapeHtml(body).replaceAll("\n", "<br />")}</p>
     </article>`;
   }
@@ -3326,6 +3325,8 @@
     renderSlideScheduleDateOptions();
     els.slideInterval.value = state.slideshow.intervalSeconds;
     els.slideRefreshInterval.value = state.slideshow.refreshSeconds || 60;
+    els.slideDdayTitle.value = state.slideshow.ddayTitle;
+    els.slideDdayDate.value = state.slideshow.ddayDate;
     if (els.slideShowMeal) {
       els.slideShowMeal.value = state.slideshow.showMeal !== false ? "true" : "false";
     }
@@ -4768,7 +4769,8 @@
     [
       els.noticeTitle,
       els.noticeBody,
-      els.noticeTargetDate,
+      els.slideDdayTitle,
+      els.slideDdayDate,
       els.slideLessonFontScale,
       els.slideClassHeaderFontScale,
       els.slidePeriodHeaderFontScale,
@@ -4842,14 +4844,8 @@
       if (!ensurePermission("update_notice", "안내사항 수정")) return;
       const title = els.noticeTitle.value.trim();
       const body = els.noticeBody.value.trim();
-      const targetDate = els.noticeTargetDate.value;
-      if (!els.noticeTargetDate.checkValidity() || (targetDate && !countdownLabel(targetDate))) {
-        showMessage(els.adminMessage, "D-day 목표일을 올바른 날짜로 입력하세요.");
-        els.noticeTargetDate.reportValidity();
-        return;
-      }
-      if (!title || (!body && !targetDate)) {
-        showMessage(els.adminMessage, "안내사항 제목과 내용 또는 D-day 목표일을 입력하세요.");
+      if (!title) {
+        showMessage(els.adminMessage, "안내사항 제목을 입력하세요.");
         return;
       }
       const existing = state.notices.find((notice) => notice.id === selectedNoticeId);
@@ -4857,7 +4853,6 @@
         id: existing ? existing.id : `${Date.now()}`,
         title,
         body,
-        targetDate,
         titleFontSize: clamp(Number(els.noticeTitleFontSize.value) || 72, 36, 120),
         detailFontSize: clamp(Number(els.noticeFontSize.value) || 42, 24, 84),
       };
@@ -4891,6 +4886,12 @@
 
     els.saveSlideSettingsButton.addEventListener("click", () => {
       if (!ensurePermission("update_slide_runtime", "슬라이드쇼 설정 수정")) return;
+      const ddayTitle = els.slideDdayTitle.value.trim();
+      const ddayDate = els.slideDdayDate.value;
+      if (!els.slideDdayTitle.checkValidity() || !els.slideDdayDate.checkValidity() || Boolean(ddayTitle) !== Boolean(ddayDate) || (ddayDate && !countdownLabel(ddayDate))) {
+        showMessage(els.adminMessage, "디데이 제목과 올바른 날짜를 함께 입력하거나 모두 비우세요.");
+        return;
+      }
       const interval = Math.max(3, Math.min(120, Number(els.slideInterval.value) || 8));
       const refreshInterval = Math.max(10, Math.min(3600, Number(els.slideRefreshInterval.value) || 60));
       const scheduleDate = els.slideScheduleDate.value;
@@ -4910,6 +4911,8 @@
         renderAdmin();
         return;
       }
+      state.slideshow.ddayTitle = ddayTitle;
+      state.slideshow.ddayDate = ddayDate;
       state.slideshow.intervalSeconds = interval;
       state.slideshow.refreshSeconds = refreshInterval;
       state.slideshow.scheduleDate = scheduleDate;

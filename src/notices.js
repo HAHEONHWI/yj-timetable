@@ -8,10 +8,11 @@
     return days === 0 ? "D-day" : days > 0 ? "D-" + days : "D+" + -days;
   }
 
-  function renderCountdown(targetDate) {
+  function renderCountdown(targetDate, title = "") {
     const label = countdownLabel(targetDate);
-    if (!label) return "";
-    return '<div class="notice-countdown"><strong>' + label + '</strong><time datetime="' + targetDate + '">' + targetDate + '</time></div>';
+    if (!label || typeof title !== "string" || !title.trim()) return "";
+    const safeTitle = title.trim().replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+    return '<section class="notice-countdown" aria-label="디데이"><h4>' + safeTitle + '</h4><strong>' + label + '</strong><time datetime="' + targetDate + '">' + targetDate + '</time></section>';
   }
 
   const api = { countdownLabel, renderCountdown };

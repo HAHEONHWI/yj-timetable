@@ -1,10 +1,46 @@
+.notice-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-32);
+  min-width: 0;
+  min-height: 0;
+  overflow-wrap: anywhere;
+}
+
+.notice-sidebar {
+  display: flex;
+  flex: 0 0 clamp(280px, 30vw, 420px);
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-24);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.has-countdown .notice-sidebar {
+  justify-content: space-between;
+}
+
+.notice-sidebar .notice-meal-container {
+  width: 100%;
+}
+
 .notice-countdown {
   display: grid;
   justify-items: center;
   gap: var(--space-8);
-  margin-block: 0 var(--space-16);
   color: var(--blue);
   overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.notice-countdown h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(var(--text-24), 2.5vw, var(--text-36));
+  line-height: 1.3;
 }
 
 .notice-countdown strong {
@@ -18,28 +54,36 @@
   font-size: var(--text-16);
 }
 
-.notice-preview-card .notice-countdown strong {
-  font-size: var(--text-36);
+.slideshow-dday-preview {
+  max-width: 420px;
+  margin-block: var(--space-16);
 }
 
 @media (max-width: 720px) {
-  .notice-slide.has-countdown h3 {
+  .notice-slide h3 {
     font-size: min(var(--notice-title-size), var(--text-36));
   }
 
-  .notice-slide.has-countdown .notice-body-text p {
+  .notice-slide .notice-body-text p {
     font-size: min(var(--notice-body-size), var(--text-24));
   }
 
-  .notice-slide.has-countdown .notice-main-content {
+  .notice-slide .notice-main-content {
     flex-direction: column;
+    overflow-y: auto;
   }
 
-  .notice-slide.has-countdown .notice-body-text {
-    min-height: 0;
+  .notice-copy,
+  .notice-sidebar {
+    flex: none;
   }
 
-  .notice-slide.has-countdown .notice-meal-container {
+  .notice-sidebar {
     width: 100%;
+  }
+
+  .notice-slide .notice-body-text {
+    flex: none;
+    overflow: visible;
   }
 }

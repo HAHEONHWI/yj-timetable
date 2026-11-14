@@ -37,7 +37,20 @@ test("countdown crosses leap day and year boundaries when counting days", () => 
 test("countdown stays hidden when the target is absent or invalid", () => {
   const values = [undefined, null, "", "2026-02-29", "2026-04-31", "2026-13-01", "2026-1-01", '<img src=x onerror=alert(1)>']; // Given
   for (const value of values) {
-    const html = renderCountdown(value); // When
+    const html = renderCountdown(value, "시험"); // When
     assert.equal(html, ""); // Then
   }
+});
+
+test("countdown displays an escaped title when both settings are present", () => {
+  const title = '<img src=x onerror=alert(1)> & 시험'; // Given
+  const html = renderCountdown("2026-11-21", title); // When
+  assert.ok(html.includes("&lt;img"));
+  assert.equal(html.includes("<img"), false); // Then: title remains text.
+});
+
+test("countdown hides when its title is cleared", () => {
+  const targetDate = "2026-11-21"; // Given
+  const html = renderCountdown(targetDate, ""); // When
+  assert.equal(html, ""); // Then
 });

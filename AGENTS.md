@@ -92,7 +92,7 @@ Codex 사용량 제한, sandbox 승인 실패, 또는 권한 문제로 커밋/�
 웹 테스트: `node --test tests/*.test.js`.
 D-day 서버 검증: `deno test --node-modules-dir=none supabase/functions/_shared/notice-schema.test.ts`.
 
-안내사항은 선택 입력 `targetDate` (`YYYY-MM-DD`)를 지원한다. 비어 있으면 카운터를 숨긴다. 한국 시간 자정 기준 `D-N`, 당일 `D-day`, 지난 날짜 `D+N`을 표시하며 저장 서버도 유효한 날짜만 허용한다.
+디데이는 슬라이드쇼 설정의 `slideshow.ddayTitle`·`slideshow.ddayDate`에서 설정한다. 제목·날짜를 함께 입력하거나 모두 비운다. 안내사항 제목·본문은 왼쪽, D-day는 오른쪽 위, 급식은 오른쪽 아래에 표시하며 서버도 날짜·제목을 검증한다. 기존 개별 안내의 첫 D-day를 초기값으로 가져오며 원본은 유지한다.
 
 웹 클라이언트 문법 확인:
 

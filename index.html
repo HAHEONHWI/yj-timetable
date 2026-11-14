@@ -869,14 +869,9 @@
               <label for="noticeTitle">제목</label>
               <input id="noticeTitle" type="text" placeholder="예: 급식실 이용 안내" />
             </div>
-            <div class="field">
-              <label for="noticeTargetDate">D-day 목표일 (선택)</label>
-              <input id="noticeTargetDate" type="date" max="9999-12-31" aria-describedby="noticeTargetDateHint" />
-              <p id="noticeTargetDateHint" class="message">한국 시간 기준 남은 날짜를 표시합니다. 비우면 D-day를 숨깁니다.</p>
-            </div>
           </div>
           <div class="field">
-            <label for="noticeBody">세부 내용</label>
+            <label for="noticeBody">세부 내용 (선택)</label>
             <textarea id="noticeBody" rows="5" placeholder="슬라이드쇼에 표시할 세부 내용을 입력하세요."></textarea>
           </div>
           <div class="form-grid two">
@@ -935,7 +930,7 @@
               <label for="slideShowMeal">안내사항에 급식 식단 표시</label>
               <select id="slideShowMeal">
                 <option value="true">표시함 (우측 하단)</option>
-                <option value="false">숨김 (안내사항만 전체 표시)</option>
+                <option value="false">숨김</option>
               </select>
               <p class="message">안내사항 슬라이드 우측 하단에 나이스 급식 식단 카드를 띄웁니다.</p>
             </div>
@@ -947,6 +942,21 @@
               </select>
               <p class="message">슬라이드쇼 시간표 칸에 과목명과 함께 담당 교사 이름을 보여줍니다.</p>
             </div>
+          </div>
+          <div class="subsection" aria-labelledby="slideDdayHeading">
+            <h3 id="slideDdayHeading">디데이</h3>
+            <div class="form-grid two">
+              <div class="field">
+                <label for="slideDdayTitle">디데이 제목</label>
+                <input id="slideDdayTitle" type="text" maxlength="80" placeholder="예: 수능 응원 안내" />
+              </div>
+              <div class="field">
+                <label for="slideDdayDate">목표 날짜</label>
+                <input id="slideDdayDate" type="date" max="9999-12-31" aria-describedby="slideDdayHint" />
+              </div>
+            </div>
+            <p id="slideDdayHint" class="message">안내사항 오른쪽 위에 표시합니다. 한국 시간 기준으로 계산하며 제목과 날짜를 모두 비우면 숨깁니다.</p>
+            <div id="slideDdayPreview" class="slideshow-dday-preview" aria-live="polite"></div>
           </div>
           <div class="subsection">
             <p class="instant-apply-notice"><strong>변경 즉시 반영</strong><span>글자 크기는 조정 즉시 반영됩니다.</span></p>
