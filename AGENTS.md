@@ -89,6 +89,11 @@ Codex 사용량 제한, sandbox 승인 실패, 또는 권한 문제로 커밋/�
 
 ## 검증 명령
 
+웹 테스트: `node --test tests/*.test.js`.
+D-day 서버 검증: `deno test --node-modules-dir=none supabase/functions/_shared/notice-schema.test.ts`.
+
+디데이는 슬라이드쇼 설정의 `slideshow.ddayTitle`·`slideshow.ddayDate`에서 설정한다. 제목·날짜를 함께 입력하거나 모두 비운다. 안내사항 제목·본문은 왼쪽, D-day는 오른쪽 위, 급식은 오른쪽 아래에 표시하며 서버도 날짜·제목을 검증한다. 기존 개별 안내의 첫 D-day를 초기값으로 가져오며 원본은 유지한다.
+
 웹 클라이언트 문법 확인:
 
 ```bash
@@ -226,6 +231,8 @@ admin/admin -> manager
 - `@resvg/resvg-js`를 사용하는 배경화면 PNG 렌더링은 폰트 포함 여부를 항상 확인한다.
 
 ## Android/Windows 산출물 규칙
+
+- 교사용 기본 설치 버튼은 https://play.google.com/store/apps/details?id=kr.yjms.timetable.teacher 를 사용한다. 교사용 APK는 공개하지 않으며 기존 APK URL도 Google Play로 redirect한다.
 
 - Android 빌드 스크립트는 `android-board/build-apk.sh`, `android-widget/build-apk.sh`를 사용한다.
 - APK 빌드 후 변경되는 `build/`, `.class`, `.idsig`, `debug.keystore`는 별도 요청 없으면 커밋하지 않는다.

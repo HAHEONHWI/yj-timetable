@@ -32,6 +32,15 @@
     return base;
   }
 
+  function countdownSettings(parsed) {
+    const slide = parsed.slideshow || {};
+    const legacy = (Array.isArray(parsed.notices) ? parsed.notices : []).find((notice) => notice && notice.targetDate);
+    return {
+      ddayTitle: typeof slide.ddayTitle === "string" ? slide.ddayTitle : legacy ? String(legacy.title || "").slice(0, 80) : "",
+      ddayDate: typeof slide.ddayDate === "string" ? slide.ddayDate : legacy ? legacy.targetDate : "",
+    };
+  }
+
   function createDefaultState() {
     return {
       adminPassword: "1234",
@@ -68,6 +77,8 @@
         scheduleDateExpiresOn: "",
         showMeal: true,
         showTeacher: false,
+        ddayTitle: "",
+        ddayDate: "",
       },
     };
   }
@@ -120,6 +131,7 @@
             parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
           showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
           showTeacher: Boolean(parsed.slideshow && parsed.slideshow.showTeacher),
+          ...countdownSettings(parsed),
         },
       };
     } catch {
@@ -181,6 +193,7 @@
           parsed.slideshow && parsed.slideshow.scheduleDateExpiresOn ? String(parsed.slideshow.scheduleDateExpiresOn) : "",
         showMeal: parsed.slideshow && parsed.slideshow.showMeal !== undefined ? Boolean(parsed.slideshow.showMeal) : true,
         showTeacher: Boolean(parsed.slideshow && parsed.slideshow.showTeacher),
+        ...countdownSettings(parsed),
       },
     };
   }
