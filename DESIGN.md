@@ -48,6 +48,14 @@ KRDS HTML Component Kit v1.1.0을 바탕으로 한 어두운 고대비 중심의
 
 ## 5. Components
 
+### Notice Countdown
+
+- Primary action: 슬라이드쇼 설정 저장. 디데이 섹션에서 제목·날짜를 설정한다. 두 값을 비우면 숨긴다.
+- 안내사항 제목·본문은 왼쪽 `.notice-copy` 안에만 표시한다. 오른쪽 `.notice-sidebar` 위에 D-day 제목·파란 카운트·목표일을, 아래에 급식을 둔다.
+- Layout: 안내사항 - 본문과 보조 정보 분리 -> sidebar (https://github.com/changeroa/StyleGallery/blob/main/patterns/split-sidebar/sidebar.md); scroll owner: `.notice-body-text`; anti-patterns: 안내 제목의 오른쪽 침범과 절대 좌표 배치를 피한다. 모바일은 안내문 다음 D-day·급식 순으로 세로 배치한다.
+- 한국 시간 자정 기준 `D-N`·`D-day`·`D+N`을 표시한다. 기존 개별 안내사항의 첫 D-day는 새 설정 초기값으로 옮기고 원본 데이터는 유지한다.
+- 기존 Field, `.form-grid.two`, KRDS 색·간격·글자 token을 재사용한다. 장식 badge와 추가 설정은 두지 않는다.
+
 ### Page Panel
 
 - 구조: `.page`, `.login-panel`, `.admin-workspace`

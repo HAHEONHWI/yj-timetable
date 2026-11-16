@@ -69,6 +69,10 @@ chore: 패키지 업데이트
 - `style`: 포맷팅, 공백, CSS 정리 등 기능 변경 없는 변경
 - `refactor`: 기능은 유지하고 구조만 개선
 - `chore`: 패키지, 빌드 설정, 산출물 정리, 자동화 보조 작업
+- `test`: 테스트 추가·수정
+- `perf`: 성능 개선
+- `ci`: CI/CD 변경
+- `build`: 빌드 시스템 변경
 
 예시:
 
@@ -84,6 +88,11 @@ chore: Netlify 배포 스크립트 정리
 Codex 사용량 제한, sandbox 승인 실패, 또는 권한 문제로 커밋/푸시/배포 명령을 직접 완료하지 못하면 사용자가 그대로 복붙해 실행할 수 있는 명령어를 반드시 제공한다. 명령어는 항상 `cd /Users/dgsw09/timetable-service`부터 시작하고, 필요한 `git add`, `git commit`, `git push`, `npx netlify deploy --prod`, `npx supabase ...` 순서를 포함한다.
 
 ## 검증 명령
+
+웹 테스트: `node --test tests/*.test.js`.
+D-day 서버 검증: `deno test --node-modules-dir=none supabase/functions/_shared/notice-schema.test.ts`.
+
+디데이는 슬라이드쇼 설정의 `slideshow.ddayTitle`·`slideshow.ddayDate`에서 설정한다. 제목·날짜를 함께 입력하거나 모두 비운다. 안내사항 제목·본문은 왼쪽, D-day는 오른쪽 위, 급식은 오른쪽 아래에 표시하며 서버도 날짜·제목을 검증한다. 기존 개별 안내의 첫 D-day를 초기값으로 가져오며 원본은 유지한다.
 
 웹 클라이언트 문법 확인:
 
@@ -221,6 +230,8 @@ admin/admin -> manager
 - `@resvg/resvg-js`를 사용하는 배경화면 PNG 렌더링은 폰트 포함 여부를 항상 확인한다.
 
 ## Android/Windows 산출물 규칙
+
+- 교사용 기본 설치 버튼은 https://play.google.com/store/apps/details?id=kr.yjms.timetable.teacher 를 사용한다. 교사용 APK는 공개하지 않으며 기존 APK URL도 Google Play로 redirect한다.
 
 - Android 빌드 스크립트는 `android-board/build-apk.sh`, `android-widget/build-apk.sh`를 사용한다.
 - APK 빌드 후 변경되는 `build/`, `.class`, `.idsig`, `debug.keystore`는 별도 요청 없으면 커밋하지 않는다.
