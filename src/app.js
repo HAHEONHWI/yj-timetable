@@ -120,6 +120,7 @@
     downloadPage: $("#downloadPage"),
     apiPage: $("#apiPage"),
     privacyPage: $("#privacyPage"),
+    termsPage: $("#termsPage"),
     adminPage: $("#adminPage"),
     homeButton: $("#homeButton"),
     todayLabel: $("#todayLabel"),
@@ -615,6 +616,7 @@
     if (path === "/download" || path === "/downloads") return "download";
     if (path === "/api" || path === "/api-docs") return "api";
     if (path === "/privacy") return "privacy";
+    if (path === "/terms") return "terms";
     return "view";
   }
 
@@ -626,6 +628,7 @@
     if (route === "download") return "/download";
     if (route === "api") return "/api";
     if (route === "privacy") return "/privacy";
+    if (route === "terms") return "/terms";
     return "/";
   }
 
@@ -639,6 +642,7 @@
       api: "API",
       admin: "관리자",
       privacy: "개인정보처리방침",
+      terms: "이용약관",
     };
     return `용정시간표 - ${labels[route] || "조회"}`;
   }
@@ -915,6 +919,7 @@
     els.downloadPage.classList.toggle("is-hidden", route !== "download");
     els.apiPage.classList.toggle("is-hidden", route !== "api");
     els.privacyPage.classList.toggle("is-hidden", route !== "privacy");
+    els.termsPage.classList.toggle("is-hidden", route !== "terms");
     els.adminPage.classList.toggle("is-hidden", route !== "admin");
     document.body.classList.toggle("slideshow-mode", route === "slideshow");
     $$(".nav-button").forEach((button) => {
@@ -944,6 +949,7 @@
     }
     syncRemoteForRoute();
     trackRoutePageView(route);
+    if (route === "terms") window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function goHome() {

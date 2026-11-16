@@ -929,6 +929,7 @@ textarea:focus {
 
 .footer-link {
   color: var(--ink);
+  min-height: var(--control-touch);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: var(--space-3);
