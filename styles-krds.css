@@ -918,11 +918,6 @@ textarea:focus {
   gap: var(--space-4);
 }
 
-.footer-disclosure {
-  color: var(--muted);
-  font-size: var(--text-12);
-}
-
 .footer strong {
   color: var(--ink);
   font-size: var(--text-15);
