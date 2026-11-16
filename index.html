@@ -8,6 +8,7 @@
   <link rel="icon" href="./assets/logo.png" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./styles-krds.css" />
+  <link rel="stylesheet" href="./src/notices.css" />
   <script>
     // set before first paint so the themed tokens never flash the wrong palette
     document.documentElement.setAttribute(
@@ -127,9 +128,8 @@
             <h2>요일별 과목 배경화면</h2>
             <p class="muted">선택한 교사가 담당하는 수업만 요일별로 모아 세로 화면에 표시합니다.</p>
             <div class="wallpaper-tool-group android-web-download dev-download-group">
-              <a href="/downloads/yj-timetable-widget.apk" class="android-download-btn" download>
-                <span class="btn-icon">🤖</span>
-                <span class="btn-text">안드로이드 위젯 모바일 앱 다운로드</span>
+              <a href="https://play.google.com/store/apps/details?id=kr.yjms.timetable.teacher" class="android-download-btn" target="_blank" rel="noopener noreferrer">
+                <span class="btn-text">Google Play에서 교사용 앱 설치</span>
               </a>
             </div>
             <div class="wallpaper-tool-group">
@@ -244,29 +244,21 @@
         <article class="download-card">
           <div>
             <p class="download-type">Android</p>
-            <h3>모바일 위젯 APK</h3>
-            <p class="muted">휴대폰 바탕화면에 교사용 시간표를 상시 띄워주는 바탕화면 위젯(4x4) 설정용 앱입니다.</p>
+            <h3>모바일 교사용 앱</h3>
+            <p class="muted">교사 시간표·학사일정·급식 조회와 홈 화면 시간표 위젯을 제공하는 Android 앱입니다.</p>
           </div>
           <dl class="download-meta">
             <div>
-              <dt>파일</dt>
-              <dd>APK</dd>
+              <dt>설치</dt>
+              <dd>Google Play</dd>
             </div>
             <div>
               <dt>대상</dt>
-              <dd>Android 5.0 이상</dd>
-            </div>
-            <div>
-              <dt>버전</dt>
-              <dd>v1.1.0</dd>
-            </div>
-            <div>
-              <dt>업데이트</dt>
-              <dd>2026.07.06</dd>
+              <dd>Android 7.0 이상</dd>
             </div>
           </dl>
-          <p class="download-note">설치 차단 안내가 뜨면 설정에서 <span class="keep-together">이 출처의 앱 설치를 허용한 뒤</span> 설치하세요.</p>
-          <a class="download-button" href="./downloads/yj-timetable-widget.apk" download>모바일 위젯 APK 다운로드</a>
+          <p class="download-note">Google Play에서 교사용 앱을 설치하고 업데이트할 수 있습니다.</p>
+          <a class="download-button" href="https://play.google.com/store/apps/details?id=kr.yjms.timetable.teacher" target="_blank" rel="noopener noreferrer">Google Play에서 교사용 앱 설치</a>
         </article>
 
         <article class="download-card">
@@ -502,6 +494,88 @@
         <article>
           <h3><span>12</span>방침 변경</h3>
           <p>이 개인정보처리방침은 법령, 서비스 기능, 외부 서비스 변경에 따라 수정될 수 있습니다. 중요한 변경이 있는 경우 서비스 화면을 통해 고지합니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="termsPage" class="page privacy-page is-hidden" aria-labelledby="termsHeading">
+      <div class="privacy-head">
+        <div>
+          <p class="eyebrow">서비스 이용 안내</p>
+          <h2 id="termsHeading">이용약관</h2>
+          <p class="muted">용정시간표를 이용할 때 알아야 할 서비스 제공 범위와 이용 기준을 안내합니다.</p>
+        </div>
+        <div class="privacy-badge">시행일 2026.11.16</div>
+      </div>
+
+      <div class="privacy-content">
+        <article>
+          <h3><span>01</span>목적과 운영자</h3>
+          <p>이 약관은 하헌휘(이하 “운영자”)가 운영하는 용정시간표(이하 “서비스”)의 이용 조건과 운영자 및 이용자의 권리·의무를 정합니다. 이용자는 서비스에 접속하여 제공 기능을 사용하는 사람을 말합니다.</p>
+        </article>
+
+        <article>
+          <h3><span>02</span>제공하는 서비스</h3>
+          <p>서비스는 용정중학교의 시간표, 수업 변경, 학사일정, 급식, 안내사항을 웹, 전자칠판, 슬라이드쇼, 앱·위젯 및 API 등의 방식으로 제공합니다. 기기와 이용 권한에 따라 제공 기능이 다를 수 있습니다.</p>
+          <p>공개 정보는 별도 회원가입 없이 조회할 수 있습니다. 관리자 기능과 API는 승인된 계정 또는 발급받은 API key 등 별도의 이용 권한이 필요합니다.</p>
+        </article>
+
+        <article>
+          <h3><span>03</span>계정과 접근 권한</h3>
+          <p>관리자는 부여받은 권한과 학교 업무 목적의 범위에서 정보를 입력·수정해야 합니다. 계정, 비밀번호, 기기 등록 코드 및 API key를 안전하게 관리하고 권한이 없는 사람과 공유하지 않아야 합니다.</p>
+          <p>접근 정보가 유출되었거나 권한 오용이 의심되면 문의처로 알려 주세요. 운영자는 사실 확인과 피해 방지를 위해 필요한 조치를 취합니다.</p>
+        </article>
+
+        <article>
+          <h3><span>04</span>이용자가 지켜야 할 사항</h3>
+          <ul>
+            <li>타인의 계정·API key를 사용하거나 허가 없이 관리자 기능과 비공개 정보에 접근하지 않습니다.</li>
+            <li>허위 정보 입력, 악성 코드 전송, 과도한 자동 요청 등 서비스 운영을 방해하는 행위를 하지 않습니다. API 호출은 안내된 사용 한도를 지켜야 합니다.</li>
+            <li>시간표·행사·공개 안내사항에 학생 이름, 연락처 등 공개할 권한이 없는 개인정보를 입력하지 않습니다. 학생 호출은 승인된 담당자가 정당한 학교 업무에 필요한 범위에서만 사용합니다.</li>
+            <li>다른 사람의 저작권, 개인정보 및 그 밖의 권리를 침해하거나 관계 법령을 위반하지 않습니다.</li>
+          </ul>
+        </article>
+
+        <article>
+          <h3><span>05</span>정보 확인과 활용</h3>
+          <p>학교 운영 상황, 외부 정보 제공처의 갱신 시점, 기기의 동기화 상태에 따라 표시 정보가 실제 일정과 다를 수 있습니다. 수업 변경, 시험, 등교 등 중요한 일정은 학교의 최신 공지나 담당 교사에게 확인해 주세요.</p>
+          <p>운영자는 확인된 오류를 바로잡기 위해 노력합니다. 잘못된 정보를 발견하면 문의처로 알려 주세요.</p>
+        </article>
+
+        <article>
+          <h3><span>06</span>서비스 변경과 일시 중단</h3>
+          <p>점검, 기능 개선, 외부 서비스 장애 또는 보안 문제로 서비스의 전부나 일부가 변경되거나 일시 중단될 수 있습니다. 운영자는 사전에 알릴 수 있는 경우 변경 내용과 일정을 서비스 화면에 안내합니다.</p>
+          <p>긴급한 장애나 보안 대응으로 사전 안내가 어려운 경우에는 가능한 한 신속하게 사유와 처리 상황을 안내하고 정상 이용을 위해 노력합니다.</p>
+        </article>
+
+        <article>
+          <h3><span>07</span>이용 제한과 이의 제기</h3>
+          <p>이 약관 위반이나 비정상적인 접근으로 다른 이용자 또는 서비스에 피해가 발생하거나 발생할 우려가 있는 경우, 운영자는 필요한 범위에서 계정·기기·API key의 이용을 제한할 수 있습니다.</p>
+          <p>운영자는 제한 사유와 범위를 안내합니다. 긴급한 피해 방지를 위해 먼저 제한한 경우 사후에 안내하며, 이용자는 문의처를 통해 이의를 제기하고 재검토를 요청할 수 있습니다.</p>
+        </article>
+
+        <article>
+          <h3><span>08</span>개인정보와 콘텐츠의 권리</h3>
+          <p>개인정보 처리에 관한 사항은 <a href="/privacy">개인정보처리방침</a>에서 확인할 수 있습니다.</p>
+          <p>서비스의 프로그램과 콘텐츠에 관한 권리는 운영자 또는 해당 권리자에게 있습니다. 외부 데이터와 오픈소스는 각 제공 조건과 라이선스를 따릅니다. 이용자가 입력한 자료의 권리는 해당 권리자에게 있으며, 운영자는 서비스 제공과 운영에 필요한 범위에서 이를 처리합니다.</p>
+        </article>
+
+        <article>
+          <h3><span>09</span>책임과 분쟁 해결</h3>
+          <p>서비스 이용과 관련한 손해의 책임은 운영자와 이용자의 귀책사유 및 관계 법령에 따라 판단합니다. 이 약관은 운영자의 고의 또는 중대한 과실로 인한 책임이나 법령상 배제할 수 없는 책임을 제한하지 않습니다.</p>
+          <p>분쟁이 발생하면 문의처를 통해 우선 협의하며, 해결되지 않은 사항은 대한민국 관계 법령과 법령에 따른 관할 법원의 절차에 따릅니다.</p>
+        </article>
+
+        <article>
+          <h3><span>10</span>약관의 게시와 변경</h3>
+          <p>운영자는 이용자가 이 약관을 쉽게 확인할 수 있도록 서비스 화면에 게시합니다. 약관을 변경할 때에는 변경 내용과 시행일을 미리 알리고, 이용자에게 불리하거나 중요한 변경은 충분한 사전 안내 기간을 둡니다.</p>
+          <p>관계 법령상 동의가 필요한 사항은 별도로 동의를 받습니다. 이 약관에서 정하지 않은 사항은 관계 법령에 따릅니다.</p>
+        </article>
+
+        <article>
+          <h3><span>11</span>서비스 문의</h3>
+          <p>운영자: 23기 하헌휘</p>
+          <p>오류 신고, 계정·API 이용 제한에 대한 문의 및 약관 관련 의견은 <a href="mailto:admin@heonhwi.dev">admin@heonhwi.dev</a>로 보내 주세요.</p>
         </article>
       </div>
     </section>
@@ -877,10 +951,10 @@
               <label for="noticeTitle">제목</label>
               <input id="noticeTitle" type="text" placeholder="예: 급식실 이용 안내" />
             </div>
-            <div class="field">
-              <label for="noticeBody">세부 내용</label>
-              <textarea id="noticeBody" rows="5" placeholder="슬라이드쇼에 표시할 세부 내용을 입력하세요."></textarea>
-            </div>
+          </div>
+          <div class="field">
+            <label for="noticeBody">세부 내용 (선택)</label>
+            <textarea id="noticeBody" rows="5" placeholder="슬라이드쇼에 표시할 세부 내용을 입력하세요."></textarea>
           </div>
           <div class="form-grid two">
             <div id="noticePreview" class="notice-preview"></div>
@@ -938,7 +1012,7 @@
               <label for="slideShowMeal">안내사항에 급식 식단 표시</label>
               <select id="slideShowMeal">
                 <option value="true">표시함 (우측 하단)</option>
-                <option value="false">숨김 (안내사항만 전체 표시)</option>
+                <option value="false">숨김</option>
               </select>
               <p class="message">안내사항 슬라이드 우측 하단에 나이스 급식 식단 카드를 띄웁니다.</p>
             </div>
@@ -950,6 +1024,21 @@
               </select>
               <p class="message">슬라이드쇼 시간표 칸에 과목명과 함께 담당 교사 이름을 보여줍니다.</p>
             </div>
+          </div>
+          <div class="subsection" aria-labelledby="slideDdayHeading">
+            <h3 id="slideDdayHeading">디데이</h3>
+            <div class="form-grid two">
+              <div class="field">
+                <label for="slideDdayTitle">디데이 제목</label>
+                <input id="slideDdayTitle" type="text" maxlength="80" placeholder="예: 수능 응원 안내" />
+              </div>
+              <div class="field">
+                <label for="slideDdayDate">목표 날짜</label>
+                <input id="slideDdayDate" type="date" max="9999-12-31" aria-describedby="slideDdayHint" />
+              </div>
+            </div>
+            <p id="slideDdayHint" class="message">안내사항 오른쪽 위에 표시합니다. 한국 시간 기준으로 계산하며 제목과 날짜를 모두 비우면 숨깁니다.</p>
+            <div id="slideDdayPreview" class="slideshow-dday-preview" aria-live="polite"></div>
           </div>
           <div class="subsection">
             <p class="instant-apply-notice"><strong>변경 즉시 반영</strong><span>글자 크기는 조정 즉시 반영됩니다.</span></p>
@@ -1119,9 +1208,9 @@
     <div>
       <strong>용정시간표</strong>
       <span>용정중학교 수업·학사일정 안내 서비스</span>
-      <span class="footer-disclosure">KRDS 디자인 시스템을 활용해 제작했습니다.</span>
     </div>
     <div class="footer-meta">
+      <button class="footer-link" data-route="terms" type="button">이용약관</button>
       <button class="footer-link" data-route="privacy" type="button">개인정보처리방침</button>
       <span>© 2026 23기 하헌휘</span>
     </div>
@@ -1145,6 +1234,7 @@
   <script src="./src/storage.js"></script>
   <script src="./src/timetable-import.js"></script>
   <script src="./src/calendar.js"></script>
+  <script src="./src/notices.js"></script>
   <script src="./src/app.js"></script>
 </body>
 

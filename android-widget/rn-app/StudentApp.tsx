@@ -29,29 +29,14 @@ import {
   ensureNotificationPermission,
   lessonBackground,
   lessonColor,
-  mealUrl,
+  MealView,
   minutesNowInKorea,
   styles,
   todayInKorea,
+  UpdatePrompt,
 } from './src/shared';
 
-type Meal = {
-  ok?: boolean;
-  targetDate?: string;
-  formattedDate?: string;
-  mealCode?: string;
-  mealTypeLabel?: string;
-  menu?: string[];
-  calories?: string;
-};
-
 const FALLBACK_CLASSES = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2'];
-const MEAL_CODES = [
-  {code: '1', label: '아침'},
-  {code: '2', label: '점심'},
-  {code: '3', label: '저녁'},
-];
-
 export default function StudentApp() {
   const {width: screenWidth} = useWindowDimensions();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -66,9 +51,7 @@ export default function StudentApp() {
   const [classModalVisible, setClassModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'시간표' | '급식' | '학사일정'>('시간표');
   const [academicRefresh, setAcademicRefresh] = useState(0);
-  const [meal, setMeal] = useState<Meal | null>(null);
-  const [mealLoading, setMealLoading] = useState(false);
-  const [mealError, setMealError] = useState('');
+  const [mealRefresh, setMealRefresh] = useState(0);
   const [notifySettings, setNotifySettings] = useState<NotificationSettings>({changes: false, daily: false, setupDone: true});
   const [notifyDraft, setNotifyDraft] = useState({changes: true, daily: true});
   const [settingsModal, setSettingsModal] = useState<'' | 'setup' | 'edit'>('');
@@ -103,20 +86,6 @@ export default function StudentApp() {
     } finally {
       setLoading(false);
       setRefreshing(false);
-    }
-  }, []);
-
-  const loadMeal = useCallback(async (date?: string, mealCode?: string) => {
-    setMealLoading(true);
-    setMealError('');
-    try {
-      const response = await fetch(mealUrl(date, mealCode));
-      if (!response.ok) throw new Error('급식 요청 실패 (' + response.status + ')');
-      setMeal(await response.json() as Meal);
-    } catch (err) {
-      setMealError(err instanceof Error ? err.message : '급식 정보를 불러오지 못했습니다.');
-    } finally {
-      setMealLoading(false);
     }
   }, []);
 
@@ -211,11 +180,6 @@ export default function StudentApp() {
     setSettingsModal('edit');
   };
 
-  const pressTab = (tab: '시간표' | '급식' | '학사일정') => {
-    setActiveTab(tab);
-    if (tab === '급식' && !meal && !mealLoading) loadMeal();
-  };
-
   const renderTimetable = () => (
     <>
       <View style={styles.classChips}>
@@ -295,46 +259,6 @@ export default function StudentApp() {
     </>
   );
 
-  const renderMeal = () => (
-    <>
-      <View style={styles.classChips}>
-        {MEAL_CODES.map(item => {
-          const active = meal?.mealCode === item.code;
-          return (
-            <Pressable
-              key={item.code}
-              accessibilityRole="button"
-              onPress={() => loadMeal(meal?.targetDate, item.code)}
-              style={[
-                styles.classChip,
-                {borderColor: active ? colors.accent : colors.border, backgroundColor: active ? colors.accent + '22' : colors.panel},
-              ]}>
-              <Text style={[styles.classChipText, {color: active ? colors.primary : colors.secondary}]}>{item.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      {mealError ? <Text style={styles.error}>{mealError}</Text> : null}
-      {mealLoading && !meal ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.accent} />
-          <Text style={[styles.loadingText, {color: colors.secondary}]}>급식 불러오는 중</Text>
-        </View>
-      ) : meal ? (
-        <View style={[local.mealCard, {borderColor: colors.border, backgroundColor: colors.panel}]}>
-          <Text style={[local.mealLabel, {color: colors.secondary}]}>{meal.formattedDate}</Text>
-          <Text style={[local.mealTitle, {color: colors.primary}]}>{meal.mealTypeLabel}</Text>
-          {meal.menu?.length ? meal.menu.map((item, index) => (
-            <Text key={item + index} style={[local.mealItem, {color: colors.primary, borderTopColor: colors.border}]}>{item}</Text>
-          )) : (
-            <Text style={[styles.todayEmpty, {color: colors.secondary}]}>급식 정보가 없습니다.</Text>
-          )}
-          {meal.calories ? <Text style={[local.mealLabel, {color: colors.secondary}]}>{meal.calories}</Text> : null}
-        </View>
-      ) : null}
-    </>
-  );
-
   return (
     <SafeAreaView style={[styles.safeArea, {backgroundColor: colors.background}]}>
       <StatusBar barStyle={settings.theme === 'dark' ? 'light-content' : 'dark-content'} />
@@ -344,9 +268,9 @@ export default function StudentApp() {
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
-              refreshing={activeTab === '급식' ? mealLoading && !!meal : activeTab === '학사일정' ? false : refreshing}
+              refreshing={activeTab === '시간표' ? refreshing : false}
               onRefresh={() => {
-                if (activeTab === '급식') loadMeal(meal?.targetDate, meal?.mealCode);
+                if (activeTab === '급식') setMealRefresh(value => value + 1);
                 else if (activeTab === '학사일정') setAcademicRefresh(value => value + 1);
                 else loadClassSchedule(myClass);
               }}
@@ -376,7 +300,7 @@ export default function StudentApp() {
           <View style={styles.heading}>
             <View style={styles.headingCopy}>
               <Text style={[styles.pageTitle, {color: colors.primary}]}>
-                {activeTab === '급식' ? '오늘 급식' : activeTab === '학사일정' ? '학사일정' : shownClass && shownClass !== myClass ? shownClass + '반 시간표' : '우리 반 시간표'}
+                {activeTab === '급식' ? '급식' : activeTab === '학사일정' ? '학사일정' : shownClass && shownClass !== myClass ? shownClass + '반 시간표' : '우리 반 시간표'}
               </Text>
               <Text numberOfLines={1} style={[styles.subtitle, {color: colors.secondary}]}>
                 {activeTab === '급식'
@@ -389,7 +313,7 @@ export default function StudentApp() {
           </View>
 
           {activeTab === '급식'
-            ? renderMeal()
+            ? <MealView colors={colors} refreshKey={mealRefresh} />
             : activeTab === '학사일정'
               ? <AcademicCalendar colors={colors} className={myClass} refreshKey={academicRefresh} />
               : renderTimetable()}
@@ -397,7 +321,7 @@ export default function StudentApp() {
 
         <View style={[styles.bottomNav, {borderTopColor: colors.border, backgroundColor: colors.background}]}>
           {(['시간표', '급식', '학사일정'] as const).map(tab => (
-            <Pressable key={tab} accessibilityRole="button" onPress={() => pressTab(tab)} style={styles.navItem}>
+            <Pressable key={tab} accessibilityRole="button" onPress={() => setActiveTab(tab)} style={styles.navItem}>
               <View style={[styles.navIndicator, {backgroundColor: activeTab === tab ? colors.accent : 'transparent'}]} />
               <Text style={[styles.navText, {color: activeTab === tab ? colors.primary : colors.secondary}]}>{tab}</Text>
             </Pressable>
@@ -461,16 +385,14 @@ export default function StudentApp() {
         onFinish={finishNotificationSetup}
         onClose={() => setSettingsModal('')}
       />
+
+      <UpdatePrompt colors={colors} hidden={classModalVisible || settingsModal !== ''} />
     </SafeAreaView>
   );
 }
 
 const local = StyleSheet.create({
   todaySubject: {width: 72, fontSize: 12, fontWeight: '700'},
-  mealCard: {borderWidth: 1, borderRadius: 12, padding: 16},
-  mealLabel: {fontSize: 12},
-  mealTitle: {fontSize: 17, fontWeight: '800', marginTop: 4, marginBottom: 10},
-  mealItem: {fontSize: 15, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth},
   classGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16},
   classOption: {width: '30%', flexGrow: 1, height: 56, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center'},
   classOptionText: {fontSize: 17, fontWeight: '800'},

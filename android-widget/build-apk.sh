@@ -36,3 +36,5 @@ if [[ ! -f "$APK_PATH" ]]; then
 fi
 
 echo "APK created: $APK_PATH"
+mkdir -p "$ROOT_DIR/android-widget/output"
+cp "$APK_PATH" "$ROOT_DIR/android-widget/output/yj-timetable-$AUDIENCE.apk"

@@ -73,6 +73,50 @@ test("student call survives local state normalization and rejects invalid shapes
   assert.equal(invalid.store.read().studentCall, null);
 });
 
+test("slideshow countdown survives a local reload", () => {
+  // Given
+  const slideshow = { ddayTitle: "수능 응원", ddayDate: "2026-11-21" };
+  const h = harness({ savedState: { base: {}, slideshow } });
+  // When
+  const state = h.store.read();
+  // Then
+  assert.equal(state.slideshow.ddayTitle, slideshow.ddayTitle);
+  assert.equal(state.slideshow.ddayDate, slideshow.ddayDate);
+});
+
+test("legacy notice countdown fills new settings without removing its original data", () => {
+  // Given
+  const notice = { id: "legacy", title: "시험", body: "", targetDate: "2026-11-21" };
+  const h = harness({ savedState: { base: {}, notices: [notice] } });
+  // When
+  const state = h.store.read();
+  // Then
+  assert.equal(state.slideshow.ddayTitle, notice.title);
+  assert.equal(state.slideshow.ddayDate, notice.targetDate);
+  assert.equal(state.notices[0].targetDate, notice.targetDate);
+});
+
+test("cleared countdown stays hidden when legacy notice dates remain", () => {
+  // Given
+  const h = harness({ savedState: { base: {}, slideshow: { ddayTitle: "", ddayDate: "" }, notices: [{ title: "시험", targetDate: "2026-11-21" }] } });
+  // When
+  const state = h.store.read();
+  // Then
+  assert.equal(state.slideshow.ddayTitle, "");
+  assert.equal(state.slideshow.ddayDate, "");
+});
+
+test("remote snapshot keeps independently configured slideshow countdown", async () => {
+  // Given
+  const slideshow = { ddayTitle: "졸업식", ddayDate: "2027-01-08" };
+  const h = harness({ profileResult: { data: { data: { base: {}, notices: [], slideshow }, revision: 1 }, error: null } });
+  // When
+  const state = await h.store.readRemote();
+  // Then
+  assert.equal(state.slideshow.ddayTitle, slideshow.ddayTitle);
+  assert.equal(state.slideshow.ddayDate, slideshow.ddayDate);
+});
+
 const state = { base: { "1-1": { mon: ["수학"] } }, notices: [], adminPassword: "never-send" };
 
 test("transient profile lookup failure preserves cached identity and Supabase session", async () => {

@@ -48,6 +48,14 @@ KRDS HTML Component Kit v1.1.0을 바탕으로 한 어두운 고대비 중심의
 
 ## 5. Components
 
+### Notice Countdown
+
+- Primary action: 슬라이드쇼 설정 저장. 디데이 섹션에서 제목·날짜를 설정한다. 두 값을 비우면 숨긴다.
+- 안내사항 제목·본문은 왼쪽 `.notice-copy` 안에만 표시한다. 오른쪽 `.notice-sidebar` 위에 D-day 제목·파란 카운트·목표일을, 아래에 급식을 둔다.
+- Layout: 안내사항 - 본문과 보조 정보 분리 -> sidebar (https://github.com/changeroa/StyleGallery/blob/main/patterns/split-sidebar/sidebar.md); scroll owner: `.notice-body-text`; anti-patterns: 안내 제목의 오른쪽 침범과 절대 좌표 배치를 피한다. 모바일은 안내문 다음 D-day·급식 순으로 세로 배치한다.
+- 한국 시간 자정 기준 `D-N`·`D-day`·`D+N`을 표시한다. 기존 개별 안내사항의 첫 D-day는 새 설정 초기값으로 옮기고 원본 데이터는 유지한다.
+- 기존 Field, `.form-grid.two`, KRDS 색·간격·글자 token을 재사용한다. 장식 badge와 추가 설정은 두지 않는다.
+
 ### Page Panel
 
 - 구조: `.page`, `.login-panel`, `.admin-workspace`
@@ -73,9 +81,12 @@ KRDS HTML Component Kit v1.1.0을 바탕으로 한 어두운 고대비 중심의
 - 호출 폼 최소 폭, overlay 최대 폭, 이름·장소 최대 크기도 `--student-call-*` token으로 관리한다.
 - 확인 버튼, Escape, 60초 timeout으로 닫히며 학생 이름과 호출 장소를 가장 큰 정보 계층으로 표시한다.
 
-### Footer Disclosure
+### Legal Pages and Footer Links
 
-- `.footer-disclosure`는 서비스 footer에서 KRDS 디자인 시스템 활용 사실을 고지하는 재사용 가능한 메타 컴포넌트다.
+- `/privacy`와 `/terms`는 `.privacy-page`, `.privacy-head`, `.privacy-content`를 공유한다.
+- Layout: 기존 개인정보처리방침의 단일 문서 흐름을 유지한다. 스크롤 소유자는 document이며 본문 내부 스크롤과 고정 높이를 추가하지 않는다.
+- footer의 `.footer-link`로 이용약관과 개인정보처리방침을 열며, 이용약관은 문서 맨 위에서 시작한다.
+- footer 링크의 최소 높이는 `--control-touch`를 사용한다.
 
 ### Field
 

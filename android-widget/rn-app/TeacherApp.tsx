@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ScrollView,
   StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   useWindowDimensions,
@@ -20,6 +21,7 @@ import {
   ClassSchedule,
   DEFAULT_SETTINGS,
   Legend,
+  MealView,
   NotificationSettings,
   NotificationSettingsModal,
   PALETTES,
@@ -38,6 +40,7 @@ import {
   teacherListUrl,
   teacherScheduleUrl,
   todayInKorea,
+  UpdatePrompt,
 } from './src/shared';
 
 export default function TeacherApp() {
@@ -56,6 +59,7 @@ export default function TeacherApp() {
   const [teacherListError, setTeacherListError] = useState('');
   const [activeTab, setActiveTab] = useState('교사 보기');
   const [academicRefresh, setAcademicRefresh] = useState(0);
+  const [mealRefresh, setMealRefresh] = useState(0);
   const [classSchedule, setClassSchedule] = useState<ClassSchedule | null>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [classLoading, setClassLoading] = useState(false);
@@ -75,6 +79,14 @@ export default function TeacherApp() {
   const weeklyHours = (schedule?.grid || []).reduce(
     (total, day) => total + day.filter(matches => matches.length > 0).length,
     0,
+  );
+  // 서버가 교과 변경·신설로 표시한 이번 주 수업. 알림을 꺼 두어도 여기서 확인할 수 있다.
+  const changedLessons = days.flatMap((day, dayIndex) =>
+    (schedule?.grid?.[dayIndex] || []).flatMap((matches, periodIndex) =>
+      matches
+        .filter(match => match.type === 'change' || match.type === 'new')
+        .map(match => ({...match, day, periodIndex})),
+    ),
   );
   const subjects = [...new Set((schedule?.grid || []).flat(2).map(match => match.title).filter(Boolean))];
   const subjectSummary = subjects.slice(0, 2).join(' · ') || '교사 시간표';
@@ -328,6 +340,37 @@ export default function TeacherApp() {
     );
   };
 
+  const renderChangedLessons = () => (
+    <>
+      <View style={[styles.todayHeader, {borderTopColor: colors.border}]}>
+        <Text style={[styles.todayTitle, {color: colors.primary}]}>이번 주 교과 변경</Text>
+        <Text style={[styles.todayCount, {color: colors.secondary}]}>{changedLessons.length}건</Text>
+      </View>
+      {changedLessons.length ? changedLessons.map((lesson, index) => {
+        const past = lesson.day.iso < todayInKorea();
+        return (
+          <View key={lesson.day.iso + '-' + lesson.periodIndex + '-' + index} style={[styles.todayRow, {borderTopColor: colors.border}, past && local.past]}>
+            <View style={[local.changeMarker, {backgroundColor: lessonColor(lesson.type, colors)}]} />
+            <Text style={[local.changeDay, {color: colors.secondary}]}>
+              {dateLabel(lesson.day) + ' ' + (periods[lesson.periodIndex] || lesson.periodIndex + 1) + '교시'}
+            </Text>
+            <Text numberOfLines={1} style={[styles.todayClass, {color: colors.primary}]}>
+              {lesson.className || lesson.title || '수업'}
+            </Text>
+            <Text numberOfLines={1} style={[styles.todaySubject, {color: colors.secondary}]}>
+              {lesson.className ? lesson.title || '' : ''}
+            </Text>
+            <Text style={[styles.todayTime, {color: lessonColor(lesson.type, colors)}]}>
+              {lesson.note || (lesson.type === 'new' ? '신설' : '변경')}
+            </Text>
+          </View>
+        );
+      }) : (
+        <Text style={[styles.todayEmpty, {color: colors.secondary}]}>이번 주 변경된 수업이 없습니다.</Text>
+      )}
+    </>
+  );
+
   const renderTodaySchedule = () => (
     <>
       <View style={[styles.todayHeader, {borderTopColor: colors.border}]}>
@@ -364,9 +407,10 @@ export default function TeacherApp() {
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
-              refreshing={activeTab === '시간표' ? classLoading && !!classSchedule : activeTab === '학사일정' ? false : refreshing}
+              refreshing={activeTab === '시간표' ? classLoading && !!classSchedule : activeTab === '교사 보기' ? refreshing : false}
               onRefresh={() => {
                 if (activeTab === '시간표') loadClassSchedule();
+                else if (activeTab === '급식') setMealRefresh(value => value + 1);
                 else if (activeTab === '학사일정') setAcademicRefresh(value => value + 1);
                 else refresh();
               }}
@@ -396,19 +440,21 @@ export default function TeacherApp() {
           <View style={styles.heading}>
             <View style={styles.headingCopy}>
               <Text style={[styles.pageTitle, {color: colors.primary}]}>
-                {activeTab === '시간표' ? '학급 시간표' : activeTab === '학사일정' ? '학사일정' : '교사 보기'}
+                {activeTab === '시간표' ? '학급 시간표' : activeTab === '학사일정' ? '학사일정' : activeTab === '급식' ? '급식' : '교사 보기'}
               </Text>
               <Text numberOfLines={1} style={[styles.subtitle, {color: colors.secondary}]}>
                 {activeTab === '시간표'
                   ? (selectedClass ? selectedClass + '반 · ' : '') + '이번 주 시간표'
                   : activeTab === '학사일정'
                     ? '시험, 행사, 휴업일과 다가오는 일정'
+                    : activeTab === '급식'
+                    ? '용정중학교 급식'
                     : firstRun
                     ? '시간표를 볼 교사를 선택하세요'
                     : teacherTitle + ' · ' + subjectSummary + ' · 주간 ' + weeklyHours + '시간'}
               </Text>
             </View>
-            {activeTab === '시간표' || activeTab === '학사일정' ? null : (
+            {activeTab !== '교사 보기' ? null : (
             <Pressable
               accessibilityRole="button"
               onPress={openTeacherModal}
@@ -421,7 +467,9 @@ export default function TeacherApp() {
             )}
           </View>
 
-          {activeTab === '학사일정' ? (
+          {activeTab === '급식' ? (
+            <MealView colors={colors} refreshKey={mealRefresh} />
+          ) : activeTab === '학사일정' ? (
             <AcademicCalendar colors={colors} refreshKey={academicRefresh} />
           ) : activeTab === '시간표' ? renderClassPage() : (
           <>
@@ -465,13 +513,14 @@ export default function TeacherApp() {
           )}
 
           <Legend colors={colors} note="가운데점은 공강입니다" />
+          {renderChangedLessons()}
           {renderTodaySchedule()}
           </>
           )}
         </ScrollView>
 
         <View style={[styles.bottomNav, {borderTopColor: colors.border, backgroundColor: colors.background}]}>
-          {['시간표', '교사 보기', '학사일정', '다운로드'].map(tab => (
+          {['시간표', '교사 보기', '급식', '학사일정', '다운로드'].map(tab => (
             <Pressable key={tab} accessibilityRole="button" onPress={() => pressTab(tab)} style={styles.navItem}>
               <View style={[styles.navIndicator, {backgroundColor: activeTab === tab ? colors.accent : 'transparent'}]} />
               <Text style={[styles.navText, {color: activeTab === tab ? colors.primary : colors.secondary}]}>{tab}</Text>
@@ -566,6 +615,14 @@ export default function TeacherApp() {
         onFinish={finishNotificationSetup}
         onClose={() => setSettingsModal('')}
       />
+
+      <UpdatePrompt colors={colors} hidden={teacherModalVisible || settingsModal !== ''} />
     </SafeAreaView>
   );
 }
+
+const local = StyleSheet.create({
+  past: {opacity: 0.5},
+  changeMarker: {width: 3, height: 18, borderRadius: 2},
+  changeDay: {width: 82, fontSize: 11},
+});
