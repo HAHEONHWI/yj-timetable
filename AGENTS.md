@@ -69,7 +69,7 @@ chore: 패키지 업데이트
 - `style`: 포맷팅, 공백, CSS 정리 등 기능 변경 없는 변경
 - `refactor`: 기능은 유지하고 구조만 개선
 - `chore`: 패키지, 빌드 설정, 산출물 정리, 자동화 보조 작업
-- `test`: 테스트 추가·수정
+- `test`: 회귀 테스트 추가·수정
 - `perf`: 성능 개선
 - `ci`: CI/CD 변경
 - `build`: 빌드 시스템 변경
@@ -206,6 +206,7 @@ admin/admin -> manager
 /admin         관리자 콘솔
 /download      다운로드 페이지
 /privacy       개인정보처리방침
+/terms         이용약관
 /wallpaper.svg iOS 배경화면 SVG
 /wallpaper.png iOS/Android 위젯 PNG 또는 JSON
 ```
