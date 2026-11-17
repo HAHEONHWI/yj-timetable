@@ -2268,6 +2268,28 @@ body.board-mode .schedule-shell {
   background: var(--blue-tint);
 }
 
+.terms-announcement {
+  margin-bottom: var(--space-18);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue-dark);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--ink);
+  padding: var(--space-12) var(--space-14);
+  line-height: 1.6;
+}
+
+.terms-announcement p {
+  margin: 4px 0;
+  color: var(--muted);
+}
+
+.terms-announcement a {
+  color: var(--blue-soft);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
 .privacy-page {
   display: grid;
   gap: 24px;
